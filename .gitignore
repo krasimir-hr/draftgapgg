@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.sqlite3
+
+# Virtual environment
+venv/
+.env/
+.venv/
+
+# Django
+*.log
+local_settings.py
+db.sqlite3
+
+# VS Code
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Migrations cache
+**/migrations/__pycache__/
+
+# Static / media (if you use them locally)
+media/
+staticfiles/
+
+# Node (if frontend exists)
+node_modules/
+npm-debug.log*
