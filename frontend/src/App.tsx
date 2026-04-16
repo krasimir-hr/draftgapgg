@@ -3,6 +3,7 @@ import HomePage from './pages/HomePage';
 import ChampionsPage from './pages/ChampionsPage';
 import ChampionDetailPage from './pages/ChampionDetailPage';
 import EventsPage from './pages/EventsPage';
+import EventDetailPage from './pages/EventDetailPage';
 import MatchesPage from './pages/MatchesPage';
 import MatchDetailPage from './pages/MatchDetailPage';
 import './App.css';
@@ -23,7 +24,7 @@ function App() {
         <Route path="/champions" element={<ChampionsPage />} />
         <Route path="/champions/:id" element={<ChampionDetailPage />} />
         <Route path="/events" element={<EventsPage />} />
-        <Route path="/events/:id" element={<EventsPage />} />
+        <Route path="/events/:id" element={<EventDetailPage />} />
         <Route path="/matches" element={<MatchesPage />} />
         <Route path="/matches/:id" element={<MatchDetailPage />} />
       </Routes>
