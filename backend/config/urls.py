@@ -10,6 +10,7 @@ urlpatterns = [
     # JWT auth endpoints
     path('api/auth/login/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/auth/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-    # Your app's endpoints
+    # App endpoints
     path('api/', include('core.urls')),
+    path('api/lol/', include('lol.urls')),
 ]
