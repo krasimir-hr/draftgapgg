@@ -1,49 +1,93 @@
-import { useState, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useCallback, useEffect } from 'react';
+import { Link, NavLink } from 'react-router-dom';
 import { getMatches } from '../api/core';
 import { usePaginatedList } from '../hooks/useApi';
 import type { Match } from '../types/models';
+import Spinner from '../components/Spinner';
+import Pagination from '../components/Pagination';
 
-export default function MatchesPage() {
+interface Props {
+  status?: 'finished' | 'upcoming';
+}
+
+export default function MatchesPage({ status }: Props) {
   const [page, setPage] = useState(1);
-  const fetcher = useCallback((p: number) => getMatches({ page: p }), []);
+
+  useEffect(() => { setPage(1); }, [status]);
+
+  const fetcher = useCallback(
+    (p: number) => getMatches({
+      page: p,
+      ...(status === 'finished' ? { has_result: 'true' } : status === 'upcoming' ? { has_result: 'false' } : {}),
+    }),
+    [status],
+  );
+
   const { data: matches, count, loading, error } = usePaginatedList<Match>(fetcher, page);
-
-  if (loading) return <p className="p-8 text-center">Loading matches…</p>;
-  if (error) return <p className="p-8 text-red-500">{error}</p>;
-
   const totalPages = Math.ceil(count / 50);
 
   return (
-    <div className="p-6">
-      <h1 className="text-3xl font-bold mb-6">Matches ({count})</h1>
+    <div className="max-w-5xl mx-auto px-6 py-8">
+      <div className="flex items-baseline gap-3 mb-6">
+        <h1 className="text-2xl font-bold text-(--text-h)">Matches</h1>
+        {count > 0 && <span className="text-sm text-(--text-dim)">{count} total</span>}
+      </div>
 
-      <div className="space-y-3">
-        {matches.map((m) => (
-          <Link
-            key={m.id}
-            to={`/matches/${m.id}`}
-            className="block border border-[var(--border)] rounded-lg p-4 hover:shadow-md transition"
+      <div className="flex gap-1 mb-6">
+        {([
+          { label: 'All',      to: '/matches'          },
+          { label: 'Finished', to: '/matches/finished' },
+          { label: 'Upcoming', to: '/matches/upcoming' },
+        ] as const).map(({ label, to }) => (
+          <NavLink
+            key={to}
+            to={to}
+            end
+            className={({ isActive }) =>
+              `px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                isActive
+                  ? 'bg-(--accent-muted) text-(--accent-2)'
+                  : 'text-(--text-dim) hover:text-(--text-h) hover:bg-(--surface-sub)'
+              }`
+            }
           >
-            <div className="flex justify-between items-center">
-              <span className="font-semibold text-[var(--text-h)]">{m.team1} vs {m.team2}</span>
-              <span className="text-xs text-[var(--text)]">
-                {m.datetime_utc ? new Date(m.datetime_utc).toLocaleDateString() : 'TBD'}
-              </span>
-            </div>
-            <p className="text-sm text-[var(--text)] mt-1">
-              Bo{m.best_of} · {m.tab}{m.winner ? ` · Winner: Team ${m.winner}` : ''}
-            </p>
-          </Link>
+            {label}
+          </NavLink>
         ))}
       </div>
 
-      {totalPages > 1 && (
-        <div className="flex justify-center gap-2 mt-6">
-          <button disabled={page <= 1} onClick={() => setPage(page - 1)} className="px-3 py-1 rounded border disabled:opacity-40">Prev</button>
-          <span className="px-3 py-1">{page} / {totalPages}</span>
-          <button disabled={page >= totalPages} onClick={() => setPage(page + 1)} className="px-3 py-1 rounded border disabled:opacity-40">Next</button>
-        </div>
+      {loading && <Spinner />}
+      {error && <p className="text-sm text-red-400 py-8 text-center">{error}</p>}
+
+      {!loading && !error && (
+        <>
+          <div className="space-y-2">
+            {matches.map((m) => (
+              <Link
+                key={m.id}
+                to={`/matches/${m.id}`}
+                className="card card-link flex items-center gap-4 px-5 py-4"
+              >
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-(--text-h) mb-0.5">
+                    {m.team1}{' '}
+                    <span className="text-(--text-dim) font-normal text-xs">vs</span>{' '}
+                    {m.team2}
+                  </p>
+                  <p className="text-xs text-(--text-dim)">
+                    Bo{m.best_of}
+                    {m.tab ? ` · ${m.tab}` : ''}
+                    {m.winner ? ` · ${m.winner === 1 ? m.team1 : m.team2} wins` : ''}
+                  </p>
+                </div>
+                <span className="text-xs text-(--text-dim) shrink-0 tabular-nums">
+                  {m.datetime_utc ? new Date(m.datetime_utc).toLocaleDateString() : 'TBD'}
+                </span>
+              </Link>
+            ))}
+          </div>
+          <Pagination page={page} totalPages={totalPages} onChange={setPage} />
+        </>
       )}
     </div>
   );

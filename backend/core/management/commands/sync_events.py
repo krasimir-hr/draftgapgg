@@ -6,6 +6,16 @@ import os
 from django.utils import timezone
 from datetime import datetime
 
+# Leaguepedia league name → our canonical league name.
+# Events whose Leaguepedia League field matches a key are assigned to the
+# value league instead. Add entries here whenever a league is renamed or
+# merged without changing the Leaguepedia source data.
+LEAGUE_REDIRECTS = {
+    "League of Legends Championship of The Americas North": "League of Legends Championship Series",
+    "League of Legends Championship of The Americas South": "Circuit Brazilian League of Legends",
+}
+
+
 class Command(BaseCommand):
     help = 'Syncs events data from Leaguepedia.'
 
@@ -55,8 +65,9 @@ class Command(BaseCommand):
                 short_name = league_data[0]
                 year = league_data[1].split(' ')[0]
 
+            league_name = LEAGUE_REDIRECTS.get(data.get("League", ""), data.get("League", ""))
             league, _ = League.objects.get_or_create(
-                name=data.get("League", ""),
+                name=league_name,
                 defaults={
                     "short_name": short_name,
                 }
@@ -64,20 +75,21 @@ class Command(BaseCommand):
 
             start_date = datetime.strptime(data.get("DateStart"), "%Y-%m-%d").date()
             end_date = datetime.strptime(data.get("Date"), "%Y-%m-%d").date()
-    
-            is_active = start_date <= timezone.now().date() <= end_date
 
+            is_active = start_date <= timezone.now().date() <= end_date
 
             event, event_created = Event.objects.update_or_create(
                 leaguepedia_page=data.get("OverviewPage"),
-                    defaults={
-                        "name": data.get("Name", ""),
-                        "league": league,
-                        "start_date": data.get("DateStart") or None,
-                        "end_date": data.get("Date") or None,
-                        "is_active": is_active,
-                        "year" : int(year),
-                    }           
+                create_defaults={
+                    "name": data.get("Name", ""),
+                },
+                defaults={
+                    "league": league,
+                    "start_date": data.get("DateStart") or None,
+                    "end_date": data.get("Date") or None,
+                    "is_active": is_active,
+                    "year": int(year),
+                }
             )
 
         BATCH_SIZE = 20
@@ -169,15 +181,14 @@ class Command(BaseCommand):
             role_list = [r.strip() for r in roles.split(";;") if r.strip()] if roles else []
             flag_list = [f.strip() for f in flags.split(";;") if f.strip()] if roles else []
 
-            print(f"📌 {team_roster} — {event}")
-            for player, role, flag in zip(player_list, role_list, flag_list):
-                print(f"   {role}: {player.split('(')[0]} - {flag}")
+            for lp_page, role, flag in zip(player_list, role_list, flag_list):
+                display_name = lp_page.split('(')[0].strip()
 
-                player_name = player.split('(')[0]
-                player, player_created = Player.objects.get_or_create(
-                    name=player_name,
+                player, _ = Player.objects.update_or_create(
+                    leaguepedia_page=lp_page,
                     defaults={
-                        "nationality": flag
+                        "name": display_name,
+                        "nationality": flag,
                     }
                 )
 

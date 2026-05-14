@@ -72,7 +72,7 @@ class Command(BaseCommand):
 
         if options["event"]:
             pages = [options["event"]]
-            event = {options["event"]: Event.objects.get(leaguepedia_page=options["event"])}
+            events = {options["event"]: Event.objects.get(leaguepedia_page=options["event"])}
         elif options["all"]:
             queryset = Event.objects.exclude(leaguepedia_page__isnull=True)
 
@@ -145,7 +145,6 @@ class Command(BaseCommand):
             tables="MatchSchedule",
             fields="MatchId, Team1, Team2, BestOf, Tab, Winner, DateTime_UTC, Patch",
             where=f"OverviewPage='{overview_page}'",
-            limit=500,
         )
         time.sleep(1)
 
@@ -179,10 +178,10 @@ class Command(BaseCommand):
                 "GameId, MatchId, DateTime_UTC, Patch, Gamelength, Winner, VOD, "
                 "Team1, Team2, "
                 "Team1Picks, Team1Bans, Team1Kills, Team1Gold, Team1Towers, Team1Dragons, Team1Barons, Team1RiftHeralds, "
-                "Team2Picks, Team2Bans, Team2Kills, Team2Gold, Team2Towers, Team2Dragons, Team2Barons, Team2RiftHeralds"
+                "Team2Picks, Team2Bans, Team2Kills, Team2Gold, Team2Towers, Team2Dragons, Team2Barons, Team2RiftHeralds, "
+                "RiotPlatformId, RiotPlatformGameId"
             ),
             where=f"OverviewPage='{overview_page}'",
-            limit=500,
         )
         time.sleep(1)
 
@@ -216,6 +215,8 @@ class Command(BaseCommand):
                     "team1_dragons": safe_int(row.get("Team1Dragons")),
                     "team1_barons": safe_int(row.get("Team1Barons")),
                     "team1_rift_heralds": safe_int(row.get("Team1RiftHeralds")),
+                    "riot_platform_id": row.get("RiotPlatformId", ""),
+                    "riot_platform_game_id": row.get("RiotPlatformGameId", ""),
                     "team2": row.get("Team2", ""),
                     "team2_kills": safe_int(row.get("Team2Kills")),
                     "team2_gold": safe_int(row.get("Team2Gold")),
@@ -255,7 +256,6 @@ class Command(BaseCommand):
                 "Items, Trinket, SummonerSpells, KeystoneRune, Runes"
             ),
             where=f"OverviewPage='{overview_page}'",
-            limit=5000,
         )
         time.sleep(1)
 

@@ -1,7 +1,9 @@
+from django.urls import path
 from rest_framework.routers import DefaultRouter
 from .views import (
     LeagueViewSet, EventViewSet, OrganizationViewSet, PlayerViewSet,
     TeamRosterViewSet, MatchViewSet, GameViewSet, PlayerPerformanceViewSet,
+    OverviewView, PlayerProfileView, TeamProfileView,
 )
 
 router = DefaultRouter()
@@ -14,4 +16,8 @@ router.register('matches', MatchViewSet, basename='match')
 router.register('games', GameViewSet, basename='game')
 router.register('performances', PlayerPerformanceViewSet, basename='performance')
 
-urlpatterns = router.urls
+urlpatterns = router.urls + [
+    path('overview/', OverviewView.as_view()),
+    path('players/profile/<str:name>/', PlayerProfileView.as_view(), name='player-profile'),
+    path('teams/profile/<str:name>/', TeamProfileView.as_view(), name='team-profile'),
+]
