@@ -44,10 +44,13 @@ class ItemSerializer(serializers.ModelSerializer):
 
 
 class RuneSerializer(serializers.ModelSerializer):
+    path_icon = serializers.CharField(source='path.icon', read_only=True)
+    path_riot_id = serializers.IntegerField(source='path.riot_id', read_only=True)
+
     class Meta:
         model = Rune
         fields = ['id', 'riot_id', 'name', 'row', 'short_description',
-                  'long_description', 'icon', 'patch']
+                  'long_description', 'icon', 'patch', 'path_icon', 'path_riot_id']
 
 
 class RunePathSerializer(serializers.ModelSerializer):
@@ -66,7 +69,12 @@ class RunePathListSerializer(serializers.ModelSerializer):
 
 
 class SummonerSpellSerializer(serializers.ModelSerializer):
+    icon_url = serializers.SerializerMethodField()
+
     class Meta:
         model = SummonerSpell
         fields = ['id', 'riot_id', 'key', 'name', 'description',
-                  'cooldown', 'image', 'patch']
+                  'cooldown', 'image', 'patch', 'icon_url']
+
+    def get_icon_url(self, obj: SummonerSpell) -> str:
+        return f"https://ddragon.leagueoflegends.com/cdn/{obj.patch}/img/spell/{obj.image}"

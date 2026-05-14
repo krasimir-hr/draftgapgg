@@ -1,17 +1,32 @@
 from rest_framework import serializers
-from .models import (League, Event, Organization, Player, TeamRoster,
-                     RosterPlayer, Match, Game, PlayerPerformance)
-from lol.serializers import ChampionListSerializer, ItemSerializer, SummonerSpellSerializer, RuneSerializer
+from .models import (
+    League,
+    Event,
+    Organization,
+    Player,
+    TeamRoster,
+    RosterPlayer,
+    Match,
+    Game,
+    PlayerPerformance,
+)
+from lol.serializers import (
+    ChampionListSerializer,
+    ItemSerializer,
+    SummonerSpellSerializer,
+    RuneSerializer,
+)
 
 
 # ---------------------
 # Lightweight / nested
 # ---------------------
 
+
 class LeagueSerializer(serializers.ModelSerializer):
     class Meta:
         model = League
-        fields = ['id', 'name', 'short_name', 'logo']
+        fields = ["id", "name", "short_name", "logo"]
 
 
 class EventListSerializer(serializers.ModelSerializer):
@@ -19,21 +34,29 @@ class EventListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Event
-        fields = ['id', 'name', 'league', 'year', 'start_date', 'end_date',
-                  'is_active', 'logo', 'leaguepedia_page']
+        fields = [
+            "id",
+            "name",
+            "league",
+            "year",
+            "start_date",
+            "end_date",
+            "is_active",
+            "logo",
+            "leaguepedia_page",
+        ]
 
 
 class OrganizationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Organization
-        fields = ['id', 'name', 'short_name', 'logo', 'leaguepedia_page', 'region']
+        fields = ["id", "name", "short_name", "logo", "color", "leaguepedia_page", "region"]
 
 
 class PlayerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Player
-        fields = ['id', 'name', 'real_name', 'image', 'nationality',
-                  'birthdate', 'age']
+        fields = ["id", "name", "real_name", "image", "nationality", "birthdate", "age"]
 
 
 class RosterPlayerSerializer(serializers.ModelSerializer):
@@ -41,7 +64,7 @@ class RosterPlayerSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = RosterPlayer
-        fields = ['id', 'player', 'role', 'is_starter']
+        fields = ["id", "player", "role", "is_starter"]
 
 
 class TeamRosterListSerializer(serializers.ModelSerializer):
@@ -49,7 +72,7 @@ class TeamRosterListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = TeamRoster
-        fields = ['id', 'name', 'org', 'event']
+        fields = ["id", "name", "org", "event"]
 
 
 class TeamRosterDetailSerializer(TeamRosterListSerializer):
@@ -57,30 +80,64 @@ class TeamRosterDetailSerializer(TeamRosterListSerializer):
     event = EventListSerializer(read_only=True)
 
     class Meta(TeamRosterListSerializer.Meta):
-        fields = [*TeamRosterListSerializer.Meta.fields, 'players']
+        fields = [*TeamRosterListSerializer.Meta.fields, "players"]
 
 
 # ---------------------
 # Match / Game
 # ---------------------
 
+
 class MatchListSerializer(serializers.ModelSerializer):
+    team1_score = serializers.IntegerField(read_only=True)
+    team2_score = serializers.IntegerField(read_only=True)
+
     class Meta:
         model = Match
-        fields = ['id', 'match_id', 'event', 'team1', 'team2', 'winner',
-                  'best_of', 'tab', 'datetime_utc', 'patch']
+        fields = [
+            "id",
+            "match_id",
+            "event",
+            "team1",
+            "team2",
+            "winner",
+            "best_of",
+            "tab",
+            "datetime_utc",
+            "patch",
+            "team1_score",
+            "team2_score",
+        ]
 
 
 class GameListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Game
-        fields = ['id', 'game_id', 'match', 'game_number', 'datetime_utc',
-                  'patch', 'gamelength', 'winner', 'vod',
-                  'team1', 'team2',
-                  'team1_kills', 'team1_gold', 'team1_towers',
-                  'team1_dragons', 'team1_barons', 'team1_rift_heralds',
-                  'team2_kills', 'team2_gold', 'team2_towers',
-                  'team2_dragons', 'team2_barons', 'team2_rift_heralds']
+        fields = [
+            "id",
+            "game_id",
+            "match",
+            "game_number",
+            "datetime_utc",
+            "patch",
+            "gamelength",
+            "winner",
+            "vod",
+            "team1",
+            "team2",
+            "team1_kills",
+            "team1_gold",
+            "team1_towers",
+            "team1_dragons",
+            "team1_barons",
+            "team1_rift_heralds",
+            "team2_kills",
+            "team2_gold",
+            "team2_towers",
+            "team2_dragons",
+            "team2_barons",
+            "team2_rift_heralds",
+        ]
 
 
 class PlayerPerformanceSerializer(serializers.ModelSerializer):
@@ -94,22 +151,50 @@ class PlayerPerformanceSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = PlayerPerformance
-        fields = ['id', 'name', 'link', 'team', 'side', 'role',
-                  'champion', 'kills', 'deaths', 'assists',
-                  'cs', 'gold', 'damage_to_champions',
-                  'items', 'trinket', 'summoner_spell_d', 'summoner_spell_f',
-                  'keystone_rune', 'runes']
+        fields = [
+            "id",
+            "name",
+            "link",
+            "team",
+            "side",
+            "role",
+            "champion",
+            "kills",
+            "deaths",
+            "assists",
+            "cs",
+            "gold",
+            "damage_to_champions",
+            "items",
+            "trinket",
+            "summoner_spell_d",
+            "summoner_spell_f",
+            "keystone_rune",
+            "runes",
+        ]
 
 
 class PlayerPerformanceCompactSerializer(serializers.ModelSerializer):
     """Lighter serializer — IDs only for FK/M2M, used in game list views."""
-    champion_name = serializers.CharField(source='champion.name', default=None)
+
+    champion_name = serializers.CharField(source="champion.name", default=None)
 
     class Meta:
         model = PlayerPerformance
-        fields = ['id', 'name', 'team', 'side', 'role', 'champion_name',
-                  'kills', 'deaths', 'assists', 'cs', 'gold',
-                  'damage_to_champions']
+        fields = [
+            "id",
+            "name",
+            "team",
+            "side",
+            "role",
+            "champion_name",
+            "kills",
+            "deaths",
+            "assists",
+            "cs",
+            "gold",
+            "damage_to_champions",
+        ]
 
 
 class GameDetailSerializer(GameListSerializer):
@@ -120,10 +205,15 @@ class GameDetailSerializer(GameListSerializer):
     performances = PlayerPerformanceSerializer(many=True, read_only=True)
 
     class Meta(GameListSerializer.Meta):
-        fields = [*GameListSerializer.Meta.fields,
-                  'team1_picks', 'team1_bans',
-                  'team2_picks', 'team2_bans',
-                  'performances']
+        fields = [
+            *GameListSerializer.Meta.fields,
+            "team1_picks",
+            "team1_bans",
+            "team2_picks",
+            "team2_bans",
+            "performances",
+            "gold_graph",
+        ]
 
 
 class MatchDetailSerializer(MatchListSerializer):
@@ -131,4 +221,4 @@ class MatchDetailSerializer(MatchListSerializer):
     games = GameListSerializer(many=True, read_only=True)
 
     class Meta(MatchListSerializer.Meta):
-        fields = [*MatchListSerializer.Meta.fields, 'games']
+        fields = [*MatchListSerializer.Meta.fields, "games"]

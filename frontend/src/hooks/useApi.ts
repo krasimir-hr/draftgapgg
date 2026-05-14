@@ -57,7 +57,7 @@ export function usePaginatedList<T>(
       });
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, ...deps]);
+  }, [fetcher, page, ...deps]);
 
   return state;
 }

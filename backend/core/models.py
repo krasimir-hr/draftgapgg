@@ -3,6 +3,16 @@ from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator
 from lol.models import Champion, Item, Rune, RunePath, SummonerSpell
 
+PLAYER_ROLES = [
+    ('Top', 'Top'),
+    ('Jungle', 'Jungle'),
+    ('Mid', 'Mid'),
+    ('Bot', 'Bot'),
+    ('Support', 'Support'),
+    ('Coach', 'Coach'),
+    ('Sub', 'Sub'),
+]
+
 
 # -------------------------
 # REGION / LEAGUE
@@ -38,6 +48,7 @@ class Organization(models.Model):
     name = models.CharField(max_length=100)
     short_name = models.CharField(max_length=10)
     logo = models.ImageField(upload_to='teams/', blank=True, null=True)
+    color = models.CharField(max_length=7, blank=True, default='')
     leaguepedia_page = models.CharField(max_length=200, blank=True, null=True)
     region = models.CharField(max_length=100, blank=True, null=True)
 
@@ -45,20 +56,13 @@ class Organization(models.Model):
         return self.name
     
 class Player(models.Model):
-    ROLES = [
-        ('Top', 'Top'),
-        ('Jungle', 'Jungle'),
-        ('Mid', 'Mid'),
-        ('Bot', 'Bot'),
-        ('Support', 'Support'),
-        ('Coach', 'Coach'),
-        ('Sub', 'Sub'),
-    ]
-    name = models.CharField(max_length=100, unique=True)
+    name = models.CharField(max_length=100)
+    leaguepedia_page = models.CharField(max_length=200, unique=True, null=True, blank=True)
     real_name = models.CharField(max_length=200, blank=True, null=True)
     image = models.ImageField(upload_to='players/', blank=True, null=True)
+    leaguepedia_image = models.CharField(max_length=300, blank=True, default='')
     nationality = models.CharField(max_length=200, blank=True, null=True)
-    birthdate = models.CharField(max_length=200, blank=True, null=True)
+    birthdate = models.DateField(null=True, blank=True)
     age = models.CharField(max_length=10, blank=True, null=True)
 
     def __str__(self):
@@ -73,19 +77,9 @@ class TeamRoster(models.Model):
         return f"{self.name} ({self.org}) at {self.event}"
 
 class RosterPlayer(models.Model):
-    ROLES = [
-        ('Top', 'Top'),
-        ('Jungle', 'Jungle'),
-        ('Mid', 'Mid'),
-        ('Bot', 'Bot'),
-        ('Support', 'Support'),
-        ('Coach', 'Coach'),
-        ('Sub', 'Sub'),
-    ]
-
     roster = models.ForeignKey(TeamRoster, on_delete=models.CASCADE, related_name='players')
     player = models.ForeignKey(Player, on_delete=models.CASCADE, related_name='roster_entries')
-    role = models.CharField(max_length=10, choices=ROLES)
+    role = models.CharField(max_length=10, choices=PLAYER_ROLES)
     is_starter = models.BooleanField(default=True)
 
     def __str__(self):
@@ -106,7 +100,6 @@ class Match(models.Model):
 
     class Meta:
         verbose_name_plural = "matches"
-        ordering = ['datetime_utc']
 
     def __str__(self):
         return f"{self.team1} vs {self.team2} ({self.match_id})"
@@ -144,6 +137,13 @@ class Game(models.Model):
     team2_barons = models.IntegerField(default=0)
     team2_rift_heralds = models.IntegerField(default=0)
 
+    # Riot API identifiers (for timeline sync)
+    riot_platform_id = models.CharField(max_length=10, blank=True)
+    riot_platform_game_id = models.CharField(max_length=30, blank=True)
+
+    # Per-minute gold graph: [{minute, t1, t2}, ...]
+    gold_graph = models.JSONField(null=True, blank=True)
+
     class Meta:
         ordering = ['game_number']
 
@@ -156,7 +156,8 @@ class PlayerPerformance(models.Model):
     name = models.CharField(max_length=100)
     link = models.CharField(max_length=200, blank=True)
     team = models.CharField(max_length=100)
-    side = models.IntegerField(default=1)
+    SIDES = [(1, 'Blue'), (2, 'Red')]
+    side = models.IntegerField(default=1, choices=SIDES)
     role = models.CharField(max_length=20)
     champion = models.ForeignKey(Champion, on_delete=models.SET_NULL, null=True, blank=True)
 
