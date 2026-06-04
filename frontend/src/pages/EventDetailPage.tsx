@@ -1,4 +1,4 @@
-import { useParams, Link } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { useState, useCallback } from 'react';
 import { useDetail, usePaginatedList } from '../hooks/useApi';
 import { getEvent, getMatches } from '../api/core';
@@ -6,10 +6,12 @@ import type { Event, Match, PaginatedResponse } from '../types/models';
 import type { AxiosResponse } from 'axios';
 import Spinner from '../components/Spinner';
 import Pagination from '../components/Pagination';
+import { useDrawer } from '../contexts/DrawerContext';
 
 export default function EventDetailPage() {
   const { id } = useParams<{ id: string }>();
   const eventId = Number(id);
+  const { openMatch } = useDrawer();
 
   const { data: event, loading: eventLoading, error: eventError } = useDetail<Event>(getEvent, eventId);
 
@@ -63,10 +65,11 @@ export default function EventDetailPage() {
         <>
           <div className="space-y-2">
             {matches.map((m) => (
-              <Link
+              <button
                 key={m.id}
-                to={`/matches/${m.id}`}
-                className="card card-link flex items-center gap-4 px-5 py-4"
+                type="button"
+                onClick={() => openMatch(m.id)}
+                className="w-full card card-link flex items-center gap-4 px-5 py-4 text-left"
               >
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-(--text-h) mb-0.5">
@@ -83,7 +86,7 @@ export default function EventDetailPage() {
                 <span className="text-xs text-(--text-dim) shrink-0 tabular-nums">
                   {m.datetime_utc ? new Date(m.datetime_utc).toLocaleDateString() : 'TBD'}
                 </span>
-              </Link>
+              </button>
             ))}
           </div>
           <Pagination page={page} totalPages={totalPages} onChange={setPage} />

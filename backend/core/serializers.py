@@ -26,7 +26,7 @@ from lol.serializers import (
 class LeagueSerializer(serializers.ModelSerializer):
     class Meta:
         model = League
-        fields = ["id", "name", "short_name", "logo"]
+        fields = ["id", "name", "short_name", "logo", "youtube", "instagram", "twitter", "twitch"]
 
 
 class EventListSerializer(serializers.ModelSerializer):
@@ -44,6 +44,7 @@ class EventListSerializer(serializers.ModelSerializer):
             "is_active",
             "logo",
             "leaguepedia_page",
+            "prize_pool",
         ]
 
 

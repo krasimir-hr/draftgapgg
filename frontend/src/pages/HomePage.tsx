@@ -1,9 +1,10 @@
 import { useEffect, useReducer } from 'react';
-import { Link } from 'react-router-dom';
 import { getOverview } from '../api/core';
 import type { Overview, Match, OverviewTopChampion, OverviewTopPlayer } from '../types/models';
+import { useDrawer } from '../contexts/DrawerContext';
+import { ChampionIcon } from '../components/ChampionIcon';
 
-/* ── state machine ── */
+/* state machine */
 
 type State =
   | { status: 'loading' }
@@ -21,7 +22,7 @@ function reducer(_: State, action: Action): State {
   return { status: 'error', message: action.message };
 }
 
-/* ── helpers ── */
+/* helpers */
 
 function fmtDatetime(dt: string | null): string {
   if (!dt) return 'TBD';
@@ -45,13 +46,14 @@ function roleShort(role: string): string {
   return map[role] ?? role.toUpperCase().slice(0, 3);
 }
 
-/* ── sub-components ── */
+/* sub-components */
 
-function CardShell({ title, children }: { title: string; children: React.ReactNode }) {
+function CardShell({ title, children, meta }: { title: string; children: React.ReactNode; meta?: string }) {
   return (
-    <div className="card flex flex-col">
-      <div className="px-5 py-4 border-b border-(--border)">
-        <h2 className="text-sm font-semibold text-(--text-h) tracking-tight">{title}</h2>
+    <div className="card card-soft-shadow flex flex-col">
+      <div className="px-5 py-4 border-b border-(--border) flex items-baseline gap-2">
+        <h2 className="font-sans text-sm font-semibold text-(--text-h) tracking-tight">{title}</h2>
+        {meta && <span className="text-xs text-(--text-dim)">· {meta}</span>}
       </div>
       <div className="flex-1">{children}</div>
     </div>
@@ -59,31 +61,33 @@ function CardShell({ title, children }: { title: string; children: React.ReactNo
 }
 
 function MatchRow({ m, showScore }: { m: Match; showScore: boolean }) {
-  const winner = m.winner === 1 ? m.team1 : m.winner === 2 ? m.team2 : null;
+  const { openMatch } = useDrawer();
+  const t1Win = m.winner === 1;
+  const t2Win = m.winner === 2;
   return (
-    <Link
-      to={`/matches/${m.id}`}
-      className="flex items-center gap-3 px-5 py-3 hover:bg-(--surface-sub) transition-colors border-b border-(--border) last:border-0"
+    <button
+      type="button"
+      onClick={() => openMatch(m.id)}
+      className="w-full flex items-center gap-3 px-5 py-3 hover:bg-(--surface-sub) transition-colors border-b border-(--border) last:border-0 text-left"
     >
       <div className="flex-1 min-w-0">
         {showScore ? (
-          <p className="text-sm font-medium text-(--text-h) tabular-nums">
-            <span className={m.winner === 1 ? 'font-semibold' : 'text-(--text)'}>{m.team1}</span>
-            <span className="mx-1.5 text-(--text-dim) text-xs font-bold">
-              {m.team1_score}–{m.team2_score}
+          <p className="text-sm text-(--text-h) tabular-nums">
+            <span className={t1Win ? 'font-semibold text-(--text-h)' : 'text-(--text-dim)'}>{m.team1}</span>
+            <span className="mx-2 text-(--text-dim) text-xs font-bold">
+              {m.team1_score}<span className="text-(--text-faint) font-normal">–</span>{m.team2_score}
             </span>
-            <span className={m.winner === 2 ? 'font-semibold' : 'text-(--text)'}>{m.team2}</span>
+            <span className={t2Win ? 'font-semibold text-(--text-h)' : 'text-(--text-dim)'}>{m.team2}</span>
           </p>
         ) : (
           <p className="text-sm font-medium text-(--text-h)">
             {m.team1}
-            <span className="mx-1.5 text-(--text-dim) text-xs">vs</span>
+            <span className="mx-2 text-(--text-faint) text-xs">vs</span>
             {m.team2}
           </p>
         )}
-        <p className="text-xs text-(--text-dim) mt-0.5">
+        <p className="text-xs text-(--text-dim) mt-1 tracking-wide">
           BO{m.best_of}{m.tab ? ` · ${m.tab}` : ''}
-          {winner && ` · ${winner} wins`}
         </p>
       </div>
       <span className="text-xs text-(--text-dim) shrink-0 tabular-nums">
@@ -93,24 +97,25 @@ function MatchRow({ m, showScore }: { m: Match; showScore: boolean }) {
             : 'TBD'
           : fmtDatetime(m.datetime_utc)}
       </span>
-    </Link>
+    </button>
   );
 }
 
 function ChampRow({ c, rank }: { c: OverviewTopChampion; rank: number }) {
+  const wr = c.win_rate;
+  const wrColor = wr === null ? 'text-(--text-h)'
+    : wr >= 55 ? 'text-(--green)'
+    : wr <= 45 ? 'text-(--red)'
+    : 'text-(--text-h)';
   return (
-    <div className="flex items-center gap-3 px-5 py-3 border-b border-(--border) last:border-0">
-      <span className="w-4 text-xs text-(--text-dim) tabular-nums text-right shrink-0">{rank}</span>
-      <img src={c.icon_url} alt={c.name} className="w-8 h-8 rounded-md object-cover shrink-0" />
-      <span className="flex-1 min-w-0 text-sm font-medium text-(--text-h) truncate">{c.name}</span>
+    <div className="flex items-center gap-3 px-5 py-3 border-b border-(--border) last:border-0 hover:bg-(--surface-sub) transition-colors">
+      <span className="w-5 text-xs text-(--text-dim) tabular-nums text-right shrink-0 font-semibold">{rank}</span>
+      <ChampionIcon src={c.icon_url} alt={c.name} size={32} />
+      <span className="flex-1 min-w-0 text-sm font-semibold text-(--text-h) truncate">{c.name}</span>
       <div className="flex gap-4 shrink-0 text-xs tabular-nums text-(--text-dim)">
-        <span><span className="text-(--text-h) font-medium">{c.picks}</span> picks</span>
-        {c.win_rate !== null && (
-          <span
-            className={`font-medium ${c.win_rate >= 55 ? 'text-(--green)' : c.win_rate <= 45 ? 'text-red-400' : 'text-(--text-h)'}`}
-          >
-            {c.win_rate}%
-          </span>
+        <span><span className="text-(--text-h) font-semibold">{c.picks}</span> picks</span>
+        {wr !== null && (
+          <span className={`font-semibold ${wrColor}`}>{wr.toFixed(1)}%</span>
         )}
       </div>
     </div>
@@ -119,22 +124,22 @@ function ChampRow({ c, rank }: { c: OverviewTopChampion; rank: number }) {
 
 function PlayerRow({ p, rank }: { p: OverviewTopPlayer; rank: number }) {
   return (
-    <div className="flex items-center gap-3 px-5 py-3 border-b border-(--border) last:border-0">
-      <span className="w-4 text-xs text-(--text-dim) tabular-nums text-right shrink-0">{rank}</span>
+    <div className="flex items-center gap-3 px-5 py-3 border-b border-(--border) last:border-0 hover:bg-(--surface-sub) transition-colors">
+      <span className="w-5 text-xs text-(--text-dim) tabular-nums text-right shrink-0 font-semibold">{rank}</span>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-(--text-h) truncate">{p.name}</p>
-        <p className="text-xs text-(--text-dim)">
+        <p className="text-sm font-semibold text-(--text-h) truncate">{p.name}</p>
+        <p className="text-xs text-(--text-dim) mt-0.5">
           {p.team} · {roleShort(p.role)}
         </p>
       </div>
-      <div className="flex gap-4 shrink-0 text-xs tabular-nums text-right">
+      <div className="flex gap-5 shrink-0 text-xs tabular-nums text-right">
         <div>
-          <p className="text-(--text-dim)">KDA</p>
-          <p className="text-(--text-h) font-semibold">{p.kda}</p>
+          <p className="text-[10px] uppercase tracking-wider text-(--text-dim)">KDA</p>
+          <p className="text-(--text-h) font-semibold mt-0.5 font-display text-base leading-none">{p.kda}</p>
         </div>
         <div>
-          <p className="text-(--text-dim)">K/D/A</p>
-          <p className="text-(--text-h) font-medium">
+          <p className="text-[10px] uppercase tracking-wider text-(--text-dim)">K/D/A</p>
+          <p className="text-(--text) font-medium mt-0.5">
             {p.avg_kills}/{p.avg_deaths}/{p.avg_assists}
           </p>
         </div>
@@ -149,7 +154,7 @@ function EmptyState({ label }: { label: string }) {
   );
 }
 
-/* ── main page ── */
+/* main page */
 
 export default function HomePage() {
   const [state, dispatch] = useReducer(reducer, { status: 'loading' });
@@ -166,17 +171,21 @@ export default function HomePage() {
 
   return (
     <div className="max-w-6xl mx-auto px-6 py-8">
-      <div className="flex items-baseline gap-3 mb-8">
-        <h1 className="text-2xl font-bold text-(--text-h)">Overview</h1>
-      </div>
+      <header className="mb-8">
+        <div className="eyebrow mb-2">Pro League · Overview</div>
+        <h1 className="h-display" style={{ fontSize: 44 }}>Overview</h1>
+        <p className="mt-3 text-(--text)" style={{ fontSize: 15.5, maxWidth: 580, lineHeight: 1.55 }}>
+          Match results, picks, and player form across the leagues you follow. Tap any card to dig deeper.
+        </p>
+      </header>
 
       {state.status === 'error' && (
-        <p className="text-sm text-red-400 py-8 text-center">{state.message}</p>
+        <p className="text-sm text-(--red) py-8 text-center">{state.message}</p>
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Upcoming Matches */}
-        <CardShell title="Upcoming Matches">
+        <CardShell title="Upcoming matches">
           {loading && <div className="px-5 py-10 flex justify-center"><div className="spinner" /></div>}
           {data && (
             data.upcoming_matches.length > 0
@@ -186,7 +195,7 @@ export default function HomePage() {
         </CardShell>
 
         {/* Recent Results */}
-        <CardShell title="Recent Results">
+        <CardShell title="Recent results">
           {loading && <div className="px-5 py-10 flex justify-center"><div className="spinner" /></div>}
           {data && (
             data.recent_results.length > 0
@@ -196,22 +205,22 @@ export default function HomePage() {
         </CardShell>
 
         {/* Top Champions */}
-        <CardShell title="Most Picked Champions">
+        <CardShell title="Most picked champions" meta="Patch 16.10">
           {loading && <div className="px-5 py-10 flex justify-center"><div className="spinner" /></div>}
           {data && (
             data.top_champions.length > 0
               ? data.top_champions.map((c, i) => <ChampRow key={c.id} c={c} rank={i + 1} />)
-              : <EmptyState label="No champion data" />
+              : <EmptyState label="No champion data yet." />
           )}
         </CardShell>
 
         {/* Top Players */}
-        <CardShell title="Best KDA Players">
+        <CardShell title="Best KDA players">
           {loading && <div className="px-5 py-10 flex justify-center"><div className="spinner" /></div>}
           {data && (
             data.top_players.length > 0
               ? data.top_players.map((p, i) => <PlayerRow key={p.name} p={p} rank={i + 1} />)
-              : <EmptyState label="No player data" />
+              : <EmptyState label="No player data yet." />
           )}
         </CardShell>
       </div>

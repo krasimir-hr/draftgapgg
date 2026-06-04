@@ -45,6 +45,196 @@ class EventViewSet(ReadOnlyModelViewSet):
     filterset_fields = ['league', 'is_active', 'year']
 
     @action(detail=True, methods=['get'])
+    def stats(self, request, pk=None):
+        event = self.get_object()
+
+        match_qs = Match.objects.filter(event=event)
+        total_matches = match_qs.count()
+        completed_matches = match_qs.exclude(winner__isnull=True).count()
+
+        games = Game.objects.filter(match__event=event)
+        games_played = games.count()
+
+        total_seconds = 0
+        counted = 0
+        for gl in games.values_list('gamelength', flat=True):
+            if not gl or ':' not in gl:
+                continue
+            try:
+                mm, ss = gl.split(':')
+                secs = int(mm) * 60 + int(ss)
+            except (ValueError, TypeError):
+                continue
+            if secs <= 0:
+                continue
+            total_seconds += secs
+            counted += 1
+
+        avg_game_length = None
+        if counted:
+            avg = total_seconds // counted
+            avg_game_length = f"{avg // 60}:{avg % 60:02d}"
+
+        return Response({
+            'prize_pool': event.prize_pool or None,
+            'total_matches': total_matches,
+            'completed_matches': completed_matches,
+            'games_played': games_played,
+            'avg_game_length': avg_game_length,
+        })
+
+    @action(detail=True, methods=['get'])
+    def highlights(self, request, pk=None):
+        event = self.get_object()
+        now = timezone.now()
+        thirty_days_ago = now - timezone.timedelta(days=30)
+
+        # Player of the month — best KDA among players with ≥2 games in past 30 days
+        recent_perfs = list(
+            PlayerPerformance.objects
+            .filter(game__match__event=event)
+            .filter(
+                Q(game__datetime_utc__gte=thirty_days_ago) |
+                Q(game__datetime_utc__isnull=True, game__match__datetime_utc__gte=thirty_days_ago)
+            )
+            .select_related('game', 'game__match')
+        )
+        player_stats = {}
+        for p in recent_perfs:
+            s = player_stats.setdefault(p.name, {
+                'name': p.name, 'team': p.team, 'role': p.role,
+                'games': 0, 'kills': 0, 'deaths': 0, 'assists': 0,
+            })
+            s['games'] += 1
+            s['kills'] += p.kills
+            s['deaths'] += p.deaths
+            s['assists'] += p.assists
+
+        player_of_month = None
+        eligible_players = [s for s in player_stats.values() if s['games'] >= 2]
+        if eligible_players:
+            def player_kda(s):
+                return (s['kills'] + s['assists']) / max(s['deaths'], 1)
+            best_player = max(eligible_players, key=player_kda)
+            g = best_player['games']
+            player_record = Player.objects.filter(name=best_player['name']).first()
+            team_roster = (
+                TeamRoster.objects
+                .filter(name=best_player['team'], event=event)
+                .select_related('org')
+                .first()
+            )
+            team_logo = None
+            if team_roster and team_roster.org and team_roster.org.logo:
+                team_logo = request.build_absolute_uri(team_roster.org.logo.url)
+            player_image = None
+            if player_record and player_record.image:
+                player_image = request.build_absolute_uri(player_record.image.url)
+            elif player_record and player_record.leaguepedia_image:
+                player_image = player_record.leaguepedia_image
+            player_of_month = {
+                'name': best_player['name'],
+                'team': best_player['team'],
+                'team_logo': team_logo,
+                'role': best_player['role'],
+                'nationality': player_record.nationality if player_record else None,
+                'games': g,
+                'avg_kills': round(best_player['kills'] / g, 1),
+                'avg_deaths': round(best_player['deaths'] / g, 1),
+                'avg_assists': round(best_player['assists'] / g, 1),
+                'kda': round(player_kda(best_player), 2),
+                'image': player_image,
+            }
+
+        # Inform team — team with best form in their last 5 matches in the event
+        all_completed = list(
+            Match.objects
+            .filter(event=event)
+            .exclude(winner__isnull=True)
+            .order_by('-datetime_utc')
+        )
+        team_matches = {}
+        for m in all_completed:
+            for team in [m.team1, m.team2]:
+                team_matches.setdefault(team, []).append(m)
+
+        inform_team = None
+        team_form_scores = {}
+        for team, t_matches in team_matches.items():
+            last5 = t_matches[:5]
+            wins = sum(
+                1 for m in last5
+                if (m.team1 == team and m.winner == 1) or (m.team2 == team and m.winner == 2)
+            )
+            team_form_scores[team] = {'team': team, 'wins': wins, 'played': len(last5)}
+
+        if team_form_scores:
+            best_team_data = max(team_form_scores.values(), key=lambda x: (x['wins'], x['played']))
+            best_team = best_team_data['team']
+            roster = (
+                TeamRoster.objects
+                .filter(name=best_team, event=event)
+                .select_related('org')
+                .first()
+            )
+            logo = None
+            if roster and roster.org and roster.org.logo:
+                logo = request.build_absolute_uri(roster.org.logo.url)
+            form_results = []
+            for m in team_matches[best_team][:5]:
+                won = (m.team1 == best_team and m.winner == 1) or (m.team2 == best_team and m.winner == 2)
+                form_results.append('W' if won else 'L')
+            inform_team = {
+                'team': best_team,
+                'logo': logo,
+                'wins': best_team_data['wins'],
+                'played': best_team_data['played'],
+                'form': form_results,
+            }
+
+        # Must pick — champion with best win rate in past 30 days (≥2 picks)
+        recent_champ_perfs = list(
+            PlayerPerformance.objects
+            .filter(game__match__event=event, champion__isnull=False)
+            .filter(
+                Q(game__datetime_utc__gte=thirty_days_ago) |
+                Q(game__datetime_utc__isnull=True, game__match__datetime_utc__gte=thirty_days_ago)
+            )
+            .select_related('game', 'champion')
+        )
+        champ_stats = {}
+        for p in recent_champ_perfs:
+            c = p.champion
+            s = champ_stats.setdefault(c.id, {
+                'id': c.id, 'name': c.name, 'icon_url': c.icon_url(),
+                'splash_url': f'https://ddragon.leagueoflegends.com/cdn/img/champion/splash/{c.riot_id}_0.jpg',
+                'picks': 0, 'wins': 0,
+            })
+            s['picks'] += 1
+            if p.side == p.game.winner:
+                s['wins'] += 1
+
+        must_pick = None
+        eligible_champs = [s for s in champ_stats.values() if s['picks'] >= 2]
+        if eligible_champs:
+            best_champ = max(eligible_champs, key=lambda s: (s['wins'] / s['picks'], s['picks']))
+            must_pick = {
+                'id': best_champ['id'],
+                'name': best_champ['name'],
+                'icon_url': best_champ['icon_url'],
+                'splash_url': best_champ['splash_url'],
+                'picks': best_champ['picks'],
+                'wins': best_champ['wins'],
+                'win_rate': round(best_champ['wins'] / best_champ['picks'] * 100, 1),
+            }
+
+        return Response({
+            'player_of_month': player_of_month,
+            'inform_team': inform_team,
+            'must_pick': must_pick,
+        })
+
+    @action(detail=True, methods=['get'])
     def standings(self, request, pk=None):
         event = self.get_object()
 

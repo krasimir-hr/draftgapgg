@@ -100,6 +100,10 @@ export interface League {
   name: string;
   short_name: string | null;
   logo: string | null;
+  youtube: string;
+  instagram: string;
+  twitter: string;
+  twitch: string;
 }
 
 export interface Event {
@@ -112,6 +116,15 @@ export interface Event {
   is_active: boolean;
   logo: string | null;
   leaguepedia_page: string | null;
+  prize_pool: string;
+}
+
+export interface EventStats {
+  prize_pool: string | null;
+  total_matches: number;
+  completed_matches: number;
+  games_played: number;
+  avg_game_length: string | null;
 }
 
 export interface Organization {
@@ -258,6 +271,38 @@ export interface StandingsEntry {
   wins: number;
   losses: number;
   kills: number;
+}
+
+export interface EventHighlights {
+  player_of_month: {
+    name: string;
+    team: string;
+    team_logo: string | null;
+    role: string;
+    nationality: string | null;
+    games: number;
+    avg_kills: number;
+    avg_deaths: number;
+    avg_assists: number;
+    kda: number;
+    image: string | null;
+  } | null;
+  inform_team: {
+    team: string;
+    logo: string | null;
+    wins: number;
+    played: number;
+    form: ('W' | 'L')[];
+  } | null;
+  must_pick: {
+    id: number;
+    name: string;
+    icon_url: string;
+    splash_url: string;
+    picks: number;
+    wins: number;
+    win_rate: number | null;
+  } | null;
 }
 
 export interface EventChampionStats {

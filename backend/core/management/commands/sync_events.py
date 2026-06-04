@@ -30,7 +30,7 @@ class Command(BaseCommand):
         # --- Step 1: Get all official primary events from 2025 onward ---
         event_data = site.cargo_client.query(
             tables="Tournaments",
-            fields="Name, Region, DateStart, Date, OverviewPage, League, TournamentLevel, IsOfficial",
+            fields="Name, Region, DateStart, Date, OverviewPage, League, TournamentLevel, IsOfficial, Prizepool",
             where="TournamentLevel = 'Primary' AND IsOfficial = '1' AND DateStart >= '2025-01-01'",
             limit=500
         )
@@ -89,8 +89,23 @@ class Command(BaseCommand):
                     "end_date": data.get("Date") or None,
                     "is_active": is_active,
                     "year": int(year),
+                    "prize_pool": (data.get("Prizepool") or "").strip(),
                 }
             )
+
+        # Propagate Road to MSI end_date onto its Rounds 1-2 parent so the
+        # combined tournament shows the correct end date and is_active state.
+        today = timezone.now().date()
+        for road_to_msi in Event.objects.filter(name__icontains='Road to MSI'):
+            parent = Event.objects.filter(
+                league=road_to_msi.league,
+                year=road_to_msi.year,
+                name__icontains='Rounds 1-2',
+            ).first()
+            if parent and road_to_msi.end_date and (not parent.end_date or road_to_msi.end_date > parent.end_date):
+                parent.end_date = road_to_msi.end_date
+                parent.is_active = parent.start_date <= today <= road_to_msi.end_date
+                parent.save(update_fields=['end_date', 'is_active'])
 
         BATCH_SIZE = 20
 

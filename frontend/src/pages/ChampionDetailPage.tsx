@@ -3,6 +3,7 @@ import { useDetail } from '../hooks/useApi';
 import { getChampion } from '../api/lol';
 import type { ChampionDetail } from '../types/models';
 import Spinner from '../components/Spinner';
+import { ChampionIcon } from '../components/ChampionIcon';
 
 export default function ChampionDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -19,7 +20,7 @@ export default function ChampionDetailPage() {
     <div className="max-w-4xl mx-auto px-6 py-8">
       <div className="card p-6 mb-6">
         <div className="flex items-center gap-5">
-          <img src={champion.icon_url} alt={champion.name} className="w-20 h-20 rounded-xl shrink-0" />
+          <ChampionIcon src={champion.icon_url} alt={champion.name} size={80} />
           <div>
             <h1 className="text-2xl font-bold text-(--text-h) mb-1">{champion.name}</h1>
             <p className="text-sm text-(--text) italic mb-3">{champion.title}</p>

@@ -15,6 +15,8 @@ import type {
   StandingsEntry,
   EventChampionStats,
   EventPlayerStats,
+  EventStats,
+  EventHighlights,
   Overview,
   PlayerProfile,
   TeamProfile,
@@ -36,6 +38,12 @@ export const getEvent = (id: number) =>
 
 export const getEventStandings = (id: number) =>
   api.get<StandingsEntry[]>(`/api/events/${id}/standings/`);
+
+export const getEventStats = (id: number) =>
+  api.get<EventStats>(`/api/events/${id}/stats/`);
+
+export const getEventHighlights = (id: number) =>
+  api.get<EventHighlights>(`/api/events/${id}/highlights/`);
 
 export const getEventPlayers = (id: number) =>
   api.get<EventPlayerStats[]>(`/api/events/${id}/players/`);

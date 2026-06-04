@@ -5,6 +5,7 @@ import { usePaginatedList } from '../hooks/useApi';
 import type { Champion } from '../types/models';
 import Spinner from '../components/Spinner';
 import Pagination from '../components/Pagination';
+import { ChampionIcon } from '../components/ChampionIcon';
 
 export default function ChampionsPage() {
   const [page, setPage] = useState(1);
@@ -32,7 +33,7 @@ export default function ChampionsPage() {
                 to={`/champions/${c.id}`}
                 className="card card-link flex flex-col items-center p-2.5 text-center"
               >
-                <img src={c.icon_url} alt={c.name} className="w-12 h-12 rounded-md mb-1.5" loading="lazy" />
+                <ChampionIcon src={c.icon_url} alt={c.name} size={48} style={{ marginBottom: 6 }} />
                 <span className="text-xs font-medium text-(--text-h) leading-tight">{c.name}</span>
                 <span className="text-[10px] text-(--text-dim) mt-0.5 leading-tight">{c.tags[0]}</span>
               </Link>

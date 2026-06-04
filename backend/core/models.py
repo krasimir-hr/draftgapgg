@@ -19,9 +19,13 @@ PLAYER_ROLES = [
 # -------------------------
 
 class League(models.Model):
-    name = models.CharField(max_length=100, unique=True)  # "LCK", "LPL", "Worlds", "MSI"
-    short_name =  models.CharField(max_length=20, blank=True, null=True)  # "LCK", "LPL", "Worlds", "MSI"
+    name = models.CharField(max_length=100, unique=True)
+    short_name = models.CharField(max_length=20, blank=True, null=True)
     logo = models.ImageField(upload_to='leagues/', blank=True, null=True)
+    youtube = models.URLField(max_length=200, blank=True, default='')
+    instagram = models.URLField(max_length=200, blank=True, default='')
+    twitter = models.URLField(max_length=200, blank=True, default='')
+    twitch = models.URLField(max_length=200, blank=True, default='')
 
     def __str__(self):
         return self.name
@@ -35,6 +39,7 @@ class Event(models.Model):
     is_active = models.BooleanField(default=False)
     logo = models.ImageField(upload_to='events/', blank=True, null=True)
     leaguepedia_page = models.CharField(max_length=200, blank=True, null=True)
+    prize_pool = models.CharField(max_length=50, blank=True, default='')
 
     is_fully_synced = models.BooleanField(default=False)
     last_synced_at = models.DateTimeField(null=True, blank=True)
