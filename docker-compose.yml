@@ -1,0 +1,94 @@
+# Full stack: Django API (gunicorn) + Caddy (SPA, reverse proxy, TLS) + sync cron.
+#
+#   Local test:   SITE_ADDRESS=:80 VITE_API_URL=http://localhost docker compose up --build
+#                 (add `--profile localdb` to also run a throwaway Postgres)
+#   Production:   put SITE_ADDRESS=yourdomain.com and VITE_API_URL=https://yourdomain.com
+#                 in a root .env, point backend/.env at your DB, then `docker compose up -d --build`
+
+services:
+  backend:
+    build: ./backend
+    env_file: ./backend/.env
+    # DB settings come from compose (root .env or the defaults below), overriding
+    # backend/.env — which is kept blank for native SQLite dev. Defaults target the
+    # bundled `db` service; for an external/managed DB set DB_HOST etc. in root .env.
+    environment:
+      DB_NAME: ${DB_NAME:-draftgap}
+      DB_USER: ${DB_USER:-draftgap}
+      DB_PASSWORD: ${DB_PASSWORD:-draftgap}
+      DB_HOST: ${DB_HOST:-db}
+      DB_PORT: ${DB_PORT:-5432}
+    volumes:
+      - static_data:/app/staticfiles
+      - media_data:/app/media
+    expose:
+      - "8000"
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost}
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-:80}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - static_data:/srv/static:ro
+      - media_data:/srv/media:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  # Periodically re-scrape Leaguepedia. Default: every 6h (21600s).
+  cron:
+    build: ./backend
+    env_file: ./backend/.env
+    environment:
+      DB_NAME: ${DB_NAME:-draftgap}
+      DB_USER: ${DB_USER:-draftgap}
+      DB_PASSWORD: ${DB_PASSWORD:-draftgap}
+      DB_HOST: ${DB_HOST:-db}
+      DB_PORT: ${DB_PORT:-5432}
+    entrypoint: []
+    # Each cycle: refresh tournaments/rosters, then matches/games/performances,
+    # then enrich from Oracle's Elixir, then recompute Performance Ratings.
+    # Each step is independent (|| true) so one failure (e.g. OE quota) doesn't
+    # block the rest. pull_oracleselixir needs OE_DRIVE_API_KEY in backend/.env.
+    command: >
+      sh -c "while true; do
+      python manage.py sync_events || true;
+      python manage.py sync_matches --all || true;
+      python manage.py pull_oracleselixir || true;
+      python manage.py compute_ratings --all || true;
+      sleep ${SYNC_INTERVAL:-21600}; done"
+    volumes:
+      - media_data:/app/media
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  # Optional self-hosted Postgres for fully-local runs.
+  # Enable with: docker compose --profile localdb up
+  # and set DB_HOST=db in backend/.env.
+  db:
+    image: postgres:16-alpine
+    profiles: ["localdb"]
+    environment:
+      POSTGRES_DB: ${DB_NAME:-draftgap}
+      POSTGRES_USER: ${DB_USER:-draftgap}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-draftgap}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  static_data:
+  media_data:
+  caddy_data:
+  caddy_config:
+  pg_data:

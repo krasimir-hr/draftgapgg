@@ -1,0 +1,29 @@
+# SITE_ADDRESS controls TLS:
+#   local test → ":80"        (plain HTTP)
+#   production → "example.com" (Caddy auto-provisions a Let's Encrypt cert)
+{$SITE_ADDRESS::80} {
+	encode gzip zstd
+
+	# API + Django admin → gunicorn
+	handle /api/* {
+		reverse_proxy backend:8000
+	}
+	handle /admin/* {
+		reverse_proxy backend:8000
+	}
+
+	# Collected static files (incl. Django admin assets) — shared volume
+	handle /static/* {
+		root * /srv
+		file_server
+	}
+
+	# Media (scraped imagery) is served from Cloudflare R2, not here.
+
+	# Everything else → the SPA, with client-side routing fallback
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+}
