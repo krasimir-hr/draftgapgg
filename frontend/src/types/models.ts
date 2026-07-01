@@ -1,6 +1,4 @@
-/* ───────────────────────────────────────────────
-   Shared API response / model types
-   ─────────────────────────────────────────────── */
+// Shared API response / model types
 
 // DRF PageNumberPagination envelope
 export interface PaginatedResponse<T> {
@@ -10,7 +8,7 @@ export interface PaginatedResponse<T> {
   results: T[];
 }
 
-// ── lol app ──
+// lol app
 
 export interface Champion {
   id: number;
@@ -39,6 +37,111 @@ export interface ChampionAbility {
 
 export interface ChampionDetail extends Champion {
   abilities: ChampionAbility[];
+}
+
+export interface ChampionProfileMeta {
+  id: number;
+  name: string;
+  title: string;
+  tags: string[];
+  resource_type: string;
+  icon_url: string;
+  splash_url: string | null;
+  patch: string;
+}
+
+export interface ChampionProfileAbility {
+  id: number;
+  ability_type: string;
+  name: string;
+  description: string;
+  cooldown: number[];
+  cost: number[];
+  image_url: string | null;
+}
+
+export interface ChampionProfileStats {
+  games: number;
+  wins: number;
+  losses: number;
+  win_rate: number | null;
+  bans: number;
+  pick_rate: number | null;
+  ban_rate: number | null;
+  presence: number | null;
+  avg_kills: number;
+  avg_deaths: number;
+  avg_assists: number;
+  kda: number;
+  avg_cs: number;
+  avg_cs_per_min: number | null;
+  avg_gold: number;
+  avg_damage: number;
+  blue_games: number;
+  blue_win_rate: number | null;
+  red_games: number;
+  red_win_rate: number | null;
+}
+
+export interface ChampionProfileRole {
+  role: string;
+  games: number;
+  wins: number;
+  win_rate: number | null;
+  share: number;
+}
+
+export interface ChampionProfilePlayer {
+  name: string;
+  team: string;
+  games: number;
+  win_rate: number;
+  kda: number;
+  avg_kills: number;
+  avg_deaths: number;
+  avg_assists: number;
+  image: string | null;
+  team_logo: string | null;
+}
+
+export interface ChampionProfileRegion {
+  id: number;
+  name: string;
+  full_name: string;
+  logo: string | null;
+  games: number;
+  wins: number;
+  win_rate: number;
+}
+
+export interface ChampionProfileGame {
+  game_id: number;
+  match_id: number;
+  datetime: string | null;
+  event: string;
+  league: string;
+  player: string;
+  role: string;
+  team: string;
+  team_logo: string | null;
+  opponent: string;
+  opponent_logo: string | null;
+  won: boolean | null;
+  kills: number;
+  deaths: number;
+  assists: number;
+  cs: number;
+}
+
+export interface ChampionProfile {
+  champion: ChampionProfileMeta;
+  abilities: ChampionProfileAbility[];
+  available_years: number[];
+  stats: ChampionProfileStats;
+  roles: ChampionProfileRole[];
+  best_players: ChampionProfilePlayer[];
+  best_regions: ChampionProfileRegion[];
+  recent_games: ChampionProfileGame[];
 }
 
 export interface Item {
@@ -93,7 +196,7 @@ export interface SummonerSpell {
   icon_url: string;
 }
 
-// ── core app ──
+// core app
 
 export interface League {
   id: number;
@@ -104,6 +207,14 @@ export interface League {
   instagram: string;
   twitter: string;
   twitch: string;
+}
+
+export interface EventStage {
+  id: number;
+  name: string;
+  type: 'league' | 'playoff' | 'swiss' | 'group' | 'play_in';
+  order: number;
+  has_lower_bracket: boolean;
 }
 
 export interface Event {
@@ -117,6 +228,7 @@ export interface Event {
   logo: string | null;
   leaguepedia_page: string | null;
   prize_pool: string;
+  stages: EventStage[];
 }
 
 export interface EventStats {
@@ -179,6 +291,18 @@ export interface Match {
   patch: string;
   team1_score: number;
   team2_score: number;
+  next_match: number | null;
+  bracket_col: number | null;
+  bracket_order: number | null;
+  is_lower_bracket: boolean;
+  is_final: boolean;
+  league_logo: string | null;
+  league_short_name: string | null;
+  // Present on the home feed (/api/home-matches/); team org crests + short names.
+  team1_logo?: string | null;
+  team2_logo?: string | null;
+  team1_short?: string | null;
+  team2_short?: string | null;
 }
 
 export interface GameListItem {
@@ -221,12 +345,30 @@ export interface PlayerPerformance {
   cs: number;
   gold: number;
   damage_to_champions: number;
+  vision_score: number;
+  rating: PerformanceRatingInfo | null;
   items: Item[];
   trinket: Item | null;
   summoner_spell_d: SummonerSpell | null;
   summoner_spell_f: SummonerSpell | null;
   keystone_rune: Rune | null;
   runes: Rune[];
+}
+
+export interface RatingMetric {
+  key: string;
+  score: number;   // 0–100 vs same-role peers
+  weight: number;  // 0–1, how much this metric counts for the role (renormalized)
+}
+
+export interface PerformanceRatingInfo {
+  pr: number;
+  points: number;
+  tier: 'enriched' | 'basic';
+  is_mvp: boolean;
+  won: boolean;
+  contribution: number;
+  metrics: RatingMetric[];
 }
 
 export interface PlayerPerformanceCompact {
@@ -264,13 +406,59 @@ export interface MatchDetail extends Omit<Match, 'event'> {
   games: GameListItem[];
 }
 
+export interface H2HMatch {
+  id: number;
+  datetime_utc: string | null;
+  event_name: string;
+  event_id: number;
+  league: string;
+  league_logo: string | null;
+  tab: string;
+  patch: string;
+  best_of: number;
+  team1: string;
+  team2: string;
+  team1_score: number;
+  team2_score: number;
+  team1_logo: string | null;
+  team2_logo: string | null;
+  winner: 1 | 2;
+}
+
+export interface FormMatch {
+  match_id: number;
+  result: 'W' | 'L';
+  opponent: string;
+  opponent_logo: string | null;
+  score: string;
+  datetime_utc: string | null;
+  tab: string;
+}
+
 export interface StandingsEntry {
   placement: number;
   team: string;
   logo: string | null;
   wins: number;
   losses: number;
+  win_rate: number;
+  form: FormMatch[];
   kills: number;
+  deaths: number;
+  kd_ratio: number | null;
+  kills_per_game: number;
+  deaths_per_game: number;
+  gold_per_min: number;
+  towers: number;
+  towers_per_game: number;
+  dragons: number;
+  dragons_per_game: number;
+  barons: number;
+  barons_per_game: number;
+  games: number;
+  game_wins: number;
+  game_win_rate: number;
+  avg_game_length: number;
 }
 
 export interface EventHighlights {
@@ -303,6 +491,27 @@ export interface EventHighlights {
     wins: number;
     win_rate: number | null;
   } | null;
+  match_of_week: {
+    team1: string;
+    team2: string;
+    team1_logo: string | null;
+    team2_logo: string | null;
+    team1_pos: number | null;
+    team2_pos: number | null;
+    datetime_utc: string | null;
+  } | null;
+  banger_of_week: {
+    team1: string;
+    team2: string;
+    team1_logo: string | null;
+    team2_logo: string | null;
+    team1_pos: number | null;
+    team2_pos: number | null;
+    team1_score: number;
+    team2_score: number;
+    winner: number;
+    datetime_utc: string | null;
+  } | null;
 }
 
 export interface EventChampionStats {
@@ -313,6 +522,12 @@ export interface EventChampionStats {
   bans: number;
   picks_by_role: Record<string, number>;
   wins_by_role: Record<string, number>;
+  /** K/D/A summed across every pick of this champion in the event. */
+  kills: number;
+  deaths: number;
+  assists: number;
+  /** K/D/A summed per role, so stats can be scoped to a single role. */
+  kda_by_role: Record<string, { kills: number; deaths: number; assists: number }>;
 }
 
 export interface EventPlayerStats {
@@ -328,6 +543,63 @@ export interface EventPlayerStats {
   avg_deaths: number;
   avg_assists: number;
   avg_cs_per_min: number | null;
+}
+
+export interface RatingEntry {
+  placement: number;
+  name: string;
+  team: string;
+  role: string;
+  link: string;
+  image: string | null;
+  nationality: string | null;
+  games_played: number;
+  avg_pr: number;
+  total_points: number;
+  avg_contribution: number;
+  mvps: number;
+  tier: 'enriched' | 'basic';
+  /** Recent games, oldest → newest (last 10) — drives the form graph. */
+  form: FormGame[];
+  /** Player's 3 best champions (PR shrunk toward overall PR), best first. */
+  champions: ChampStat[];
+}
+
+/** A champion in a player's best-champions list (see ratings endpoint). */
+export interface ChampStat {
+  name: string;
+  icon: string | null;
+  games: number;
+  pr: number;
+}
+
+/** One recent game in a player's form graph (see ratings endpoint). */
+export interface FormGame {
+  pr: number;
+  win: boolean | null;
+  opponent: string;
+  champion: string | null;
+  champion_icon: string | null;
+  kills: number;
+  deaths: number;
+  assists: number;
+  date: string | null;
+}
+
+export interface ChampionStatEntry {
+  id: number;
+  name: string;
+  icon_url: string;
+  picks: number;
+  wins: number;
+  bans: number;
+  win_rate: number | null;
+}
+
+export interface ChampionStats {
+  top_picks: ChampionStatEntry[];
+  top_bans: ChampionStatEntry[];
+  top_win_rate: ChampionStatEntry[];
 }
 
 export interface OverviewTopChampion {
@@ -350,6 +622,38 @@ export interface OverviewTopPlayer {
   kda: number;
 }
 
+export interface HomeMatches {
+  server_time: string;
+  matches: Match[];
+}
+
+export interface HomeLeagueRef {
+  id: number;
+  name: string;
+  short_name: string | null;
+  logo: string | null;
+}
+
+export interface HomeStandingRow {
+  placement: number;
+  team: string;
+  logo: string | null;
+  wins: number;
+  losses: number;
+  win_rate: number;
+}
+
+export interface HomeStandingsGroup {
+  league: HomeLeagueRef;
+  event_name: string;
+  is_active: boolean;
+  standings: HomeStandingRow[];
+}
+
+export interface HomeStandings {
+  leagues: HomeStandingsGroup[];
+}
+
 export interface Overview {
   upcoming_matches: Match[];
   recent_results: Match[];
@@ -357,7 +661,7 @@ export interface Overview {
   top_players: OverviewTopPlayer[];
 }
 
-// ── Player profile ──
+// Player profile
 
 export interface PlayerProfileTeam {
   name: string;
@@ -435,6 +739,31 @@ export interface PlayerProfileGame {
   match_winner: number | null;
 }
 
+export interface PlayerProfileTrait {
+  key: string;
+  label: string;
+  value: number | null;
+  display: string;
+  percentile: number | null;
+}
+
+export interface PlayerProfileTraits {
+  role: string;
+  sample: number;
+  traits: PlayerProfileTrait[];
+}
+
+export interface PlayerProfileUpcomingMatch {
+  id: number;
+  datetime: string | null;
+  event: string;
+  best_of: number;
+  team1: string;
+  team2: string;
+  team1_logo: string | null;
+  team2_logo: string | null;
+}
+
 export interface PlayerProfile {
   player: {
     name: string;
@@ -450,11 +779,13 @@ export interface PlayerProfile {
   available_years: number[];
   available_events: PlayerProfileEventOption[];
   stats: PlayerProfileStats;
+  traits: PlayerProfileTraits | null;
   best_champions: PlayerProfileChampion[];
   recent_games: PlayerProfileGame[];
+  upcoming_matches: PlayerProfileUpcomingMatch[];
 }
 
-// ── Team profile ──
+// Team profile
 
 export interface TeamProfileEventOption {
   id: number;

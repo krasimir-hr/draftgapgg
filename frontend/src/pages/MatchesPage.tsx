@@ -1,14 +1,31 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useMemo } from 'react';
+import { useNavigate, useLoaderData, useSearchParams, type LoaderFunctionArgs } from 'react-router-dom';
 import { getMatches } from '../api/core';
-import { usePaginatedList } from '../hooks/useApi';
 import type { Match } from '../types/models';
-import Spinner from '../components/Spinner';
 import Pagination from '../components/Pagination';
+import EsportsLayout from '../components/EsportsLayout';
 import { useDrawer } from '../contexts/DrawerContext';
 
 interface Props {
   status?: 'finished' | 'upcoming';
+}
+
+export interface MatchesLoaderData {
+  matches: Match[];
+  count: number;
+  page: number;
+}
+
+// Route loader factory for the match list; reads `?page=` from the URL.
+export function matchesLoader(status?: 'finished' | 'upcoming') {
+  return async ({ request }: LoaderFunctionArgs): Promise<MatchesLoaderData> => {
+    const page = Number(new URL(request.url).searchParams.get('page')) || 1;
+    const res = await getMatches({
+      page,
+      ...(status === 'finished' ? { has_result: 'true' } : status === 'upcoming' ? { has_result: 'false' } : {}),
+    });
+    return { matches: res.data.results, count: res.data.count, page };
+  };
 }
 
 type Scope = 'all' | 'upcoming' | 'recent';
@@ -81,7 +98,7 @@ function MatchRow({ m, isLast }: { m: Match; isLast: boolean }) {
       style={{
         padding: '14px 20px',
         borderBottom: isLast ? 'none' : '1px solid var(--border)',
-        gridTemplateColumns: '74px minmax(0, 1fr) auto 110px',
+        gridTemplateColumns: '74px minmax(0, 1fr) auto',
         gap: 16,
       }}
     >
@@ -97,42 +114,58 @@ function MatchRow({ m, isLast }: { m: Match; isLast: boolean }) {
       <div className="flex items-center gap-3 min-w-0">
         <div
           className="flex items-center gap-2 flex-1 min-w-0"
-          style={{ opacity: played && !t1Win ? 0.62 : 1 }}
+          style={{ opacity: played && !t1Win ? 0.55 : 1 }}
         >
           <span
             className={`text-sm truncate ${t1Win ? 'font-bold text-(--text-h)' : 'font-medium text-(--text-h)'}`}
           >
             {m.team1}
           </span>
-          {t1Win && <span className="badge badge-green">W</span>}
         </div>
 
-        <div
-          className="tabular-nums font-bold flex items-center justify-center"
-          style={{
-            fontSize: 17,
-            letterSpacing: '-0.02em',
-            minWidth: 64,
-            padding: '4px 10px',
-            borderRadius: 7,
-            background: played ? 'var(--surface-sub)' : 'transparent',
-            color: played ? 'var(--text-h)' : 'var(--text-faint)',
-          }}
-        >
-          {played ? (
-            <>
-              {m.team1_score} <span className="text-(--text-faint) font-normal mx-1">–</span> {m.team2_score}
-            </>
-          ) : (
-            <span className="text-xs font-semibold tracking-wider">vs</span>
-          )}
-        </div>
+        {played ? (
+          <div className="flex items-center tabular-nums" style={{ gap: 2 }}>
+            <span
+              className="font-display"
+              style={{
+                fontSize: 20,
+                fontWeight: t1Win ? 700 : 400,
+                color: t1Win ? 'var(--text-h)' : 'var(--text-dim)',
+                letterSpacing: '-0.03em',
+                minWidth: 18,
+                textAlign: 'right',
+              }}
+            >
+              {m.team1_score}
+            </span>
+            <span style={{ color: 'var(--text-faint)', fontSize: 14, fontWeight: 300, margin: '0 5px' }}>–</span>
+            <span
+              className="font-display"
+              style={{
+                fontSize: 20,
+                fontWeight: t2Win ? 700 : 400,
+                color: t2Win ? 'var(--text-h)' : 'var(--text-dim)',
+                letterSpacing: '-0.03em',
+                minWidth: 18,
+                textAlign: 'left',
+              }}
+            >
+              {m.team2_score}
+            </span>
+          </div>
+        ) : (
+          <span
+            className="font-semibold tracking-wider"
+            style={{ fontSize: 11, color: 'var(--text-faint)', minWidth: 42, textAlign: 'center' }}
+          >
+            vs
+          </span>
+        )}
 
         <div
           className="flex items-center gap-2 flex-1 min-w-0 justify-end"
-          style={{ opacity: played && !t2Win ? 0.62 : 1 }}
+          style={{ opacity: played && !t2Win ? 0.55 : 1 }}
         >
-          {t2Win && <span className="badge badge-green">W</span>}
           <span
             className={`text-sm truncate ${t2Win ? 'font-bold text-(--text-h)' : 'font-medium text-(--text-h)'}`}
           >
@@ -141,20 +174,19 @@ function MatchRow({ m, isLast }: { m: Match; isLast: boolean }) {
         </div>
       </div>
 
-      {/* Stage / BO */}
-      <div className="flex items-center gap-2 justify-end text-xs">
-        {m.tab && <span className="badge badge-neutral">{m.tab.slice(0, 8)}</span>}
-        <span className="font-semibold tracking-wide text-(--text-dim)">BO{m.best_of}</span>
-      </div>
-
-      {/* Meta line */}
-      <div
-        className="text-right tabular-nums"
-        style={{ fontSize: 11, color: 'var(--text)', fontWeight: 500 }}
-      >
-        {played
-          ? `${m.winner === 1 ? m.team1 : m.team2} wins`
-          : 'Squad locked at start'}
+      {/* League + BO */}
+      <div className="flex items-center gap-3 justify-end">
+        <span className="inline-flex items-center" style={{ gap: 5 }}>
+          {m.league_logo && (
+            <img src={m.league_logo} alt="" className="logo-themed" style={{ width: 13, height: 13, objectFit: 'contain', opacity: 0.6 }} />
+          )}
+          {m.league_short_name && (
+            <span style={{ fontSize: 11, color: 'var(--text-dim)', fontWeight: 400, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+              {m.league_short_name}
+            </span>
+          )}
+        </span>
+        <span className="font-semibold tracking-wide text-(--text-dim)" style={{ fontSize: 11 }}>BO{m.best_of}</span>
       </div>
     </button>
   );
@@ -200,20 +232,9 @@ function DateGroupSection({ group }: { group: DateGroup }) {
 
 export default function MatchesPage({ status }: Props) {
   const navigate = useNavigate();
-  const [page, setPage] = useState(1);
+  const [, setSearchParams] = useSearchParams();
+  const { matches, count, page } = useLoaderData() as MatchesLoaderData;
   const scope: Scope = scopeFromStatus(status);
-
-  useEffect(() => { setPage(1); }, [status]);
-
-  const fetcher = useCallback(
-    (p: number) => getMatches({
-      page: p,
-      ...(status === 'finished' ? { has_result: 'true' } : status === 'upcoming' ? { has_result: 'false' } : {}),
-    }),
-    [status],
-  );
-
-  const { data: matches, count, loading, error } = usePaginatedList<Match>(fetcher, page);
   const totalPages = Math.ceil(count / 50);
 
   const groups = useMemo(() => groupByDate(matches), [matches]);
@@ -225,8 +246,12 @@ export default function MatchesPage({ status }: Props) {
     else navigate('/matches');
   }
 
+  function setPage(p: number) {
+    setSearchParams(p > 1 ? { page: String(p) } : {});
+  }
+
   return (
-    <div className="max-w-6xl mx-auto px-6 py-8">
+    <EsportsLayout>
       {/* Hero header */}
       <header className="mb-6">
         <div className="eyebrow mb-2">Pro League · Schedule</div>
@@ -263,26 +288,19 @@ export default function MatchesPage({ status }: Props) {
         </div>
       </div>
 
-      {loading && <Spinner />}
-      {error && <p className="text-sm text-(--red) py-8 text-center">{error}</p>}
-
-      {!loading && !error && (
-        <>
-          <div className="flex flex-col" style={{ gap: 24 }}>
-            {groups.length > 0 ? (
-              groups.map((g) => <DateGroupSection key={g.label + g.date.toISOString()} group={g} />)
-            ) : (
-              <div
-                className="card text-center text-sm text-(--text-dim)"
-                style={{ padding: 60 }}
-              >
-                No matches for this filter.
-              </div>
-            )}
+      <div className="flex flex-col" style={{ gap: 24 }}>
+        {groups.length > 0 ? (
+          groups.map((g) => <DateGroupSection key={g.label + g.date.toISOString()} group={g} />)
+        ) : (
+          <div
+            className="card text-center text-sm text-(--text-dim)"
+            style={{ padding: 60 }}
+          >
+            No matches for this filter.
           </div>
-          <Pagination page={page} totalPages={totalPages} onChange={setPage} />
-        </>
-      )}
-    </div>
+        )}
+      </div>
+      <Pagination page={page} totalPages={totalPages} onChange={setPage} />
+    </EsportsLayout>
   );
 }

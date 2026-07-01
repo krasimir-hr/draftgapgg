@@ -40,7 +40,3 @@ export function parseLeagueSlug(slug: string): { leaguePart: string; year: numbe
   if (!m) return null;
   return { leaguePart: m[1], year: Number(m[2]), stagePart: m[3] };
 }
-
-export function leagueBasePath(league: League): string {
-  return `/leagues/${slugify(league.short_name ?? league.name)}`;
-}

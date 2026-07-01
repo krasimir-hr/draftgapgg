@@ -1,11 +1,21 @@
-import { useState, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLoaderData, useSearchParams, type LoaderFunctionArgs } from 'react-router-dom';
 import { getLeagues } from '../api/core';
-import { usePaginatedList } from '../hooks/useApi';
 import type { League } from '../types/models';
-import Spinner from '../components/Spinner';
 import Pagination from '../components/Pagination';
+import EsportsLayout from '../components/EsportsLayout';
 import { slugify } from '../utils/slugs';
+
+export interface LeaguesLoaderData {
+  leagues: League[];
+  count: number;
+  page: number;
+}
+
+export async function leaguesLoader({ request }: LoaderFunctionArgs): Promise<LeaguesLoaderData> {
+  const page = Number(new URL(request.url).searchParams.get('page')) || 1;
+  const res = await getLeagues({ page });
+  return { leagues: res.data.results, count: res.data.count, page };
+}
 
 const LEAGUE_COLOR: Record<string, string> = {
   LCK:   '#a78bfa',
@@ -28,6 +38,10 @@ function LeagueIcon({ league }: { league: League }) {
         <img
           src={league.logo}
           alt={label}
+          width={28}
+          height={28}
+          loading="lazy"
+          decoding="async"
           className="logo-themed"
           style={{ width: 28, height: 28, objectFit: 'contain' }}
         />
@@ -48,14 +62,16 @@ function LeagueIcon({ league }: { league: League }) {
 }
 
 export default function LeaguesPage() {
-  const [page, setPage] = useState(1);
-  const fetcher = useCallback((p: number) => getLeagues({ page: p }), []);
-  const { data: leagues, count, loading, error } = usePaginatedList<League>(fetcher, page);
-
+  const { leagues, count, page } = useLoaderData() as LeaguesLoaderData;
+  const [, setSearchParams] = useSearchParams();
   const totalPages = Math.ceil(count / 50);
 
+  function setPage(p: number) {
+    setSearchParams(p > 1 ? { page: String(p) } : {});
+  }
+
   return (
-    <div className="max-w-6xl mx-auto px-6 py-8">
+    <EsportsLayout>
       <header className="mb-8">
         <div className="eyebrow mb-2">Pro League · Directory</div>
         <h1 className="h-display" style={{ fontSize: 44 }}>Leagues</h1>
@@ -64,32 +80,25 @@ export default function LeaguesPage() {
         </p>
       </header>
 
-      {loading && <Spinner />}
-      {error && <p className="text-sm text-(--red) py-8 text-center">{error}</p>}
-
-      {!loading && !error && (
-        <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {leagues.map((league) => (
-              <Link
-                key={league.id}
-                to={`/leagues/${slugify(league.short_name ?? league.name)}`}
-                className="card card-link card-soft-shadow flex items-center gap-4 px-5 py-4"
-              >
-                <LeagueIcon league={league} />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-(--text-h)">{league.name}</p>
-                  {league.short_name && league.short_name !== league.name && (
-                    <p className="text-xs text-(--text-dim) mt-0.5 tracking-wide uppercase">{league.short_name}</p>
-                  )}
-                </div>
-                <span className="text-(--text-dim) text-sm shrink-0">→</span>
-              </Link>
-            ))}
-          </div>
-          <Pagination page={page} totalPages={totalPages} onChange={setPage} />
-        </>
-      )}
-    </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {leagues.map((league) => (
+          <Link
+            key={league.id}
+            to={`/leagues/${slugify(league.short_name ?? league.name)}`}
+            className="card card-link card-soft-shadow flex items-center gap-4 px-5 py-4"
+          >
+            <LeagueIcon league={league} />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-(--text-h)">{league.name}</p>
+              {league.short_name && league.short_name !== league.name && (
+                <p className="text-xs text-(--text-dim) mt-0.5 tracking-wide uppercase">{league.short_name}</p>
+              )}
+            </div>
+            <span className="text-(--text-dim) text-sm shrink-0">→</span>
+          </Link>
+        ))}
+      </div>
+      <Pagination page={page} totalPages={totalPages} onChange={setPage} />
+    </EsportsLayout>
   );
 }

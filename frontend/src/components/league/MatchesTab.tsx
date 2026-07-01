@@ -1,22 +1,8 @@
-import { useEffect, useMemo, useReducer, useState } from 'react';
-import { getMatches } from '../../api/core';
+import { useMemo, useState } from 'react';
 import type { Match } from '../../types/models';
-import { Badge, TeamMark } from './shared';
+import { TeamMark } from './shared';
 
-type Scope = 'all' | 'upcoming' | 'recent';
-
-interface State { loading: boolean; error: string | null; list: Match[]; }
-type Action =
-  | { type: 'fetch' }
-  | { type: 'success'; list: Match[] }
-  | { type: 'error'; message: string };
-function reducer(_s: State, a: Action): State {
-  switch (a.type) {
-    case 'fetch':   return { loading: true, error: null, list: [] };
-    case 'success': return { loading: false, error: null, list: a.list };
-    case 'error':   return { loading: false, error: a.message, list: [] };
-  }
-}
+type Scope = 'upcoming' | 'recent';
 
 interface DateGroup {
   label: string;
@@ -57,56 +43,56 @@ function groupByDate(matches: Match[]): DateGroup[] {
 }
 
 interface Props {
-  eventId: number;
+  matches: Match[];
   teamLogos: Record<string, string | null>;
   teamShortNames: Record<string, string>;
   onMatchSelect: (id: number) => void;
 }
 
 export default function MatchesTab({
-  eventId, teamLogos, teamShortNames, onMatchSelect,
+  matches, teamLogos, teamShortNames, onMatchSelect,
 }: Props) {
-  const [state, dispatch] = useReducer(reducer, { loading: true, error: null, list: [] });
-  const [scope, setScope] = useState<Scope>('all');
+  const [scope, setScope] = useState<Scope>(() =>
+    matches.some((m) => m.winner === null) ? 'upcoming' : 'recent'
+  );
   const [stage, setStage] = useState<string>('All');
   const [team, setTeam] = useState<string>('All');
 
-  useEffect(() => {
-    dispatch({ type: 'fetch' });
-    getMatches({ event: eventId, page_size: 500 })
-      .then((res) => dispatch({ type: 'success', list: res.data.results }))
-      .catch(() => dispatch({ type: 'error', message: 'Failed to load matches' }));
-  }, [eventId]);
-
   const stageOptions = useMemo(() => {
     const set = new Set<string>();
-    for (const m of state.list) if (m.tab) set.add(m.tab);
+    for (const m of matches) if (m.tab) set.add(m.tab);
     return ['All', ...Array.from(set)];
-  }, [state.list]);
+  }, [matches]);
 
   const teamOptions = useMemo(() => {
     const set = new Set<string>();
-    for (const m of state.list) {
+    for (const m of matches) {
       set.add(m.team1);
       set.add(m.team2);
     }
     return ['All', ...Array.from(set).sort()];
-  }, [state.list]);
+  }, [matches]);
 
   const filtered = useMemo(() => {
-    return state.list.filter((m) => {
+    return matches.filter((m) => {
       if (stage !== 'All' && m.tab !== stage) return false;
       if (team !== 'All' && m.team1 !== team && m.team2 !== team) return false;
       if (scope === 'upcoming' && m.winner !== null) return false;
       if (scope === 'recent' && m.winner === null) return false;
       return true;
     });
-  }, [state.list, scope, stage, team]);
+  }, [matches, scope, stage, team]);
 
-  const groups = useMemo(() => groupByDate(filtered), [filtered]);
-
-  if (state.loading) return <div className="py-10 flex items-center justify-center"><div className="spinner" /></div>;
-  if (state.error)   return <p className="text-sm px-6 py-6" style={{ color: 'var(--red)' }}>{state.error}</p>;
+  const groups = useMemo(() => {
+    const gs = groupByDate(filtered);
+    if (scope === 'recent') {
+      gs.reverse();
+      for (const g of gs) {
+        g.matches.sort((a, b) => (b.datetime_utc ?? '').localeCompare(a.datetime_utc ?? ''));
+      }
+    }
+    return gs;
+  }, [filtered, scope]);
 
   return (
     <div className="flex flex-col" style={{ gap: 20 }}>
@@ -117,7 +103,6 @@ export default function MatchesTab({
       >
         <div className="chip-group">
           {([
-            { k: 'all',      label: 'All' },
             { k: 'upcoming', label: 'Upcoming' },
             { k: 'recent',   label: 'Recent' },
           ] as const).map((s) => (
@@ -267,7 +252,7 @@ function MatchListItem({
       style={{
         padding: '14px 20px',
         borderBottom: isLast ? 'none' : '1px solid var(--border)',
-        gridTemplateColumns: '74px minmax(0, 1fr) auto 110px',
+        gridTemplateColumns: '74px minmax(0, 1fr) auto',
         gap: 16,
       }}
     >
@@ -283,74 +268,81 @@ function MatchListItem({
       <div className="flex items-center min-w-0" style={{ gap: 14 }}>
         <div
           className="flex items-center flex-1 min-w-0"
-          style={{ gap: 10, opacity: played && !t1Win ? 0.62 : 1 }}
+          style={{ gap: 10, opacity: played && !t1Win ? 0.55 : 1 }}
         >
           <TeamMark short={teamShortNames[m.team1] || m.team1} logo={teamLogos[m.team1]} size={28} />
-          <div className="min-w-0 flex items-center" style={{ gap: 6 }}>
-            <span
-              className={`text-sm truncate ${t1Win ? 'font-bold text-(--text-h)' : 'font-medium text-(--text-h)'}`}
-            >
-              {teamShortNames[m.team1] || m.team1}
-            </span>
-            {t1Win && <Badge tone="green">W</Badge>}
-          </div>
+          <span
+            className={`text-sm truncate ${t1Win ? 'font-bold text-(--text-h)' : 'font-medium text-(--text-h)'}`}
+          >
+            {teamShortNames[m.team1] || m.team1}
+          </span>
         </div>
 
-        <div
-          className="tabular-nums font-bold flex items-center justify-center"
-          style={{
-            fontSize: 17,
-            letterSpacing: '-0.02em',
-            minWidth: 64,
-            padding: '4px 10px',
-            borderRadius: 7,
-            background: played ? 'var(--surface-sub)' : 'transparent',
-            color: played ? 'var(--text-h)' : 'var(--text-faint)',
-          }}
-        >
-          {played ? (
-            <>
-              {m.team1_score} <span className="text-(--text-faint) font-normal mx-1">–</span> {m.team2_score}
-            </>
-          ) : (
-            <span className="text-xs font-semibold tracking-wider">vs</span>
-          )}
-        </div>
+        {played ? (
+          <div className="flex items-center tabular-nums" style={{ gap: 2 }}>
+            <span
+              className="font-display"
+              style={{
+                fontSize: 20,
+                fontWeight: t1Win ? 700 : 400,
+                color: t1Win ? 'var(--text-h)' : 'var(--text-dim)',
+                letterSpacing: '-0.03em',
+                minWidth: 18,
+                textAlign: 'right',
+              }}
+            >
+              {m.team1_score}
+            </span>
+            <span style={{ color: 'var(--text-faint)', fontSize: 14, fontWeight: 300, margin: '0 5px' }}>–</span>
+            <span
+              className="font-display"
+              style={{
+                fontSize: 20,
+                fontWeight: t2Win ? 700 : 400,
+                color: t2Win ? 'var(--text-h)' : 'var(--text-dim)',
+                letterSpacing: '-0.03em',
+                minWidth: 18,
+                textAlign: 'left',
+              }}
+            >
+              {m.team2_score}
+            </span>
+          </div>
+        ) : (
+          <span
+            className="font-semibold tracking-wider"
+            style={{ fontSize: 11, color: 'var(--text-faint)', minWidth: 42, textAlign: 'center' }}
+          >
+            vs
+          </span>
+        )}
 
         <div
           className="flex items-center flex-1 min-w-0 flex-row-reverse"
-          style={{ gap: 10, opacity: played && !t2Win ? 0.62 : 1 }}
+          style={{ gap: 10, opacity: played && !t2Win ? 0.55 : 1 }}
         >
           <TeamMark short={teamShortNames[m.team2] || m.team2} logo={teamLogos[m.team2]} size={28} />
-          <div className="min-w-0 text-right flex items-center justify-end" style={{ gap: 6 }}>
-            {t2Win && <Badge tone="green">W</Badge>}
-            <span
-              className={`text-sm truncate ${t2Win ? 'font-bold text-(--text-h)' : 'font-medium text-(--text-h)'}`}
-            >
-              {teamShortNames[m.team2] || m.team2}
-            </span>
-          </div>
+          <span
+            className={`text-sm truncate text-right ${t2Win ? 'font-bold text-(--text-h)' : 'font-medium text-(--text-h)'}`}
+          >
+            {teamShortNames[m.team2] || m.team2}
+          </span>
         </div>
       </div>
 
-      {/* Stage / BO */}
-      <div className="flex items-center gap-2 justify-end text-xs">
-        {m.tab && (
-          <Badge tone={m.tab.toLowerCase().includes('final') ? 'accent' : m.tab.toLowerCase().includes('playoff') ? 'amber' : 'neutral'}>
-            {m.tab.length > 12 ? m.tab.slice(0, 10) + '…' : m.tab}
-          </Badge>
-        )}
-        <span className="font-semibold tracking-wide text-(--text-dim)">BO{m.best_of}</span>
-      </div>
-
-      {/* Meta line */}
-      <div
-        className="text-right tabular-nums"
-        style={{ fontSize: 11, color: 'var(--text)', fontWeight: 500 }}
-      >
-        {played
-          ? `${(teamShortNames[m.winner === 1 ? m.team1 : m.team2] || (m.winner === 1 ? m.team1 : m.team2))} wins`
-          : '—'}
+      {/* League + BO */}
+      <div className="flex items-center gap-3 justify-end">
+        <span className="inline-flex items-center" style={{ gap: 5 }}>
+          {m.league_logo && (
+            <img src={m.league_logo} alt="" className="logo-themed" style={{ width: 13, height: 13, objectFit: 'contain', opacity: 0.6 }} />
+          )}
+          {m.league_short_name && (
+            <span style={{ fontSize: 11, color: 'var(--text-dim)', fontWeight: 400, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+              {m.league_short_name}
+            </span>
+          )}
+        </span>
+        <span className="font-semibold tracking-wide text-(--text-dim)" style={{ fontSize: 11 }}>BO{m.best_of}</span>
       </div>
     </button>
   );

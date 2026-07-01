@@ -1,71 +1,61 @@
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useRef, type ReactNode } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 
-type DrawerKind = 'match' | 'player' | 'team';
+type DrawerKind = 'team';
 
 type DrawerState =
-  | { kind: 'match'; id: number }
-  | { kind: 'player'; name: string }
   | { kind: 'team'; name: string }
   | null;
 
-interface ScoreboardState { matchId: number; gameIdx: number; }
-
 interface DrawerCtx {
   current: DrawerState;
-  scoreboard: ScoreboardState | null;
   openMatch: (id: number) => void;
   openPlayer: (name: string) => void;
   openTeam: (name: string) => void;
   close: () => void;
-  openScoreboard: (matchId: number, gameIdx: number) => void;
-  closeScoreboard: () => void;
 }
 
 const DrawerContext = createContext<DrawerCtx | null>(null);
 
 export function DrawerProvider({ children }: { children: ReactNode }) {
-  /* Single-slot drawer: opening a new one replaces whatever was open.
-     Closing the scoreboard does not close the underlying drawer. */
+  /* Single-slot drawer for teams. Players and matches are full pages. */
   const [current, setCurrent] = useState<DrawerState>(null);
-  const [scoreboard, setScoreboard] = useState<ScoreboardState | null>(null);
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
 
-  const openMatch  = useCallback((id: number)   => { setCurrent({ kind: 'match',  id }); }, []);
-  const openPlayer = useCallback((name: string) => { setCurrent({ kind: 'player', name }); }, []);
-  const openTeam   = useCallback((name: string) => { setCurrent({ kind: 'team',   name }); }, []);
+  const openMatch  = useCallback((id: number)   => { navigate(`/matches/${id}`); }, [navigate]);
+  const openPlayer = useCallback((name: string) => { navigate(`/players/${encodeURIComponent(name)}`); }, [navigate]);
+  const openTeam   = useCallback((name: string) => { navigate(`/teams/${encodeURIComponent(name)}`); }, [navigate]);
   const close      = useCallback(() => { setCurrent(null); }, []);
-  const openScoreboard = useCallback((matchId: number, gameIdx: number) => {
-    setScoreboard({ matchId, gameIdx });
-  }, []);
-  const closeScoreboard = useCallback(() => {
-    setScoreboard(null);
-  }, []);
 
-  // Esc closes scoreboard first, then the drawer
+  // Close any open drawer when navigating to a new page, so it doesn't linger
+  // on top of the destination (e.g. opening a player from inside a team drawer).
+  const prevPath = useRef(pathname);
   useEffect(() => {
-    if (!current && !scoreboard) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape') return;
-      if (scoreboard) setScoreboard(null);
-      else close();
-    };
+    if (prevPath.current !== pathname) {
+      prevPath.current = pathname;
+      close();
+    }
+  }, [pathname, close]);
+
+  // Esc closes the drawer
+  useEffect(() => {
+    if (!current) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [current, scoreboard, close]);
+  }, [current, close]);
 
-  // Lock body scroll when any overlay is open
+  // Lock body scroll when a drawer is open
   useEffect(() => {
-    if (!current && !scoreboard) return;
+    if (!current) return;
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = prev; };
-  }, [current, scoreboard]);
+  }, [current]);
 
   return (
-    <DrawerContext.Provider value={{
-      current, scoreboard,
-      openMatch, openPlayer, openTeam, close,
-      openScoreboard, closeScoreboard,
-    }}>
+    <DrawerContext.Provider value={{ current, openMatch, openPlayer, openTeam, close }}>
       {children}
     </DrawerContext.Provider>
   );

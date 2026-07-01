@@ -3,103 +3,68 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { getLeagues } from '../api/core';
 import type { League } from '../types/models';
 import { slugify } from '../utils/slugs';
+import { SideRail } from './Sidebar';
 
-const ORDER = ['LCK', 'LPL', 'LEC', 'LCS', 'CBLoL', 'LCP'];
+const REGIONAL      = ['LCK', 'LPL', 'LEC', 'LCS', 'CBLOL', 'LCP'];
+const INTERNATIONAL = ['Worlds', 'MSI', 'First Stand', 'EWC'];
 
-const LEAGUE_COLOR: Record<string, string> = {
-  LCK:   '#a78bfa',
-  LPL:   '#dc2626',
-  LEC:   '#3b82f6',
-  LCS:   '#06b6d4',
-  CBLoL: '#10b981',
-  LCP:   '#f59e0b',
-};
-
-export default function LeagueSidebar() {
-  const [leagues, setLeagues] = useState<League[]>([]);
+export default function LeagueSidebar({ style, className }: { style?: React.CSSProperties; className?: string }) {
+  const [byShort, setByShort] = useState<Record<string, League>>({});
   const location = useLocation();
 
   useEffect(() => {
     getLeagues({ page: 1, page_size: 100 }).then((res) => {
-      const all = res.data.results;
-      const sorted: League[] = [];
-      for (const name of ORDER) {
-        const found = all.find((l) => l.short_name === name);
-        if (found) sorted.push(found);
+      const map: Record<string, League> = {};
+      for (const l of res.data.results) {
+        if (l.short_name) map[l.short_name] = l;
       }
-      setLeagues(sorted);
+      setByShort(map);
     }).catch(() => {});
   }, []);
 
+  const renderItem = (short: string, isLast: boolean) => {
+    const league = byShort[short];
+    if (!league) return null;
+    const label = league.short_name ?? league.name;
+    const base = slugify(label);
+    const active =
+      location.pathname === `/leagues/${base}` ||
+      location.pathname.startsWith(`/leagues/${base}-20`) ||
+      location.pathname.startsWith(`/leagues/${base}/`);
+
+    return (
+      <NavLink
+        key={league.id}
+        to={`/leagues/${base}`}
+        className={`league-nav-row${active ? ' active' : ''}`}
+        style={{ borderBottom: isLast ? 'none' : '1px solid var(--border)' }}
+      >
+        <span className="league-nav-logo">
+          {league.logo ? (
+            <img src={league.logo} alt={label} width={20} height={20} loading="lazy" decoding="async" />
+          ) : (
+            <span className="league-nav-fallback">{label.slice(0, 3)}</span>
+          )}
+        </span>
+        <span className="league-nav-name">{label}</span>
+      </NavLink>
+    );
+  };
+
+  // Only render groups whose leagues have actually loaded, so the panels never
+  // show a hollow border before data arrives.
+  const section = (shorts: string[]) => {
+    const items = shorts.filter((s) => byShort[s]);
+    return items.map((short, i) => renderItem(short, i === items.length - 1));
+  };
+
+  const regional = section(REGIONAL);
+  const international = section(INTERNATIONAL);
+
   return (
-    <aside
-      className="shrink-0 border-r border-(--border) bg-(--surface) flex flex-col py-3.5"
-      style={{
-        width: 76,
-        position: 'sticky',
-        top: 56,
-        alignSelf: 'flex-start',
-        height: 'calc(100svh - 56px)',
-        overflowY: 'auto',
-        gap: 4,
-      }}
-    >
-      {leagues.map((league) => {
-        const label = league.short_name ?? league.name;
-        const base = slugify(label);
-        const onThisLeague =
-          location.pathname === `/leagues/${base}` ||
-          location.pathname.startsWith(`/leagues/${base}-20`) ||
-          location.pathname.startsWith(`/leagues/${base}/`);
-
-        const color = LEAGUE_COLOR[label] ?? 'var(--accent)';
-
-        return (
-          <NavLink
-            key={league.id}
-            to={`/leagues/${base}`}
-            className="flex flex-col items-center"
-            style={{
-              padding: '7px 0',
-              margin: '0 10px',
-              borderRadius: 9,
-              background: onThisLeague ? 'var(--accent-muted)' : 'transparent',
-              transition: 'background var(--t-fast)',
-              textDecoration: 'none',
-            }}
-          >
-            <div
-              className="flex items-center justify-center"
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: 10,
-                background: color,
-                color: 'white',
-                fontFamily: 'var(--font-sans)',
-                fontWeight: 700,
-                fontSize: 11.5,
-                letterSpacing: '-0.02em',
-                boxShadow: onThisLeague
-                  ? '0 0 0 2px var(--surface), 0 0 0 3px var(--accent-border)'
-                  : 'none',
-                overflow: 'hidden',
-              }}
-            >
-              {league.logo ? (
-                <img
-                  src={league.logo}
-                  alt={label}
-                  className="logo-themed"
-                  style={{ width: 26, height: 26, objectFit: 'contain' }}
-                />
-              ) : (
-                label
-              )}
-            </div>
-          </NavLink>
-        );
-      })}
+    <aside className={`league-sidebar${className ? ` ${className}` : ''}`} style={style}>
+      {regional.length > 0 && <SideRail title="Regional">{regional}</SideRail>}
+      {international.length > 0 && <SideRail title="International">{international}</SideRail>}
     </aside>
   );
 }

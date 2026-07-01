@@ -95,7 +95,7 @@ export default function TeamDrawer({ name }: Props) {
             }}
           >
             {team.logo ? (
-              <img src={team.logo} alt={team.name} className="max-w-full max-h-full object-contain" style={{ padding: 8 }} />
+              <img src={team.logo} alt={team.name} width={72} height={72} decoding="async" className="max-w-full max-h-full object-contain" style={{ padding: 8 }} />
             ) : (
               <span
                 className="text-white font-bold"
@@ -186,6 +186,10 @@ export default function TeamDrawer({ name }: Props) {
                     <img
                       src={p.image}
                       alt={p.name}
+                      width={36}
+                      height={36}
+                      loading="lazy"
+                      decoding="async"
                       className="rounded object-cover object-top"
                       style={{ width: 36, height: 36 }}
                     />
@@ -442,7 +446,7 @@ function MatchRowRecent({ m, last, onOpen }: { m: TeamProfileMatch; last: boolea
       <span className="text-(--text-dim)" style={{ fontSize: 11 }}>vs</span>
       <div className="flex items-center gap-2 min-w-0">
         {m.opponent_logo && (
-          <img src={m.opponent_logo} alt={m.opponent} className="w-5 h-5 object-contain shrink-0" />
+          <img src={m.opponent_logo} alt={m.opponent} width={20} height={20} loading="lazy" decoding="async" className="w-5 h-5 object-contain shrink-0" />
         )}
         <span className="text-(--text-h) font-semibold truncate">{m.opponent}</span>
       </div>
@@ -481,7 +485,7 @@ function MatchRowUpcoming({ m, last, onOpen }: { m: TeamProfileMatch; last: bool
         {time}
       </span>
       <span className="text-(--text-dim)" style={{ fontSize: 11 }}>vs</span>
-      {m.opponent_logo && <img src={m.opponent_logo} alt={m.opponent} className="w-5 h-5 object-contain shrink-0" />}
+      {m.opponent_logo && <img src={m.opponent_logo} alt={m.opponent} width={20} height={20} loading="lazy" decoding="async" className="w-5 h-5 object-contain shrink-0" />}
       <span className="text-(--text-h) font-semibold flex-1 min-w-0 truncate">{m.opponent}</span>
       <span
         className="text-(--text-dim) font-bold uppercase shrink-0"

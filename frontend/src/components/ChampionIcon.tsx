@@ -27,6 +27,10 @@ export function ChampionIcon({
       <img
         src={src}
         alt={alt}
+        width={size}
+        height={size}
+        loading="lazy"
+        decoding="async"
         style={{
           display: 'block',
           width: '100%',
