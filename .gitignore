@@ -7,8 +7,12 @@ __pycache__/
 
 # Virtual environment
 venv/
-.env/
 .venv/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
 
 # Django
 *.log
@@ -32,3 +36,7 @@ staticfiles/
 # Node (if frontend exists)
 node_modules/
 npm-debug.log*
+
+# Oracle's Elixir match data (downloaded/mirrored, non-commercial license)
+*_LoL_esports_match_data_from_OraclesElixir*.csv
+backend/oe_data/
