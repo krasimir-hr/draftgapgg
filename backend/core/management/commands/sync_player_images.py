@@ -7,6 +7,7 @@ import requests
 socket.setdefaulttimeout(15)
 
 from collections import defaultdict
+from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.core.files.base import ContentFile
 from mwrogue.esports_client import EsportsClient
@@ -49,8 +50,8 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         force    = options['force']
         site     = EsportsClient('lol', credentials=AuthCredentials(
-            username='Witcher303!@draftgap-fanmade',
-            password='***REMOVED-CREDENTIAL***',
+            username=settings.LEAGUEPEDIA_USERNAME,
+            password=settings.LEAGUEPEDIA_PASSWORD,
         ))
 
         qs = Player.objects.all() if force else Player.objects.filter(image='')
@@ -135,7 +136,7 @@ class Command(BaseCommand):
             if prev is None or year_of(fname_u) > year_of(prev):
                 best_image[lp] = fname_u
 
-        # ── Pass 1: allimages by org prefix, fully paginated ─────────────────────
+        # Pass 1: allimages by org prefix, fully paginated
         # Fetches every file starting with "{OrgShort} " so no images are missed
         # due to the 500-per-request cap (ascending avoids needing a second pass
         # to pick up number-year filenames that sort below letter-named ones).
@@ -162,7 +163,7 @@ class Command(BaseCommand):
 
         self.stdout.write(f'  After Pass 1: {len(best_image)} player(s) matched')
 
-        # ── Pass 2: action=parse for ALL players ─────────────────────────────────
+        # Pass 2: action=parse for ALL players
         # Uses leaguepedia_page for exact page lookup — handles disambiguation like
         # "Zeka (Kim Geon-woo)" correctly. Purge forces fresh Lua rendering.
         self.stdout.write(f'Pass 2 — page-parse for all {len(players)} player(s)...')
@@ -187,7 +188,7 @@ class Command(BaseCommand):
 
         self.stdout.write(f'  After Pass 2: {len(best_image)} player(s) matched')
 
-        # ── Pass 3: batch-resolve CDN URLs ───────────────────────────────────────
+        # Pass 3: batch-resolve CDN URLs
         pending = [(player_by_lp[lp], 'File:' + fn.replace('_', ' '))
                    for lp, fn in best_image.items()]
 
@@ -208,7 +209,7 @@ class Command(BaseCommand):
             except Exception as e:
                 self.stdout.write(self.style.ERROR(f'  imageinfo batch failed: {e}'))
 
-        # ── Pass 4: download and save ─────────────────────────────────────────
+        # Pass 4: download and save
         ok = skip = unchanged = fail = 0
         for player, file_title in pending:
             if player.leaguepedia_image == file_title:

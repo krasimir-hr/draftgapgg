@@ -5,6 +5,7 @@ import requests
 
 socket.setdefaulttimeout(15)
 
+from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.core.files.base import ContentFile
 from mwrogue.esports_client import EsportsClient
@@ -49,8 +50,8 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         force = options['force']
         site = EsportsClient('lol', credentials=AuthCredentials(
-            username='Witcher303!@draftgap-fanmade',
-            password='***REMOVED-CREDENTIAL***',
+            username=settings.LEAGUEPEDIA_USERNAME,
+            password=settings.LEAGUEPEDIA_PASSWORD,
         ))
 
         qs = Organization.objects.exclude(leaguepedia_page__isnull=True).exclude(leaguepedia_page='')
@@ -62,7 +63,7 @@ class Command(BaseCommand):
         orgs = list(qs)
         self.stdout.write(f'Processing {len(orgs)} org(s)...\n')
 
-        # ── Pass 1: allimages search by org-name prefix ───────────────────────────
+        # Pass 1: allimages search by org-name prefix
         # Searches for files named "{LeaguepediaPage}logo*" — avoids picking up
         # unrelated logos (sponsors, opponents) that appear on the org's wiki page.
         best_logo: dict[int, str] = {}  # org.id → filename (underscores)
@@ -100,7 +101,7 @@ class Command(BaseCommand):
 
         self.stdout.write(f'\nMatched {len(best_logo)} logo(s). Resolving CDN URLs...')
 
-        # ── Pass 2: batch resolve CDN URLs ────────────────────────────────────────
+        # Pass 2: batch resolve CDN URLs
         # Use spaces in title (MediaWiki normalises to spaces in responses).
         org_by_id = {org.id: org for org in orgs}
         pending = [
@@ -123,7 +124,7 @@ class Command(BaseCommand):
             except Exception as e:
                 self.stdout.write(self.style.ERROR(f'  imageinfo batch failed: {e}'))
 
-        # ── Pass 3: download and save ─────────────────────────────────────────────
+        # Pass 3: download and save
         ok = skip = fail = 0
         for org, file_title in pending:
             url = url_by_file.get(file_title)

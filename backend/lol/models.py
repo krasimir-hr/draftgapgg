@@ -9,9 +9,17 @@ class Champion(models.Model):
     tags = models.JSONField(default=list, blank=True)             # ["Fighter", "Tank"]
     resource_type = models.CharField(max_length=50, blank=True)   # "Blood Well"
     image = models.CharField(max_length=200, blank=True)          # "Aatrox.png"
+    icon = models.ImageField(upload_to='champions/', blank=True)   # local copy (webp)
     patch = models.CharField(max_length=20, blank=True)
 
-    def icon_url(self, version=None):
+    def icon_url(self, request=None, version=None):
+        """Prefer the locally-stored icon; fall back to the Data Dragon CDN.
+
+        Pass the request to get an absolute URL for the local file (needed by
+        the frontend, which runs on a different origin in dev).
+        """
+        if self.icon:
+            return request.build_absolute_uri(self.icon.url) if request else self.icon.url
         v = version or self.patch
         return f"https://ddragon.leagueoflegends.com/cdn/{v}/img/champion/{self.image}"
 

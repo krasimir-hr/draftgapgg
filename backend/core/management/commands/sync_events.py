@@ -1,10 +1,18 @@
+from django.conf import settings
 from django.core.management.base import BaseCommand
 from mwrogue.esports_client import EsportsClient
 from mwrogue.auth_credentials import AuthCredentials
-from core.models import Event, League, Organization, Player, TeamRoster, RosterPlayer
-import os
+from core.models import Event, EventStage, League, Organization, Player, TeamRoster, RosterPlayer
 from django.utils import timezone
 from datetime import datetime
+
+# Page name suffixes that mark a child stage rather than a standalone event.
+# Maps suffix → (stage name, stage type, display order within the parent event).
+CHILD_STAGE_SUFFIXES = {
+    ' Playoffs':          ('Playoffs',          'playoff', 3),
+    ' Placements':        ('Placements',        'league',  2),
+    ' Qualifying Series': ('Qualifying Series', 'play_in', 0),
+}
 
 # Leaguepedia league name → our canonical league name.
 # Events whose Leaguepedia League field matches a key are assigned to the
@@ -20,38 +28,78 @@ class Command(BaseCommand):
     help = 'Syncs events data from Leaguepedia.'
 
     def handle(self, *args, **options):
-        username = 'Witcher303!@draftgap-fanmade'
-        password = '***REMOVED-CREDENTIAL***'
-
-        credentials = AuthCredentials(username=username, password=password)
+        credentials = AuthCredentials(
+            username=settings.LEAGUEPEDIA_USERNAME,
+            password=settings.LEAGUEPEDIA_PASSWORD,
+        )
         site = EsportsClient('lol', credentials=credentials)
 
 
         # --- Step 1: Get all official primary events from 2025 onward ---
+        # EWC is IsOfficial='0' in Leaguepedia despite being a major international
+        # tournament, so we include it via an explicit League filter.
         event_data = site.cargo_client.query(
             tables="Tournaments",
             fields="Name, Region, DateStart, Date, OverviewPage, League, TournamentLevel, IsOfficial, Prizepool",
-            where="TournamentLevel = 'Primary' AND IsOfficial = '1' AND DateStart >= '2025-01-01'",
+            where="TournamentLevel = 'Primary' AND (IsOfficial = '1' OR League = 'Esports World Cup') AND DateStart >= '2025-01-01'",
             limit=500
         )
 
         events = [e["OverviewPage"] for e in event_data if e.get("OverviewPage")]
 
-        leagues_created_count = 0
-        leagues_updated_count = 0
-
-        events_created_count = 0
-        events_updated_count = 0
-
-
-
         for data in event_data:
             overview_page = data.get('OverviewPage')
             short_name = ''
             year = ''
-            
+
             if 'Season Opening' in overview_page:
                 continue
+            elif 'Online Qualifier' in overview_page or 'Online Qualifiers' in overview_page:
+                continue
+
+            # --- Child-stage detection ---
+            # If this page is a child of another event (e.g. "LPL/2026 Season/Split 2 Playoffs"),
+            # create/update an EventStage on the parent instead of a standalone Event.
+            child_stage_match = None
+            for suffix, (stage_name, stage_type, stage_order) in CHILD_STAGE_SUFFIXES.items():
+                if overview_page.endswith(suffix):
+                    child_stage_match = (suffix, stage_name, stage_type, stage_order)
+                    break
+
+            if child_stage_match:
+                suffix, stage_name, stage_type, stage_order = child_stage_match
+                # Derive parent page by stripping the suffix from the last path segment.
+                parent_page = overview_page[: -len(suffix)]
+                parent_event = Event.objects.filter(leaguepedia_page=parent_page).first()
+                if parent_event:
+                    # Ensure parent has a Regular Season stage.
+                    EventStage.objects.get_or_create(
+                        event=parent_event, name='Regular Season',
+                        defaults={'type': 'league', 'order': 1},
+                    )
+                    EventStage.objects.update_or_create(
+                        event=parent_event, name=stage_name,
+                        defaults={
+                            'type': stage_type,
+                            'order': stage_order,
+                            'leaguepedia_page': overview_page,
+                        },
+                    )
+                    self.stdout.write(f"  Stage {stage_name!r} → {parent_event.name!r}")
+                else:
+                    self.stdout.write(self.style.WARNING(
+                        f"  ⚠ Parent event not found for {overview_page!r} (expected {parent_page!r})"
+                        " — creating standalone event as fallback."
+                    ))
+                    # Fall through to normal event creation below.
+                    child_stage_match = None
+
+            if child_stage_match:
+                continue  # Successfully handled as a stage; skip standalone event creation.
+
+            elif 'Esports World Cup' in overview_page and '/' not in overview_page:
+                year = overview_page.split(' ')[-1]
+                short_name = 'EWC'
             elif 'First Stand' in overview_page or 'Mid-Season' in overview_page:
                 league_data = overview_page.split(' ')
                 short_name = f'{league_data[1]} {league_data[2]}'
@@ -80,10 +128,8 @@ class Command(BaseCommand):
 
             event, event_created = Event.objects.update_or_create(
                 leaguepedia_page=data.get("OverviewPage"),
-                create_defaults={
-                    "name": data.get("Name", ""),
-                },
                 defaults={
+                    "name": data.get("Name", ""),
                     "league": league,
                     "start_date": data.get("DateStart") or None,
                     "end_date": data.get("Date") or None,
@@ -93,8 +139,15 @@ class Command(BaseCommand):
                 }
             )
 
-        # Propagate Road to MSI end_date onto its Rounds 1-2 parent so the
-        # combined tournament shows the correct end date and is_active state.
+        # Fold each "Road to MSI" event into its "Rounds 1-2" parent as a stage.
+        # Road to MSI lives on its own Leaguepedia page, but for us it's a stage
+        # of the Rounds 1-2 tournament (its parent can't be derived by stripping a
+        # suffix — they differ in the last path segment — so it's handled here
+        # rather than via CHILD_STAGE_SUFFIXES). We attach a "Road to MSI" stage
+        # to the parent pointing at the Road to MSI page (so sync_matches pulls
+        # its matches straight into the parent under that stage), migrate any
+        # already-synced matches over, propagate the end date, and drop the now
+        # redundant standalone event.
         today = timezone.now().date()
         for road_to_msi in Event.objects.filter(name__icontains='Road to MSI'):
             parent = Event.objects.filter(
@@ -102,10 +155,38 @@ class Command(BaseCommand):
                 year=road_to_msi.year,
                 name__icontains='Rounds 1-2',
             ).first()
-            if parent and road_to_msi.end_date and (not parent.end_date or road_to_msi.end_date > parent.end_date):
+            if not parent:
+                continue
+
+            # Parent's own matches belong to a Regular Season stage.
+            rs_stage, _ = EventStage.objects.get_or_create(
+                event=parent, name='Regular Season',
+                defaults={'type': 'league', 'order': 1},
+            )
+            parent.matches.filter(stage__isnull=True).update(stage=rs_stage)
+
+            # The Road to MSI stage, sourced from the Road to MSI page.
+            rtm_stage, _ = EventStage.objects.update_or_create(
+                event=parent, name='Road to MSI',
+                defaults={
+                    'type': 'playoff',
+                    'order': 4,
+                    'leaguepedia_page': road_to_msi.leaguepedia_page,
+                },
+            )
+
+            # Move any matches already synced under the standalone event.
+            road_to_msi.matches.update(event=parent, stage=rtm_stage)
+
+            # Propagate end date / active state onto the parent.
+            if road_to_msi.end_date and (not parent.end_date or road_to_msi.end_date > parent.end_date):
                 parent.end_date = road_to_msi.end_date
-                parent.is_active = parent.start_date <= today <= road_to_msi.end_date
-                parent.save(update_fields=['end_date', 'is_active'])
+            if parent.start_date and parent.end_date:
+                parent.is_active = parent.start_date <= today <= parent.end_date
+            parent.save(update_fields=['end_date', 'is_active'])
+
+            # The standalone event is now redundant — its matches live on the parent.
+            road_to_msi.delete()
 
         BATCH_SIZE = 20
 

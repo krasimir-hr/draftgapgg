@@ -27,7 +27,7 @@ class Command(BaseCommand):
 
         self.stdout.write(self.style.SUCCESS("\nDone!"))
 
-    # ── Champions + Abilities ──────────────────────────────────────
+    # Champions + Abilities
 
     def sync_champions(self, base, version):
         self.stdout.write("\n=== Syncing Champions ===")
@@ -98,7 +98,7 @@ class Command(BaseCommand):
                 },
             )
 
-    # ── Items ──────────────────────────────────────────────────────
+    # Items
 
     def sync_items(self, base, version):
         self.stdout.write("\n=== Syncing Items ===")
@@ -131,7 +131,7 @@ class Command(BaseCommand):
             f"Items — created: {created}, updated: {updated}"
         ))
 
-    # ── Runes ──────────────────────────────────────────────────────
+    # Runes
 
     def sync_runes(self, base, version):
         self.stdout.write("\n=== Syncing Runes ===")
@@ -169,7 +169,7 @@ class Command(BaseCommand):
                     else:
                         runes_updated += 1
 
-                # ── Stat Shards (not in runesReforged.json) ──────────────
+                # Stat Shards (not in runesReforged.json)
             stat_shards_path, _ = RunePath.objects.get_or_create(
                 riot_id=0,
                 defaults={"name": "Stat Shards", "icon": "", "patch": version},
@@ -206,7 +206,7 @@ class Command(BaseCommand):
                 f"+ {len(STAT_SHARDS)} stat shards seeded"
             ))
 
-    # ── Summoner Spells ────────────────────────────────────────────
+    # Summoner Spells
 
     def sync_summoner_spells(self, base, version):
         self.stdout.write("\n=== Syncing Summoner Spells ===")

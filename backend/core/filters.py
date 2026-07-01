@@ -2,6 +2,10 @@ import django_filters
 from .models import Match
 
 
+class NumberInFilter(django_filters.BaseInFilter, django_filters.NumberFilter):
+    pass
+
+
 class MatchFilter(django_filters.FilterSet):
     has_result = django_filters.BooleanFilter(method='filter_has_result')
 
@@ -10,6 +14,9 @@ class MatchFilter(django_filters.FilterSet):
             return queryset.exclude(winner__isnull=True)
         return queryset.filter(winner__isnull=True)
 
+    league = django_filters.NumberFilter(field_name='event__league')
+    event__in = NumberInFilter(field_name='event', lookup_expr='in')
+
     class Meta:
         model = Match
-        fields = ['event', 'team1', 'team2']
+        fields = ['event', 'stage', 'team1', 'team2']

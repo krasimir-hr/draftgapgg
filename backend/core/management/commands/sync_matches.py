@@ -1,11 +1,13 @@
 import time
 from datetime import date, timezone
+from django.conf import settings
 from django.core.management.base import BaseCommand
+from django.db.models import Count
 from django.utils.dateparse import parse_datetime
 from django.utils.timezone import now, make_aware
 from mwrogue.esports_client import EsportsClient
 from mwrogue.auth_credentials import AuthCredentials
-from core.models import Event, Match, Game, PlayerPerformance
+from core.models import Event, EventStage, Match, Game, PlayerPerformance
 from lol.models import Champion, Item, SummonerSpell, Rune
 
 
@@ -55,9 +57,10 @@ class Command(BaseCommand):
         parser.add_argument("--force", action="store_true", help="Ignore is_fully_synced and re-sync everything")
 
     def handle(self, *args, **options):
-        username = 'Witcher303!@draftgap-fanmade'
-        password = '***REMOVED-CREDENTIAL***'
-        credentials = AuthCredentials(username=username, password=password)
+        credentials = AuthCredentials(
+            username=settings.LEAGUEPEDIA_USERNAME,
+            password=settings.LEAGUEPEDIA_PASSWORD,
+        )
         site = EsportsClient('lol', credentials=credentials)
 
         self.champion_map = {c.name: c for c in Champion.objects.all()}
@@ -72,51 +75,78 @@ class Command(BaseCommand):
 
         if options["event"]:
             pages = [options["event"]]
-            events = {options["event"]: Event.objects.get(leaguepedia_page=options["event"])}
         elif options["all"]:
-            queryset = Event.objects.exclude(leaguepedia_page__isnull=True)
-
+            # Sync pages from two sources:
+            # 1. Events that haven't been fully synced yet.
+            # 2. EventStages that have their own leaguepedia_page (e.g. Playoffs pages).
+            event_qs = Event.objects.exclude(leaguepedia_page__isnull=True)
             if not options["force"]:
                 today = date.today()
-                queryset = queryset.filter(is_fully_synced=False).exclude(
-                    start_date__gt=today  # skip future events
-                )
+                event_qs = event_qs.filter(is_fully_synced=False).exclude(start_date__gt=today)
 
-            events = {t.leaguepedia_page: t for t in queryset}
-            pages = list(events.keys())
-
-            self.stdout.write(f"Found {len(pages)} events to sync")
+            stage_pages = list(
+                EventStage.objects.exclude(leaguepedia_page__isnull=True)
+                .exclude(leaguepedia_page='')
+                .values_list('leaguepedia_page', flat=True)
+            )
+            pages = list(event_qs.values_list('leaguepedia_page', flat=True)) + stage_pages
+            self.stdout.write(f"Found {len(pages)} pages to sync ({len(stage_pages)} stage pages)")
         else:
             self.stderr.write("Provide --event <page> or --all")
             return
 
         for page in pages:
-            event = events.get(page)
-            if not event:
+            # Resolve to (event, stage). A stage page maps to its parent event.
+            stage = EventStage.objects.filter(leaguepedia_page=page).select_related('event').first()
+            if stage:
+                event = stage.event
+                self.stdout.write(f"\n{'='*60}\nSyncing stage: {stage.name!r} → {event.name!r}\n{'='*60}")
+            else:
                 try:
                     event = Event.objects.get(leaguepedia_page=page)
+                    stage = None
                 except Event.DoesNotExist:
-                    self.stderr.write(self.style.ERROR(f"Event not found: {page}"))
+                    self.stderr.write(self.style.ERROR(f"Event or stage not found for page: {page}"))
                     continue
+                self.stdout.write(f"\n{'='*60}\nSyncing: {page}\n{'='*60}")
 
-            self.stdout.write(f"\n{'='*60}\nSyncing: {page}\n{'='*60}")
-
-            self.sync_matches(site, event, page)
+            self.sync_matches(site, event, page, stage=stage)
             self.sync_games(site, event, page)
             self.sync_player_performances(site, page)
 
-            # Mark as fully synced if the event has ended
-            event.last_synced_at = now()
-            if event.end_date and event.end_date < date.today():
-                event.is_fully_synced = True
-                self.stdout.write(self.style.SUCCESS(
-                    f"✔ Marked as fully synced (ended {event.end_date})"
-                ))
-            event.save()
+            # Only mark the parent event as fully synced (not individual stage pages).
+            if not stage:
+                event.last_synced_at = now()
+                if event.end_date and event.end_date < date.today():
+                    event.is_fully_synced = True
+                    self.stdout.write(self.style.SUCCESS(
+                        f"✔ Marked as fully synced (ended {event.end_date})"
+                    ))
+                event.save()
 
             time.sleep(2)
 
+        if options["all"]:
+            self._purge_empty_past_events()
+
         self.stdout.write(self.style.SUCCESS("\nDone!"))
+
+    def _purge_empty_past_events(self):
+        """Delete past events that ended up with zero matches after a full sync."""
+        today = date.today()
+        empty = (
+            Event.objects
+            .filter(end_date__lt=today)
+            .annotate(n=Count('matches'))
+            .filter(n=0)
+        )
+        count = empty.count()
+        if count:
+            names = list(empty.values_list('name', flat=True))
+            empty.delete()
+            self.stdout.write(self.style.SUCCESS(
+                f"\nPurged {count} empty past event(s): {names}"
+            ))
 
     def find_champion(self, name):
         name = CHAMPION_ALIASES.get(name, name)
@@ -137,9 +167,9 @@ class Command(BaseCommand):
         name = RUNE_ALIASES.get(name, name)
         return self.rune_map.get(name)
 
-    # ── Matches ────────────────────────────────────────────────
+    # Matches
 
-    def sync_matches(self, site, event, overview_page):
+    def sync_matches(self, site, event, overview_page, stage=None):
         self.stdout.write("\n--- Matches ---")
         data = site.cargo_client.query(
             tables="MatchSchedule",
@@ -148,12 +178,17 @@ class Command(BaseCommand):
         )
         time.sleep(1)
 
+        # If no stage is provided but the event has stages, assign to Regular Season.
+        if stage is None:
+            stage = EventStage.objects.filter(event=event, name='Regular Season').first()
+
         created, updated = 0, 0
         for row in data:
             match, was_created = Match.objects.update_or_create(
                 match_id=row.get("MatchId", ""),
                 defaults={
                     "event": event,
+                    "stage": stage,
                     "team1": row.get("Team1", ""),
                     "team2": row.get("Team2", ""),
                     "winner": safe_int(row.get("Winner"), None),
@@ -168,7 +203,7 @@ class Command(BaseCommand):
 
         self.stdout.write(self.style.SUCCESS(f"Matches — created: {created}, updated: {updated}"))
 
-    # ── Games ──────────────────────────────────────────────────
+    # Games
 
     def sync_games(self, site, event, overview_page):
         self.stdout.write("\n--- Games ---")
@@ -244,7 +279,7 @@ class Command(BaseCommand):
 
         self.stdout.write(self.style.SUCCESS(f"Games — created: {created}, updated: {updated}"))
 
-    # ── Player Performances ────────────────────────────────────
+    # Player Performances
 
     def sync_player_performances(self, site, overview_page):
         self.stdout.write("\n--- Player Performances ---")
@@ -252,7 +287,7 @@ class Command(BaseCommand):
             tables="ScoreboardPlayers",
             fields=(
                 "GameId, Name, Link, Team, Side, Role, Champion, "
-                "Kills, Deaths, Assists, CS, Gold, DamageToChampions, "
+                "Kills, Deaths, Assists, CS, Gold, DamageToChampions, VisionScore, "
                 "Items, Trinket, SummonerSpells, KeystoneRune, Runes"
             ),
             where=f"OverviewPage='{overview_page}'",
@@ -297,6 +332,7 @@ class Command(BaseCommand):
                     "cs": safe_int(row.get("CS")),
                     "gold": safe_int(row.get("Gold")),
                     "damage_to_champions": safe_int(row.get("DamageToChampions")),
+                    "vision_score": safe_int(row.get("VisionScore")),
                     "trinket": trinket,
                     "summoner_spell_d": spell_d,
                     "summoner_spell_f": spell_f,

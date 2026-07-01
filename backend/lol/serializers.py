@@ -19,7 +19,7 @@ class ChampionListSerializer(serializers.ModelSerializer):
                   'resource_type', 'image', 'patch', 'icon_url']
 
     def get_icon_url(self, obj: Champion) -> str:
-        return obj.icon_url()
+        return obj.icon_url(self.context.get('request'))
 
 
 class ChampionDetailSerializer(ChampionListSerializer):

@@ -1,7 +1,9 @@
 from rest_framework import serializers
+from . import rating as rating_engine
 from .models import (
     League,
     Event,
+    EventStage,
     Organization,
     Player,
     TeamRoster,
@@ -9,6 +11,7 @@ from .models import (
     Match,
     Game,
     PlayerPerformance,
+    PerformanceRating,
 )
 from lol.serializers import (
     ChampionListSerializer,
@@ -29,8 +32,15 @@ class LeagueSerializer(serializers.ModelSerializer):
         fields = ["id", "name", "short_name", "logo", "youtube", "instagram", "twitter", "twitch"]
 
 
+class EventStageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = EventStage
+        fields = ["id", "name", "type", "order", "has_lower_bracket"]
+
+
 class EventListSerializer(serializers.ModelSerializer):
     league = LeagueSerializer(read_only=True)
+    stages = EventStageSerializer(many=True, read_only=True)
 
     class Meta:
         model = Event
@@ -45,6 +55,7 @@ class EventListSerializer(serializers.ModelSerializer):
             "logo",
             "leaguepedia_page",
             "prize_pool",
+            "stages",
         ]
 
 
@@ -92,6 +103,15 @@ class TeamRosterDetailSerializer(TeamRosterListSerializer):
 class MatchListSerializer(serializers.ModelSerializer):
     team1_score = serializers.IntegerField(read_only=True)
     team2_score = serializers.IntegerField(read_only=True)
+    league_logo = serializers.SerializerMethodField()
+    league_short_name = serializers.CharField(source='event.league.short_name', read_only=True, default=None)
+
+    def get_league_logo(self, obj):
+        logo = obj.event.league.logo
+        if not logo:
+            return None
+        request = self.context.get('request')
+        return request.build_absolute_uri(logo.url) if request else logo.url
 
     class Meta:
         model = Match
@@ -108,7 +128,21 @@ class MatchListSerializer(serializers.ModelSerializer):
             "patch",
             "team1_score",
             "team2_score",
+            "next_match",
+            "bracket_col",
+            "bracket_order",
+            "is_lower_bracket",
+            "is_final",
+            "league_logo",
+            "league_short_name",
         ]
+
+
+class MatchBracketSerializer(serializers.ModelSerializer):
+    """Write-only serializer for admin bracket wiring (per-match)."""
+    class Meta:
+        model = Match
+        fields = ["bracket_col", "bracket_order", "next_match", "is_lower_bracket", "is_final"]
 
 
 class GameListSerializer(serializers.ModelSerializer):
@@ -149,6 +183,33 @@ class PlayerPerformanceSerializer(serializers.ModelSerializer):
     summoner_spell_f = SummonerSpellSerializer(read_only=True)
     keystone_rune = RuneSerializer(read_only=True)
     runes = RuneSerializer(many=True, read_only=True)
+    rating = serializers.SerializerMethodField()
+
+    def get_rating(self, obj):
+        try:
+            r = obj.rating
+        except PerformanceRating.DoesNotExist:
+            return None
+        breakdown = r.metric_breakdown or {}
+        role = rating_engine.canonical_role(obj.role)
+        eff = rating_engine.effective_weights(role, set(breakdown.keys()), r.tier == "enriched") if role else {}
+        # One entry per metric: 0–100 score + how much it counts for this role.
+        metrics = sorted(
+            ({"key": k, "score": round(v, 1), "weight": round(eff.get(k, 0.0), 3)} for k, v in breakdown.items()),
+            key=lambda m: m["weight"], reverse=True,
+        )
+        # Recover the win bonus so the UI can explain the points total.
+        base = r.pr / 10.0
+        won = (r.points - base - (1.0 if r.is_mvp else 0.0)) > 1.0
+        return {
+            "pr": round(r.pr, 1),
+            "points": round(r.points, 1),
+            "tier": r.tier,
+            "is_mvp": r.is_mvp,
+            "won": won,
+            "contribution": round(r.contribution_share, 3),
+            "metrics": metrics,
+        }
 
     class Meta:
         model = PlayerPerformance
@@ -166,6 +227,8 @@ class PlayerPerformanceSerializer(serializers.ModelSerializer):
             "cs",
             "gold",
             "damage_to_champions",
+            "vision_score",
+            "rating",
             "items",
             "trinket",
             "summoner_spell_d",

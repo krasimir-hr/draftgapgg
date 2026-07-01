@@ -11,13 +11,13 @@ Usage:
 """
 
 import time
-from datetime import datetime, timezone
+from datetime import datetime
 from urllib.parse import urlparse
 
 import requests
 from django.core.management.base import BaseCommand
 
-from core.models import Event, Game
+from core.models import Game
 
 _KEY  = '0TvQnueqKa5mxJntVWt0w4LpLfEkrV1Ta8rQBb9Z'
 _GW   = 'https://esports-api.lolesports.com/persisted/gw'
@@ -31,7 +31,7 @@ def _get(url, params=None, retries=3):
             r = requests.get(url, params=params, headers=_HDR, timeout=10)
             r.raise_for_status()
             return r.json()
-        except Exception as exc:
+        except Exception:
             if attempt == retries - 1:
                 raise
             time.sleep(2 ** attempt)
@@ -159,7 +159,7 @@ class Command(BaseCommand):
 
                 esports_game_id, teams = _get_esports_game_id(match_event_id, game_number)
                 if not esports_game_id:
-                    self.stderr.write(f'    ⚠ Game ID not found in event details')
+                    self.stderr.write('    ⚠ Game ID not found in event details')
                     skipped += 1
                     continue
 
@@ -176,7 +176,7 @@ class Command(BaseCommand):
 
                 frames = _fetch_all_frames(esports_game_id)
                 if not frames:
-                    self.stderr.write(f'    ⚠ No frames returned')
+                    self.stderr.write('    ⚠ No frames returned')
                     skipped += 1
                     continue
 
