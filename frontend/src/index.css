@@ -44,6 +44,7 @@
   /* Color: chrome */
   --nav-bg: rgba(255, 255, 255, 0.85);
   --dot-grid: rgb(190, 190, 190);
+  --dot-glow: rgba(0, 0, 0, 0.03);
 
   /* Shadows — flat aesthetic: near-zero on surfaces, --shadow-lg reserved
      for popovers/drawers. */
@@ -152,6 +153,7 @@
   --blue-muted: rgba(96, 165, 250, 0.12);
   --nav-bg: rgba(10, 10, 10, 0.85);
   --dot-grid: rgb(119, 119, 119);
+  --dot-glow: rgba(255, 255, 255, 0.055);
   --shadow-sm: none;
   --shadow-md: none;
   --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
@@ -171,34 +173,32 @@ body {
   font-family: var(--font-sans);
 }
 
-/* Page backdrop: a faint dot grid that fades out toward the lower edges,
-   matching the reference landing. Fixed and behind all content (the app shell
-   renders at z-index >= 1; z-index -1 here would drop behind the canvas). */
+/* Page backdrop: a dot grid inside a soft glow, matching reactnativereusables.com.
+   Fixed and behind all content (the app shell renders at z-index >= 1; z-index -1
+   here would drop behind the canvas).
+
+   One element does both jobs, as the reference does: `background-color`
+   (--dot-glow) is the soft light bloom that shows in the gaps between the dots,
+   and the two dot gradients sit on top. A single radial mask fades the whole
+   thing out past the glow — so the dots are only visible inside the glow. Dots
+   stay tiny yet crisp because --dot-grid is a SOLID mid-gray (full opacity) and
+   `transparent 0` (< the 1.5px stop) clamps each to a hard-edged circle; the
+   second layer's half-tile offset staggers every other row. */
 body::before {
   content: "";
   position: fixed;
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  /* Dot grid, matching reactnativereusables.com. Two layers offset by half a
-     tile stagger every other row; `transparent 0` (< the 1.5px stop) clamps to
-     a hard-edged crisp circle. Dots stay tiny yet visible because --dot-grid is
-     a SOLID mid-gray (full opacity), not a low-alpha wash. */
+  background-color: var(--dot-glow);
   background-image:
     radial-gradient(circle at 0 0, var(--dot-grid) 1.5px, transparent 0),
     radial-gradient(circle at 100% 100%, var(--dot-grid) 1.5px, transparent 0);
   background-size: 20px 20px;
   background-position: 0 0, 10px 10px;
-  -webkit-mask-image: radial-gradient(
-    ellipse 110% 100% at 50% 0%,
-    #000 45%,
-    transparent 85%
-  );
-  mask-image: radial-gradient(
-    ellipse 110% 100% at 50% 0%,
-    #000 45%,
-    transparent 85%
-  );
+  --glow: radial-gradient(ellipse 62% 52% at 50% 24%, #000 0%, #000 26%, transparent 72%);
+  -webkit-mask-image: var(--glow);
+  mask-image: var(--glow);
 }
 
 #root {
