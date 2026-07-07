@@ -122,7 +122,7 @@ export function TeamMark({
         width: size,
         height: size,
         borderRadius: Math.max(4, size * 0.22),
-        background: color || 'var(--accent)',
+        background: color || '#171717',
         fontWeight: 700,
         fontSize: size * 0.38,
         fontFamily: 'var(--font-sans)',
@@ -137,7 +137,6 @@ export function TeamMark({
 export function PlayerAvatar({
   name,
   image,
-  role,
   teamColor,
   size = 36,
 }: {
@@ -156,9 +155,8 @@ export function PlayerAvatar({
         style={{
           width: size, height: size, borderRadius: radius,
           boxSizing: 'border-box',
-          border: '1px solid var(--accent-border)',
-          boxShadow: 'var(--shadow-md)',
-          background: 'linear-gradient(160deg, #1e1830 0%, #0e0c18 100%)',
+          border: '1px solid var(--border)',
+          background: 'var(--surface-sub)',
         }}
       >
         <img
@@ -174,8 +172,7 @@ export function PlayerAvatar({
     );
   }
 
-  const tc = teamColor || 'var(--accent)';
-  const rc = role && ROLE_COLOR[role] ? ROLE_COLOR[role] : tc;
+  const tc = teamColor || '#171717';
   return (
     <div
       className="shrink-0 flex items-center justify-center text-white"
@@ -183,7 +180,7 @@ export function PlayerAvatar({
         width: size,
         height: size,
         borderRadius: radius,
-        background: `linear-gradient(135deg, ${tc} 0%, ${rc} 100%)`,
+        background: tc,
         fontWeight: 700,
         fontSize: size * 0.32,
         fontFamily: 'var(--font-sans)',

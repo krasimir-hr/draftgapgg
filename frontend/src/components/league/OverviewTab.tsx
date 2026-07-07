@@ -119,7 +119,7 @@ export default function OverviewTab({
 /* Highlights row (Player of Month · Inform Team · Must Pick) */
 
 const CARD_H = 175;
-const CARD_RADIUS = 14;
+const CARD_RADIUS = 10;
 const CARD_BORDER = '1px solid var(--border)';
 
 // Player of the Month / Inform Team / Must Pick cards hidden for now.
@@ -140,7 +140,7 @@ function AccoladesRow({ highlights }: { highlights: EventHighlights | null }) {
 
 function PlayerOfMonthCard({ p }: { p: NonNullable<EventHighlights['player_of_month']> }) {
   return (
-    <div style={{ position: 'relative', height: CARD_H, background: '#000', boxShadow: 'var(--shadow-md)', border: CARD_BORDER, borderRadius: CARD_RADIUS, overflow: 'hidden' }}>
+    <div style={{ position: 'relative', height: CARD_H, background: '#000', border: CARD_BORDER, borderRadius: CARD_RADIUS, overflow: 'hidden' }}>
       {p.team_logo && (
         <img src={p.team_logo} alt="" aria-hidden style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -40%)', width: 400, height: 400, objectFit: 'contain', filter: 'blur(20px) brightness(0.65)' }} />
       )}
@@ -160,7 +160,7 @@ function PlayerOfMonthCard({ p }: { p: NonNullable<EventHighlights['player_of_mo
           <span style={{ fontSize: 22, fontWeight: 700, color: '#fff', letterSpacing: '-0.02em', lineHeight: 1, flex: '1 1 0', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</span>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, flexShrink: 0 }}>
             <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11 }}>{p.avg_kills}/{p.avg_deaths}/{p.avg_assists}</span>
-            <span style={{ color: 'var(--accent-2)', fontSize: 12, fontWeight: 700 }}>{p.kda} KDA</span>
+            <span style={{ color: '#fff', fontSize: 12, fontWeight: 700 }}>{p.kda} KDA</span>
           </div>
         </div>
       </div>
@@ -170,7 +170,7 @@ function PlayerOfMonthCard({ p }: { p: NonNullable<EventHighlights['player_of_mo
 
 function InformTeamCard({ t }: { t: NonNullable<EventHighlights['inform_team']> }) {
   return (
-    <div style={{ position: 'relative', height: CARD_H, background: '#000', boxShadow: 'var(--shadow-md)', border: CARD_BORDER, borderRadius: CARD_RADIUS, overflow: 'hidden' }}>
+    <div style={{ position: 'relative', height: CARD_H, background: '#000', border: CARD_BORDER, borderRadius: CARD_RADIUS, overflow: 'hidden' }}>
       {t.logo && <img src={t.logo} alt="" aria-hidden style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -40%)', width: 400, height: 400, objectFit: 'contain', filter: 'blur(24px) brightness(0.5)', opacity: 0.85 }} />}
       <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.2) 60%, transparent 100%)' }} />
       <div style={{ position: 'absolute', top: 11, left: 13, right: 13, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -179,7 +179,7 @@ function InformTeamCard({ t }: { t: NonNullable<EventHighlights['inform_team']> 
       <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         {t.logo
           ? <img src={t.logo} alt={t.team} style={{ width: 120, height: 120, objectFit: 'contain' }} />
-          : <div style={{ width: 80, height: 80, borderRadius: 16, background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 28, fontWeight: 700 }}>{t.team.charAt(0)}</div>}
+          : <div style={{ width: 80, height: 80, borderRadius: 16, background: '#171717', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fafafa', fontSize: 28, fontWeight: 700 }}>{t.team.charAt(0)}</div>}
       </div>
       <div style={{ position: 'absolute', bottom: 13, left: 14, right: 14 }}>
         <div style={{ fontSize: 20, fontWeight: 700, color: '#fff', letterSpacing: '-0.02em', lineHeight: 1, marginBottom: 6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.team}</div>
@@ -194,7 +194,7 @@ function InformTeamCard({ t }: { t: NonNullable<EventHighlights['inform_team']> 
 
 function MustPickCard({ c }: { c: NonNullable<EventHighlights['must_pick']> }) {
   return (
-    <div style={{ position: 'relative', height: CARD_H, overflow: 'hidden', background: 'linear-gradient(135deg, var(--accent-muted) 0%, transparent 55%, var(--accent-muted) 100%)', boxShadow: 'var(--shadow-md)', border: CARD_BORDER, borderRadius: CARD_RADIUS }}>
+    <div style={{ position: 'relative', height: CARD_H, overflow: 'hidden', background: '#0a0a0a', border: CARD_BORDER, borderRadius: CARD_RADIUS }}>
       <img src={c.splash_url} alt="" aria-hidden style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top' }} />
       <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.2) 50%, transparent 100%)' }} />
       <div style={{ position: 'absolute', top: 11, left: 13, right: 13, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
