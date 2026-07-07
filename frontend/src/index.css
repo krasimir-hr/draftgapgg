@@ -43,7 +43,7 @@
 
   /* Color: chrome */
   --nav-bg: rgba(255, 255, 255, 0.85);
-  --dot-grid: rgba(0, 0, 0, 0.28);
+  --dot-grid: rgb(190, 190, 190);
 
   /* Shadows — flat aesthetic: near-zero on surfaces, --shadow-lg reserved
      for popovers/drawers. */
@@ -151,7 +151,7 @@
   --blue: #60a5fa;
   --blue-muted: rgba(96, 165, 250, 0.12);
   --nav-bg: rgba(10, 10, 10, 0.85);
-  --dot-grid: rgba(255, 255, 255, 0.22);
+  --dot-grid: rgb(119, 119, 119);
   --shadow-sm: none;
   --shadow-md: none;
   --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
@@ -180,15 +180,15 @@ body::before {
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  /* Two layered grids, the second offset by half a tile in both axes, so every
-     other row sits centered in the gap between its neighbours (staggered). */
-  /* Hard-edged dots (both stops equal → crisp circle, no soft halo). ~1px so
-     they still render on 1x displays; below ~1 device pixel they vanish. */
+  /* Dot grid, matching reactnativereusables.com. Two layers offset by half a
+     tile stagger every other row; `transparent 0` (< the 1.5px stop) clamps to
+     a hard-edged crisp circle. Dots stay tiny yet visible because --dot-grid is
+     a SOLID mid-gray (full opacity), not a low-alpha wash. */
   background-image:
-    radial-gradient(var(--dot-grid) 1px, transparent 1px),
-    radial-gradient(var(--dot-grid) 1px, transparent 1px);
-  background-size: 14px 14px;
-  background-position: 0 0, 7px 7px;
+    radial-gradient(circle at 0 0, var(--dot-grid) 1.5px, transparent 0),
+    radial-gradient(circle at 100% 100%, var(--dot-grid) 1.5px, transparent 0);
+  background-size: 20px 20px;
+  background-position: 0 0, 10px 10px;
   -webkit-mask-image: radial-gradient(
     ellipse 110% 100% at 50% 0%,
     #000 45%,
