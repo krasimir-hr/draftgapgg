@@ -24,7 +24,7 @@ export function StatLeaderboard({ title, rows, bleedImage, champIcon }: { title:
           height: 84,
           boxSizing: 'border-box',
           padding: bleedImage ? '0 14px 0' : '0 14px',
-          background: 'linear-gradient(135deg, var(--accent-muted) 0%, transparent 100%)',
+          background: 'var(--surface-sub)',
           borderBottom: rest.length > 0 ? '1px solid var(--border)' : 'none',
         }}
       >

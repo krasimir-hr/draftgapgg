@@ -998,8 +998,8 @@ function TeamRow({
   onHover: (team: string | null) => void;
 }) {
   const background = highlight
-    ? 'var(--accent-muted)'
-    : win ? 'color-mix(in srgb, var(--accent-muted) 55%, transparent)' : 'transparent';
+    ? 'var(--surface-hover)'
+    : win ? 'var(--surface-sub)' : 'transparent';
   const tbd = !team;
 
   return (
@@ -1052,8 +1052,8 @@ function TeamRow({
             fontSize: 12,
             fontWeight: 700,
             fontVariantNumeric: 'tabular-nums',
-            background: win ? 'var(--accent-muted)' : 'var(--surface-sub)',
-            color: win ? 'var(--accent-2)' : 'var(--text-dim)',
+            background: win ? 'var(--surface-hover)' : 'var(--surface-sub)',
+            color: win ? 'var(--text-h)' : 'var(--text-dim)',
             flexShrink: 0,
           }}
         >

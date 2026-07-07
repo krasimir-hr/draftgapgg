@@ -112,7 +112,7 @@ function MatchDetailView() {
       {/* Header */}
       <div
         style={{
-          background: 'linear-gradient(135deg, var(--accent-muted) 0%, transparent 50%, var(--accent-muted) 100%), var(--surface)',
+          background: 'var(--surface)',
           border: '1px solid var(--border)',
           borderRadius: 16,
           overflow: 'hidden',

@@ -460,7 +460,7 @@ function PlayerDetailView() {
       {/* Hero card */}
       <div
         className="card card-xl card-soft-shadow overflow-hidden"
-        style={{ borderRadius: 16, background: 'linear-gradient(135deg, var(--accent-muted) 0%, transparent 50%, var(--accent-muted) 100%)' }}
+        style={{ borderRadius: 16, background: 'var(--surface)' }}
       >
         <div className="flex gap-6 px-7 pt-6" style={{ alignItems: 'flex-end' }}>
           <div className="shrink-0 overflow-hidden" style={{ height: 140, borderRadius: '8px 8px 0 0', alignSelf: 'stretch' }}>

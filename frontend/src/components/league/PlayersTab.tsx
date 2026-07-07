@@ -398,7 +398,7 @@ function PlayerCard({ p, teamShortNames }: { p: UIPlayer; teamShortNames: Record
         style={{
           padding: '14px 16px 12px',
           borderBottom: '1px solid var(--border)',
-          background: 'linear-gradient(180deg, color-mix(in srgb, var(--accent) 8%, transparent) 0%, transparent 100%)',
+          background: 'transparent',
         }}
       >
         <div

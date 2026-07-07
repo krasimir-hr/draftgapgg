@@ -170,12 +170,12 @@ function Hero({ teamName, gwTotal, rivals }: { teamName: string; gwTotal: number
   return (
     <div
       className="card card-xl card-soft-shadow overflow-hidden"
-      style={{ borderRadius: 16, background: 'linear-gradient(135deg, var(--accent-muted) 0%, transparent 55%, var(--accent-muted) 100%)' }}
+      style={{ borderRadius: 16, background: 'var(--surface)' }}
     >
       <div className="flex items-center gap-4 px-7 pt-6 pb-5">
         <div
           className="shrink-0 flex items-center justify-center text-white font-display"
-          style={{ width: 64, height: 64, borderRadius: 14, fontSize: 26, fontWeight: 700, background: 'linear-gradient(135deg, var(--accent) 0%, var(--accent-3) 100%)', boxShadow: 'var(--shadow-md)' }}
+          style={{ width: 64, height: 64, borderRadius: 14, fontSize: 26, fontWeight: 700, background: '#171717', color: '#fafafa' }}
         >
           {teamName.slice(0, 1)}
         </div>

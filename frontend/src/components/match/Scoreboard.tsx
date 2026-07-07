@@ -57,7 +57,7 @@ export default function Scoreboard({
   return (
     <div
       style={{
-        background: 'linear-gradient(135deg, color-mix(in srgb, var(--accent-muted) 40%, transparent) 0%, transparent 55%, color-mix(in srgb, var(--accent-muted) 40%, transparent) 100%), var(--surface)',
+        background: 'var(--surface)',
         border: '1px solid var(--border)',
         borderRadius: 16,
         overflow: 'hidden',
@@ -174,7 +174,7 @@ function TeamSide({
   return (
     <div
       className="flex flex-col"
-      style={{ padding: '20px 24px 18px', gap: 14, background: 'linear-gradient(135deg, color-mix(in srgb, var(--accent-muted) 40%, transparent) 0%, transparent 55%, color-mix(in srgb, var(--accent-muted) 40%, transparent) 100%), var(--surface)' }}
+      style={{ padding: '20px 24px 18px', gap: 14, background: 'var(--surface)' }}
     >
       <div className="flex items-center" style={{ gap: 14, flexDirection: blueSide ? 'row' : 'row-reverse', textAlign: blueSide ? 'left' : 'right' }}>
         <TeamMark team={team} size={44} />
