@@ -1,27 +1,28 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400..800&family=Geist+Mono:wght@400..600&display=swap');
 @import "tailwindcss";
 
 :root {
-  /* Color: base palette (warm, Claude-leaning) */
-  --bg:             #faf9f5;
+  /* Color: base palette (shadcn/ui neutral) */
+  --bg:             #ffffff;
   --surface:        #ffffff;
-  --surface-sub:    #f3f1ea;
-  --surface-hover:  #ebe9df;
-  --border:         #e7e3d6;
-  --border-strong:  #d6d1bf;
+  --surface-sub:    #f5f5f5;
+  --surface-hover:  #ebebeb;
+  --border:         #e5e5e5;
+  --border-strong:  #d4d4d4;
 
   /* Color: typography */
-  --text-h:         #1a1915;
-  --text:           #54524a;
-  --text-dim:       #8a8778;
-  --text-faint:     #b8b4a4;
+  --text-h:         #0a0a0a;
+  --text:           #404040;
+  --text-dim:       #737373;
+  --text-faint:     #a3a3a3;
 
-  /* Color: brand (DraftGap purple) */
+  /* Color: brand (DraftGap purple — trace usage only: links, active
+     underlines/bars, focus rings; chrome stays neutral) */
   --accent:         #6d28d9;
-  --accent-2:       #8b5cf6;
-  --accent-3:       #aa3bff;
-  --accent-muted:   rgba(109, 40, 217, 0.09);
-  --accent-border:  rgba(109, 40, 217, 0.22);
+  --accent-2:       #7c3aed;
+  --accent-3:       #7c3aed;
+  --accent-muted:   rgba(109, 40, 217, 0.07);
+  --accent-border:  rgba(109, 40, 217, 0.25);
 
   /* Color: semantic */
   --green:          #2f8a4d;
@@ -41,21 +42,22 @@
   --role-sup:       #0891b2;
 
   /* Color: chrome */
-  --nav-bg:         rgba(250, 249, 245, 0.85);
+  --nav-bg:         rgba(255, 255, 255, 0.85);
 
-  /* Shadows */
-  --shadow-sm:      0 1px 2px rgba(40, 33, 18, 0.04);
-  --shadow-md:      0 4px 16px rgba(40, 33, 18, 0.06), 0 1px 4px rgba(40, 33, 18, 0.04);
-  --shadow-lg:      0 12px 32px rgba(40, 33, 18, 0.10), 0 4px 12px rgba(40, 33, 18, 0.06);
-  --ring-focus:     0 0 0 3px rgba(109, 40, 217, 0.18);
+  /* Shadows — flat aesthetic: near-zero on surfaces, --shadow-lg reserved
+     for popovers/drawers. */
+  --shadow-sm:      0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md:      0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-lg:      0 8px 24px rgba(0, 0, 0, 0.08);
+  --ring-focus:     0 0 0 3px rgba(109, 40, 217, 0.20);
 
   /* Radius */
   --r-xs:  4px;
   --r-sm:  6px;
   --r-md:  8px;
   --r-lg:  10px;
-  --r-xl:  14px;
-  --r-2xl: 20px;
+  --r-xl:  12px;
+  --r-2xl: 16px;
   --r-pill: 999px;
 
   /* Spacing (4px grid) */
@@ -70,11 +72,12 @@
   --s-12: 48px;
   --s-16: 64px;
 
-  /* Typography: families */
-  --font-display: "Plus Jakarta Sans", "Inter", system-ui, sans-serif;
-  --font-sans:    "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", system-ui, sans-serif;
-  --font-mono:    "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
-  --font-num:     "Inter", system-ui, sans-serif;
+  /* Typography: families (Geist everywhere; --font-display kept as a
+     separate token in case a display face returns) */
+  --font-display: "Geist", system-ui, sans-serif;
+  --font-sans:    "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", system-ui, sans-serif;
+  --font-mono:    "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --font-num:     "Geist", system-ui, sans-serif;
 
   /* Typography: sizes */
   --fs-xs:   12px;
@@ -121,21 +124,21 @@
    script + ThemeContext). */
 .dark {
     color-scheme: dark;
-    --bg:             #18171a;
-    --surface:        #1f1e22;
-    --surface-sub:    #25232a;
-    --surface-hover:  #2c2a33;
-    --border:         #2d2b34;
-    --border-strong:  #3a3744;
-    --text-h:         #ede9dd;
-    --text:           #a8a496;
-    --text-dim:       #6b6a64;
-    --text-faint:     #4a4944;
+    --bg:             #0a0a0a;
+    --surface:        #0f0f0f;
+    --surface-sub:    #171717;
+    --surface-hover:  #1f1f1f;
+    --border:         #242424;
+    --border-strong:  #333333;
+    --text-h:         #fafafa;
+    --text:           #a3a3a3;
+    --text-dim:       #737373;
+    --text-faint:     #525252;
     --accent:         #a78bfa;
     --accent-2:       #c4b5fd;
-    --accent-3:       #c084fc;
-    --accent-muted:   rgba(167, 139, 250, 0.12);
-    --accent-border:  rgba(167, 139, 250, 0.28);
+    --accent-3:       #c4b5fd;
+    --accent-muted:   rgba(167, 139, 250, 0.10);
+    --accent-border:  rgba(167, 139, 250, 0.30);
     --green:          #4ade80;
     --green-muted:    rgba(74, 222, 128, 0.12);
     --red:            #f87171;
@@ -144,11 +147,11 @@
     --amber-muted:    rgba(251, 191, 36, 0.12);
     --blue:           #60a5fa;
     --blue-muted:     rgba(96, 165, 250, 0.12);
-    --nav-bg:         rgba(24, 23, 26, 0.85);
-    --shadow-sm:      0 1px 2px rgba(0, 0, 0, 0.4);
-    --shadow-md:      0 4px 16px rgba(0, 0, 0, 0.5), 0 1px 4px rgba(0, 0, 0, 0.3);
-    --shadow-lg:      0 12px 32px rgba(0, 0, 0, 0.65), 0 4px 12px rgba(0, 0, 0, 0.4);
-    --ring-focus:     0 0 0 3px rgba(167, 139, 250, 0.28);
+    --nav-bg:         rgba(10, 10, 10, 0.85);
+    --shadow-sm:      none;
+    --shadow-md:      none;
+    --shadow-lg:      0 8px 24px rgba(0, 0, 0, 0.5);
+    --ring-focus:     0 0 0 3px rgba(167, 139, 250, 0.30);
 }
 
 *, *::before, *::after { box-sizing: border-box; }
