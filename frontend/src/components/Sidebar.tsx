@@ -106,7 +106,7 @@ export function SideRail({
   return (
     <div className="side-rail">
       {title && <h3 className="side-rail-header">{title}</h3>}
-      {children}
+      <div className="side-rail-body">{children}</div>
       {onViewAll && (
         <button
           type="button"

@@ -393,10 +393,24 @@
 
 /* Side rail (used on league / matches pages) */
 .side-rail {
+  display: flex;
+  flex-direction: column;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
   overflow: hidden;
+}
+
+/* Last card in the league-frame right rail grows to fill the row's full
+   height (matching the main column) instead of leaving dead space below it. */
+.es-frame-rail > .side-rail:last-child {
+  flex: 1;
+  min-height: 0;
+}
+
+.side-rail-body {
+  flex: 1;
+  min-height: 0;
 }
 
 .side-rail-header {
@@ -482,55 +496,107 @@
   .es-shell--rail { grid-template-columns: minmax(0, 1fr) 186px; }
 }
 
-/* League hero shrink-on-scroll: the big logo + title collapse, leaving a
-   compact bar with a small logo on the left and the tabs/menu sliding right.
-   The collapse animates grid-template-rows 1fr -> 0fr (exact, no height guess),
-   and the menu slide animates flex-grow so it glides instead of snapping. */
+/* League "frame": one bordered, rounded container laid out as a flex column —
+   a fixed header bar on top and a scrollable body below it. The body holds a
+   grid with the main content + right rail as two divider-separated columns, so
+   the header stays put while the rest of the div scrolls as one. */
+.es-frame-outer {
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  padding: 16px 24px 24px;
+}
+.es-frame {
+  width: 100%;
+  max-width: 1280px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;                 /* clip rounded corners; the body scrolls */
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-2xl);
+  box-shadow: var(--shadow-sm);
+}
+/* Fixed top bar — never scrolls. */
+.es-frame-header {
+  flex-shrink: 0;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 46px;
+  padding: 0 6px;
+}
+/* Tighter tabs inside the frame header so the top bar stays compact. */
+.es-frame-header .section-tab {
+  padding-top: 9px;
+  padding-bottom: 9px;
+}
+/* The single scroll container below the header. Inner sticky rows (a tab's
+   table column-header) pin to the top of this, i.e. right under the header. */
+.es-frame-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+/* min-height:100% keeps the grid (and its column divider) filling the body
+   even when content is short; it grows past that and scrolls when tall. */
+.es-frame-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-height: 100%;
+}
+.es-frame--rail .es-frame-grid {
+  grid-template-columns: minmax(0, 1fr) 280px;
+}
+.es-frame-main {
+  grid-column: 1;
+  min-width: 0;
+  padding: 20px 24px 40px;
+}
+.es-frame--rail .es-frame-main {
+  border-right: 1px solid var(--border);
+}
+.es-frame-rail {
+  grid-column: 2;
+  padding: 20px 16px 40px;
+}
+@media (max-width: 1360px) {
+  .es-frame--rail .es-frame-grid { grid-template-columns: minmax(0, 1fr) 240px; }
+}
+@media (max-width: 768px) {
+  /* Full-bleed on mobile: drop the outer margin, side borders and rounding,
+     collapse to a single column. */
+  .es-frame-outer { padding: 0; }
+  .es-frame { border-radius: 0; border-left: 0; border-right: 0; }
+  .es-frame--rail .es-frame-grid { grid-template-columns: minmax(0, 1fr); }
+  .es-frame--rail .es-frame-main { border-right: 0; }
+  .es-frame-rail { display: none; }
+  .es-frame-main { padding: 16px 12px 40px; }
+}
 
-.league-hero-top {
-  max-height: 136px;
-  overflow: hidden;
-  transition: max-height 0.18s cubic-bezier(0.16, 1, 0.3, 1),
-              opacity 0.12s ease-out,
-              padding 0.18s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.es-header-stuck .league-hero-top {
-  max-height: 0;
-  opacity: 0;
-  padding-top: 0;
-  padding-bottom: 0;
-}
+/* League hero: a single compact bar — small logo on the left, section tabs
+   next to it, and the year/stage selectors pushed to the far right. */
 
 .league-hero-bar-logo {
-  width: 0;
+  width: 28px;
   height: 28px;
   flex-shrink: 0;
   object-fit: contain;
-  opacity: 0;
-  transition: width 0.18s cubic-bezier(0.16, 1, 0.3, 1),
-              opacity 0.12s ease-out,
-              margin 0.18s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.es-header-stuck .league-hero-bar-logo {
-  width: 28px;
-  opacity: 1;
   margin-right: 6px;
 }
 
-/* Spacer grows on scroll to push the tabs + selectors to the right. */
+/* Spacer between the tabs and the selectors, pushing the selectors right. */
 .league-hero-spacer {
-  flex-grow: 0;
+  flex-grow: 1;
   flex-basis: 0;
   min-width: 0;
-  transition: flex-grow 0.18s cubic-bezier(0.16, 1, 0.3, 1);
 }
-.es-header-stuck .league-hero-spacer { flex-grow: 1; }
 
 .league-hero-tabs {
-  flex: 1 0 auto; /* grow to fill when expanded; never shrink below the tabs' width */
-  transition: flex-grow 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  flex: 0 0 auto; /* sized to the tabs; the spacer takes the slack */
 }
-.es-header-stuck .league-hero-tabs { flex-grow: 0; }
 
 /* One league entry inside a side-rail panel: logo + name, full-width link. */
 .league-nav-row {
@@ -759,9 +825,10 @@ button { font-family: inherit; }
    being clipped by the overflow-hidden main region.
    ============================================================ */
 
-/* Clears the two-row flat header (56px logo/search row + 44px league tab row
-   + hairlines). */
-.app-main { padding-top: 102px; }
+/* Clears the floating two-row header: 12px top float + 1px top border +
+   56px logo/search row + 1px divider + 44px league tab row + 1px bottom border,
+   plus a small gap below the bar. */
+.app-main { padding-top: 128px; }
 
 @media (max-width: 768px) {
   /* Two flat bars on mobile (see TopNav.css): logo + search header on top,
@@ -781,13 +848,9 @@ button { font-family: inherit; }
   }
   .es-rail { display: none !important; }
 
-  /* League hero on mobile collapses to a two-liner:
+  /* League hero on mobile wraps into a two-liner:
        line 1 — logo + year/league selects
-       line 2 — the section-tab menu (Overview / Matches / …)
-     The big title block is dropped; the top nav + selects already say which
-     league and year you're viewing. */
-  .league-hero-topwrap { display: none; }
-
+       line 2 — the section-tab menu (Overview / Matches / …) */
   .league-hero-bar {
     flex-wrap: wrap;
     align-items: center;

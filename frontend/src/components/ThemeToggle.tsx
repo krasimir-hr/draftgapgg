@@ -1,4 +1,4 @@
-import { useTheme, type Theme } from '../contexts/ThemeContext';
+import { useTheme } from '../contexts/ThemeContext';
 
 const SunIcon = () => (
   <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true">
@@ -19,30 +19,31 @@ const MoonIcon = () => (
   </svg>
 );
 
-const MonitorIcon = () => (
-  <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true">
-    <rect x="1.75" y="2.75" width="12.5" height="8.5" rx="1.25" fill="none" stroke="currentColor" strokeWidth="1.5" />
-    <path d="M5.5 13.75h5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-  </svg>
-);
-
-const NEXT: Record<Theme, Theme> = { light: 'dark', dark: 'system', system: 'light' };
-const ICON: Record<Theme, () => React.JSX.Element> = { light: SunIcon, dark: MoonIcon, system: MonitorIcon };
-const LABEL: Record<Theme, string> = { light: 'Light theme', dark: 'Dark theme', system: 'System theme' };
-
-/** Icon button cycling light → dark → system. */
+/** Segmented light | dark toggle: both icons shown, the active mode raised. */
 export default function ThemeToggle() {
-  const { theme, setTheme } = useTheme();
-  const Icon = ICON[theme];
+  const { resolved, setTheme } = useTheme();
   return (
-    <button
-      type="button"
-      className="theme-toggle"
-      onClick={() => setTheme(NEXT[theme])}
-      title={`${LABEL[theme]} — click to switch`}
-      aria-label={`${LABEL[theme]} active, switch to ${LABEL[NEXT[theme]].toLowerCase()}`}
-    >
-      <Icon />
-    </button>
+    <div className="theme-toggle" role="group" aria-label="Theme">
+      <button
+        type="button"
+        className={`theme-toggle-opt${resolved === 'light' ? ' active' : ''}`}
+        onClick={() => setTheme('light')}
+        aria-pressed={resolved === 'light'}
+        aria-label="Light theme"
+        title="Light theme"
+      >
+        <SunIcon />
+      </button>
+      <button
+        type="button"
+        className={`theme-toggle-opt${resolved === 'dark' ? ' active' : ''}`}
+        onClick={() => setTheme('dark')}
+        aria-pressed={resolved === 'dark'}
+        aria-label="Dark theme"
+        title="Dark theme"
+      >
+        <MoonIcon />
+      </button>
+    </div>
   );
 }

@@ -5,7 +5,6 @@ import type { League, Event, Match } from '../types/models';
 import OverviewTab from '../components/league/OverviewTab';
 import EsportsLayout from '../components/EsportsLayout';
 import { MatchRails } from '../components/Sidebar';
-import { RAIL_FEATURED } from '../lib/surfaces';
 import MatchesTab from '../components/league/MatchesTab';
 import StandingsTab from '../components/league/StandingsTab';
 import TeamStatsRail from '../components/league/TeamStatsRail';
@@ -17,7 +16,7 @@ import BracketTab from '../components/league/BracketTab';
 import { useDrawer } from '../contexts/DrawerContext';
 import { slugify, getStageName, buildLeagueSlug, parseLeagueSlug } from '../utils/slugs';
 import {
-  resolveLeagueView, bracketNeeds, bracketKey, NO_STANDINGS, STATIC_TAB_PATH,
+  resolveLeagueView, bracketNeeds, bracketKey, STATIC_TAB_PATH,
   type NavTab, type StaticTab,
 } from '../lib/leagueView';
 import {
@@ -196,7 +195,6 @@ export default function LeagueDetailPage() {
   );
 
   const leagueLabel = league.short_name ?? league.name;
-  const activeStageName = effectiveEvent ? getStageName(effectiveEvent.name, stagesForYear) : '';
 
   const rightRail =
     activeEventId == null ? undefined
@@ -219,60 +217,7 @@ export default function LeagueDetailPage() {
     <EsportsLayout
       right={rightRail}
       header={
-        <div
-          className="card card-xl card-soft-shadow overflow-hidden league-hero"
-          style={{ borderRadius: 16, background: RAIL_FEATURED }}
-        >
-        <div className="league-hero-topwrap">
-        <div className="league-hero-top flex items-center gap-4 px-7 py-6 flex-wrap">
-          <div className="league-hero-logo flex items-center justify-center shrink-0" style={{ width: 80, height: 80 }}>
-            {league.logo ? (
-              <img
-                src={league.logo}
-                alt={leagueLabel}
-                width={80}
-                height={80}
-                decoding="async"
-                fetchPriority="high"
-                className="logo-themed"
-                style={{ width: 80, height: 80, objectFit: 'contain' }}
-              />
-            ) : (
-              <span
-                className="font-bold"
-                style={{
-                  fontFamily: 'var(--font-sans)', fontSize: 18,
-                  letterSpacing: '-0.02em', color: 'var(--text-h)',
-                }}
-              >
-                {leagueLabel}
-              </span>
-            )}
-          </div>
-
-          <div className="flex-1 min-w-0">
-            <h1
-              className="h-display league-hero-title"
-              style={{ fontSize: 32, fontWeight: 700, lineHeight: 1.1 }}
-            >
-              {leagueLabel}{effectiveYear ? ` ${NO_STANDINGS.has(leagueLabel) ? '' : 'Season '}${effectiveYear}` : ''}
-            </h1>
-            {activeStageName && !NO_STANDINGS.has(leagueLabel) && (() => {
-              const stripped = activeStageName
-                .replace(new RegExp(`^${leagueLabel}\\s+${effectiveYear}\\s+`, 'i'), '')
-                .replace(new RegExp(`^${leagueLabel}\\s+`, 'i'), '');
-              return stripped ? (
-                <div style={{ marginTop: 4, fontSize: 12.5, color: 'var(--accent-2)', fontWeight: 500 }}>
-                  {stripped}
-                </div>
-              ) : null;
-            })()}
-          </div>
-
-        </div>
-        </div>
-
-        <div className="league-hero-bar flex items-center border-t border-(--border)" style={{ padding: '0 14px' }}>
+        <div className="league-hero-bar flex items-center" style={{ padding: '0 8px' }}>
           {league.logo && (
             <img
               src={league.logo}
@@ -314,7 +259,6 @@ export default function LeagueDetailPage() {
             )}
           </div>
         </div>
-      </div>
       }
     >
           <div>

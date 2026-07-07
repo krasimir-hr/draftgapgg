@@ -737,7 +737,7 @@ export function FilterBar({
   return (
     <div
       className="card card-soft-shadow flex items-center"
-      style={{ padding: '8px 14px', position: 'sticky', top: 0, zIndex: 4, background: 'var(--surface)', border: 'none' }}
+      style={{ padding: '8px 14px', background: 'var(--surface)', border: 'none' }}
     >
       {/* Left: stage picker / search */}
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8 }}>

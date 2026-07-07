@@ -6,6 +6,9 @@
   position: fixed;
   inset: 0 0 auto 0;
   z-index: 60;
+  /* Float the bar down from the top and in from the side edges so it reads as a
+     contained, centered card rather than a full-bleed header. */
+  padding: 12px 24px 0;
 }
 
 .top-nav {
@@ -30,14 +33,20 @@
   border-bottom: 1px solid var(--nav-line);
 }
 
-/* Desktop header stacks two full-width rows: logo + search, then league tabs.
-   Row content is centered to the 1280px shell. */
+/* Desktop header: a contained bar as wide as the main content shell (1280px),
+   centered, with a full hairline border + rounded corners — floating over the
+   page rather than spanning the viewport edge-to-edge. Stacks two rows: logo +
+   search, then league tabs. */
 .top-nav-container .top-nav {
   flex-direction: column;
   align-items: stretch;
   height: auto;
   gap: 0;
   padding: 0;
+  max-width: 1280px;
+  margin: 0 auto;
+  border: 1px solid var(--nav-line);
+  border-radius: 14px;
 }
 
 .top-nav-main {
@@ -67,24 +76,44 @@
 .top-nav-logo-full { filter: brightness(0); }
 .dark .top-nav-logo-full { filter: none; }
 
-/* Theme toggle button (see ThemeToggle.tsx). */
+/* Theme toggle (see ThemeToggle.tsx): a segmented light | dark control. A pill
+   track sized to match the search field's 34px height, holding two circular
+   options; the active mode is raised on a lighter fill. */
 .theme-toggle {
   display: inline-flex;
   align-items: center;
+  gap: 2px;
+  height: 34px;
+  padding: 0 3px;
+  flex-shrink: 0;
+  border: 1px solid var(--nav-line);
+  border-radius: 999px;
+  background: var(--nav-field-bg);
+}
+
+.theme-toggle-opt {
+  display: inline-flex;
+  align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   flex-shrink: 0;
   border: none;
-  border-radius: var(--r-md);
+  border-radius: 999px;
   background: transparent;
-  color: var(--nav-fg-dim);
+  color: var(--nav-fg-faint);
   cursor: pointer;
   transition: background var(--t-fast), color var(--t-fast);
 }
-.theme-toggle:hover {
-  background: var(--nav-hover);
+.theme-toggle-opt:hover { color: var(--nav-fg); }
+
+.theme-toggle-opt.active {
+  background: var(--surface);
   color: var(--nav-fg);
+  box-shadow: var(--shadow-sm);
+}
+.dark .theme-toggle-opt.active {
+  background: var(--surface-hover);
 }
 
 /* Desktop: the league tabs sit in a second row below the logo/search line,
@@ -356,6 +385,10 @@
    dock (Instagram-style tab bar).
    ------------------------------------------------------------------ */
 @media (max-width: 768px) {
+  /* Mobile drops the floating-bar treatment — the header goes full-bleed again
+     (edge-to-edge, bottom border only) so it reads as a plain top bar. */
+  .top-nav-container { padding: 0; }
+
   /* Single row again on mobile: the league tab row is hidden and the bottom
      dock takes over, so the header collapses back to logo + search. */
   .top-nav-container .top-nav {
@@ -364,6 +397,11 @@
     height: 56px;
     gap: 10px;
     padding: 0 12px;
+    max-width: none;
+    margin: 0;
+    border: none;
+    border-bottom: 1px solid var(--nav-line);
+    border-radius: 0;
   }
   .top-nav-main {
     display: contents;

@@ -158,7 +158,8 @@ class Match(models.Model):
 
     # Bracket layout — admin-controlled.
     # bracket_col:   which column (1, 2, 3…) this match belongs to.
-    # bracket_order: vertical slot within that column (1 = topmost), unique per col.
+    # bracket_order: vertical slot within that column (1 = topmost), unique per
+    #                col within a stage's upper or lower bracket band.
     # is_final:      marks this match as a "grand final" — centered on full bracket height.
     bracket_col   = models.PositiveSmallIntegerField(null=True, blank=True)
     bracket_order = models.PositiveSmallIntegerField(null=True, blank=True)
@@ -168,7 +169,7 @@ class Match(models.Model):
         verbose_name_plural = "matches"
         constraints = [
             models.UniqueConstraint(
-                fields=['event', 'bracket_col', 'bracket_order'],
+                fields=['event', 'stage', 'is_lower_bracket', 'bracket_col', 'bracket_order'],
                 condition=models.Q(bracket_order__isnull=False, bracket_col__isnull=False),
                 name='unique_bracket_order_per_col',
             )
