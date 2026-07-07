@@ -125,10 +125,10 @@ export default function EsportsLayout({
                 filter into. Sits above the scroll body. */}
             <div
               ref={headerRef}
-              // paddingTop: 3 — .app-main's fixed clearance already overshoots the
-              // nav's actual rendered height by ~13px, so this tops up to a 16px
-              // visual gap below the nav (matching the .es-shell horizontal gap).
-              style={{ flexShrink: 0, paddingTop: 3, paddingBottom: 12, position: 'relative', zIndex: 1 }}
+              // paddingTop: 16 — .app-main's fixed clearance matches the flat
+              // header's exact height, so this provides the full 16px visual
+              // gap below the nav (matching the .es-shell horizontal gap).
+              style={{ flexShrink: 0, paddingTop: 16, paddingBottom: 12, position: 'relative', zIndex: 1 }}
             >
               {header}
               <div ref={setSubHeaderEl} />

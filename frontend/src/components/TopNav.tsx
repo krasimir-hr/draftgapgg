@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import ThemeToggle from './ThemeToggle';
 import './TopNav.css';
 
 export type TopNavLeague = {
@@ -15,7 +16,7 @@ export interface TopNavProps {
   leagues: TopNavLeague[];
 }
 
-// Leagues whose crest reads dark and needs whitening on the dark-mode bar.
+// Leagues whose crest reads dark and needs whitening on dark surfaces.
 const WHITE_LOGO_SLUGS = new Set(['lck', 'cblol', 'worlds', 'msi']);
 
 type SearchResult = {
@@ -174,9 +175,10 @@ function LeagueButtons({ leagues }: { leagues: TopNavLeague[] }) {
   );
 }
 
-/** Floating pill bar. Desktop stacks two rows: the app logo + search on top,
-    and a row of league tabs (crest + label) below. On mobile the league row is
-    hidden and the tabs move into a separate bottom bar (see TopNav.css). */
+/** Flat full-width header. Desktop stacks two rows: the app logo + search +
+    theme toggle on top, and a row of league tabs (crest + label) below. On
+    mobile the league row is hidden and the tabs move into a bottom dock (see
+    TopNav.css). */
 export default function TopNav({ logo, logoAlt = 'Logo', leagues }: TopNavProps) {
   return (
     <>
@@ -188,6 +190,7 @@ export default function TopNav({ logo, logoAlt = 'Logo', leagues }: TopNavProps)
             </Link>
 
             <NavSearch leagues={leagues} />
+            <ThemeToggle />
           </div>
 
           <div className="top-nav-leagues-slot">

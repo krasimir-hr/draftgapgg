@@ -1,52 +1,37 @@
-/* TopNav — floating pill bar with the app logo and league icon-buttons.
-   Themed with the app's design tokens so it follows light/dark automatically. */
+/* TopNav — flat full-width header (shadcn-style): logo + search + theme
+   toggle on the first row, league tabs on the second, hairline borders only.
+   On mobile the tab row is replaced by a bottom dock. */
 
 .top-nav-container {
   position: fixed;
-  left: 50%;
-  transform: translateX(-50%);
-  width: calc(100% - 48px); /* matches the content frame's 24px side padding */
-  max-width: 1232px;        /* matches EsportsLayout: 1280 max − 48 padding */
+  inset: 0 0 auto 0;
   z-index: 60;
-  top: 14px;
 }
 
 .top-nav {
-  /* On-nav tokens: the bar is a saturated brand-purple surface in BOTH themes,
-     so its text/icons/lines switch to a light-on-purple set instead of the
-     page's neutral tokens. This is what makes the header pop off the page. */
-  --nav-grad:           linear-gradient(115deg, #7c3aed 0%, #6d28d9 48%, #5b21b6 100%);
-  --nav-glow:           0 10px 30px -6px rgba(109, 40, 217, 0.45), 0 3px 10px rgba(109, 40, 217, 0.22);
-  --nav-fg:             #ffffff;
-  --nav-fg-dim:         rgba(255, 255, 255, 0.68);
-  --nav-fg-faint:       rgba(255, 255, 255, 0.45);
-  --nav-line:           rgba(255, 255, 255, 0.15);
-  --nav-line-strong:    rgba(255, 255, 255, 0.28);
-  --nav-field-bg:       rgba(255, 255, 255, 0.12);
-  --nav-field-bg-focus: rgba(255, 255, 255, 0.20);
-  --nav-hover:          rgba(255, 255, 255, 0.14);
-  --nav-active:         rgba(255, 255, 255, 0.20);
+  /* On-nav tokens alias the page's neutral tokens; kept as a layer so the
+     header and the mobile dock share one vocabulary. */
+  --nav-fg:             var(--text-h);
+  --nav-fg-dim:         var(--text-dim);
+  --nav-fg-faint:       var(--text-faint);
+  --nav-line:           var(--border);
+  --nav-line-strong:    var(--border-strong);
+  --nav-field-bg:       var(--surface-sub);
+  --nav-field-bg-focus: var(--surface-sub);
+  --nav-hover:          var(--surface-sub);
+  --nav-active:         var(--surface-sub);
 
-  height: 60px;
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 0 14px;
-  border-radius: 14px;
-  border: 1px solid var(--nav-line);
-  /* Top sheen layered over the brand gradient for a lit, glassy edge. */
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 42%),
-    var(--nav-grad);
-  box-shadow: var(--nav-glow);
+  background: var(--nav-bg);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--nav-line);
 }
 
-.dark .top-nav {
-  --nav-grad: linear-gradient(115deg, #6d28d9 0%, #5b21b6 52%, #4c1d95 100%);
-  --nav-glow: 0 12px 34px -6px rgba(124, 58, 237, 0.50), 0 2px 8px rgba(0, 0, 0, 0.55);
-}
-
-/* Desktop top pill stacks two rows: logo + search, then the league tab row. */
+/* Desktop header stacks two full-width rows: logo + search, then league tabs.
+   Row content is centered to the 1280px shell. */
 .top-nav-container .top-nav {
   flex-direction: column;
   align-items: stretch;
@@ -60,7 +45,10 @@
   align-items: center;
   gap: 14px;
   height: 56px;
-  padding: 0 14px;
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 24px;
 }
 
 .top-nav-logo {
@@ -75,26 +63,48 @@
   width: auto;
 }
 
-/* The wordmark asset is white; the bar is brand-purple in both themes, so it
-   stays white with a soft shadow for depth. */
-.top-nav-logo-full { filter: drop-shadow(0 1px 2px rgba(30, 12, 60, 0.35)); }
+/* The wordmark asset is white; ink it on the light header, leave it in dark. */
+.top-nav-logo-full { filter: brightness(0); }
+.dark .top-nav-logo-full { filter: none; }
+
+/* Theme toggle button (see ThemeToggle.tsx). */
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border: none;
+  border-radius: var(--r-md);
+  background: transparent;
+  color: var(--nav-fg-dim);
+  cursor: pointer;
+  transition: background var(--t-fast), color var(--t-fast);
+}
+.theme-toggle:hover {
+  background: var(--nav-hover);
+  color: var(--nav-fg);
+}
 
 /* Desktop: the league tabs sit in a second row below the logo/search line,
-   divided by a hairline. Mobile hides this — the bottom bar takes over. */
+   divided by a hairline. Mobile hides this — the bottom dock takes over. */
 .top-nav-leagues-slot {
   display: block;
   border-top: 1px solid var(--nav-line);
-  padding: 0 8px;
 }
 
-/* Mobile-only bottom bar for the league icon-buttons. */
+.top-nav-leagues-slot .top-nav-leagues {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 10px; /* tabs carry 14px of their own → labels align at 24px */
+}
+
+/* Mobile-only bottom dock for the league icon-buttons. */
 .bottom-nav-container {
   display: none;
   position: fixed;
-  left: 50%;
-  transform: translateX(-50%);
-  bottom: calc(10px + env(safe-area-inset-bottom));
-  width: calc(100% - 20px);
+  inset: auto 0 0 0;
   z-index: 60;
 }
 
@@ -114,7 +124,7 @@
   width: 1px;
   height: 22px;
   margin: 0 6px;
-  background: var(--nav-line-strong);
+  background: var(--nav-line);
 }
 
 .league-btn {
@@ -124,21 +134,20 @@
   width: 42px;
   height: 42px;
   flex-shrink: 0;
-  border-radius: 11px;
+  border-radius: var(--r-lg);
   border: 1px solid transparent;
   background: transparent;
   cursor: pointer;
-  transition: background var(--t-fast), border-color var(--t-fast), transform var(--t-fast);
+  transition: background var(--t-fast), border-color var(--t-fast);
 }
 
 .league-btn:hover {
   background: var(--nav-hover);
-  transform: translateY(-1px);
 }
 
 .league-btn.active {
   background: var(--nav-active);
-  border-color: var(--nav-line-strong);
+  border-color: var(--nav-line);
 }
 
 .league-btn img {
@@ -147,9 +156,8 @@
   object-fit: contain;
 }
 
-/* Some crests read dark; the bar is deep purple in both themes now, so force
-   these white so they stay visible. */
-.league-btn-white img {
+/* Some crests read dark; whiten them on dark surfaces only. */
+.dark .league-btn-white img {
   filter: brightness(0) invert(1);
 }
 
@@ -178,7 +186,7 @@
 .top-nav-leagues-slot .league-btn {
   position: relative;
   width: auto;
-  height: 46px;
+  height: 44px;
   gap: 8px;
   padding: 0 14px;
   border-radius: 0;
@@ -186,7 +194,6 @@
 }
 .top-nav-leagues-slot .league-btn:hover {
   background: transparent;
-  transform: none;
 }
 .top-nav-leagues-slot .league-btn.active {
   background: transparent;
@@ -206,7 +213,7 @@
   display: block;
   font-family: var(--font-sans);
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: -0.01em;
   color: var(--nav-fg-dim);
   white-space: nowrap;
@@ -217,16 +224,17 @@
 }
 .top-nav-leagues-slot .league-btn.active .league-btn-label {
   color: var(--nav-fg);
+  font-weight: 600;
 }
 .top-nav-leagues-slot .league-btn.active::after {
   content: '';
   position: absolute;
   left: 14px;
   right: 14px;
-  bottom: 0;
+  bottom: -1px; /* sit on the header's bottom border */
   height: 2px;
   border-radius: 2px 2px 0 0;
-  background: var(--nav-fg);
+  background: var(--accent);
 }
 
 /* Search — pinned to the right of the bar with a results dropdown. */
@@ -241,18 +249,18 @@
   align-items: center;
   gap: 8px;
   width: 200px;
-  height: 38px;
+  height: 34px;
   padding: 0 12px;
-  border-radius: 10px;
+  border-radius: var(--r-md);
   border: 1px solid var(--nav-line);
   background: var(--nav-field-bg);
   color: var(--nav-fg-dim);
-  transition: border-color var(--t-fast), background var(--t-fast);
+  transition: border-color var(--t-fast), box-shadow var(--t-fast);
 }
 
 .top-nav-search-field:focus-within {
-  border-color: var(--nav-line-strong);
-  background: var(--nav-field-bg-focus);
+  border-color: var(--accent-border);
+  box-shadow: var(--ring-focus);
 }
 
 .top-nav-search-field input {
@@ -278,10 +286,10 @@
   max-height: 340px;
   overflow-y: auto;
   padding: 5px;
-  border-radius: 12px;
+  border-radius: var(--r-lg);
   border: 1px solid var(--border);
   background: var(--surface);
-  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.18);
+  box-shadow: var(--shadow-lg);
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -295,7 +303,7 @@
   width: 100%;
   padding: 8px 10px;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--r-md);
   background: transparent;
   text-align: left;
   cursor: pointer;
@@ -343,22 +351,17 @@
 }
 
 /* ------------------------------------------------------------------
-   Mobile: two bars. The top pill keeps the wordmark + search; the
-   league icon-buttons move into their own bottom pill (Instagram-style
-   tab bar). Search results still open downward from the top bar.
+   Mobile: two flat bars. The top one keeps the wordmark + search +
+   theme toggle; the league icon-buttons move into a full-width bottom
+   dock (Instagram-style tab bar).
    ------------------------------------------------------------------ */
 @media (max-width: 768px) {
-  .top-nav-container {
-    top: 10px;
-    width: calc(100% - 20px);
-  }
-
   /* Single row again on mobile: the league tab row is hidden and the bottom
-     dock takes over, so the pill collapses back to logo + search. */
+     dock takes over, so the header collapses back to logo + search. */
   .top-nav-container .top-nav {
     flex-direction: row;
     align-items: center;
-    height: 54px;
+    height: 56px;
     gap: 10px;
     padding: 0 12px;
   }
@@ -373,7 +376,7 @@
 
   /* …and the search stretches to fill the freed space. */
   .top-nav-search { flex: 1 1 auto; min-width: 0; }
-  .top-nav-search-field { width: 100%; height: 38px; }
+  .top-nav-search-field { width: 100%; height: 36px; }
 
   .top-nav-search-results {
     min-width: 0;
@@ -381,13 +384,15 @@
     max-width: calc(100vw - 24px);
   }
 
-  /* Bottom bar: league icon-buttons, horizontally scrollable. */
+  /* Bottom dock: league icon-buttons, horizontally scrollable. */
   .bottom-nav-container { display: block; }
 
   .bottom-nav {
-    height: 58px;
-    padding: 0 8px;
+    height: calc(58px + env(safe-area-inset-bottom));
+    padding: 0 8px env(safe-area-inset-bottom);
     justify-content: center;
+    border-bottom: none;
+    border-top: 1px solid var(--nav-line);
   }
 
   .bottom-nav .top-nav-leagues {
@@ -398,7 +403,6 @@
   .league-btn {
     width: 42px;
     height: 42px;
-    border-radius: 11px;
   }
   .league-btn img { width: 23px; height: 23px; }
 }

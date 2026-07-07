@@ -860,16 +860,17 @@ button { font-family: inherit; }
    being clipped by the overflow-hidden main region.
    ============================================================ */
 
-/* Clears the two-row nav pill (logo/search row + league tab row). */
-.app-main { padding-top: 132px; }
+/* Clears the two-row flat header (56px logo/search row + 44px league tab row
+   + hairlines). */
+.app-main { padding-top: 102px; }
 
 @media (max-width: 768px) {
-  /* Two nav bars on mobile (see TopNav.css): logo + search pill on top,
-     league icons pill on the bottom. Reserve room for both, plus the iOS
-     home indicator below the bottom bar. */
+  /* Two flat bars on mobile (see TopNav.css): logo + search header on top,
+     league icon dock on the bottom. Reserve room for both, plus the iOS
+     home indicator below the dock. */
   .app-main {
-    padding-top: 72px;
-    padding-bottom: calc(80px + env(safe-area-inset-bottom));
+    padding-top: 57px;
+    padding-bottom: calc(59px + env(safe-area-inset-bottom));
   }
 
   /* Single-column frame: drop the right rail, tighten side padding. */
