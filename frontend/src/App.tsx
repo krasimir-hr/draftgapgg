@@ -16,6 +16,7 @@ import PlayerDetailPage, { playerLoader } from './pages/PlayerDetailPage';
 import TeamDetailPage, { teamLoader } from './pages/TeamDetailPage';
 import FantasyTeamPage from './pages/FantasyTeamPage';
 import { DrawerProvider } from './contexts/DrawerContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 import DrawerHost from './components/drawers/DrawerHost';
 import TopLoadingBar from './components/TopLoadingBar';
 import RouteError from './components/RouteError';
@@ -54,6 +55,7 @@ function useLeagues(): TopNavLeague[] {
 function RootLayout() {
   const leagues = useLeagues();
   return (
+    <ThemeProvider>
     <DrawerProvider>
       <TopLoadingBar />
       <TopNav
@@ -70,6 +72,7 @@ function RootLayout() {
 
       <DrawerHost />
     </DrawerProvider>
+    </ThemeProvider>
   );
 }
 

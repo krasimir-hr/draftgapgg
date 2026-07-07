@@ -12,17 +12,38 @@
 }
 
 .top-nav {
+  /* On-nav tokens: the bar is a saturated brand-purple surface in BOTH themes,
+     so its text/icons/lines switch to a light-on-purple set instead of the
+     page's neutral tokens. This is what makes the header pop off the page. */
+  --nav-grad:           linear-gradient(115deg, #7c3aed 0%, #6d28d9 48%, #5b21b6 100%);
+  --nav-glow:           0 10px 30px -6px rgba(109, 40, 217, 0.45), 0 3px 10px rgba(109, 40, 217, 0.22);
+  --nav-fg:             #ffffff;
+  --nav-fg-dim:         rgba(255, 255, 255, 0.68);
+  --nav-fg-faint:       rgba(255, 255, 255, 0.45);
+  --nav-line:           rgba(255, 255, 255, 0.15);
+  --nav-line-strong:    rgba(255, 255, 255, 0.28);
+  --nav-field-bg:       rgba(255, 255, 255, 0.12);
+  --nav-field-bg-focus: rgba(255, 255, 255, 0.20);
+  --nav-hover:          rgba(255, 255, 255, 0.14);
+  --nav-active:         rgba(255, 255, 255, 0.20);
+
   height: 60px;
   display: flex;
   align-items: center;
   gap: 14px;
   padding: 0 14px;
   border-radius: 14px;
-  border: 1px solid var(--border);
-  background: var(--nav-bg);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+  border: 1px solid var(--nav-line);
+  /* Top sheen layered over the brand gradient for a lit, glassy edge. */
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 42%),
+    var(--nav-grad);
+  box-shadow: var(--nav-glow);
+}
+
+.dark .top-nav {
+  --nav-grad: linear-gradient(115deg, #6d28d9 0%, #5b21b6 52%, #4c1d95 100%);
+  --nav-glow: 0 12px 34px -6px rgba(124, 58, 237, 0.50), 0 2px 8px rgba(0, 0, 0, 0.55);
 }
 
 /* Desktop top pill stacks two rows: logo + search, then the league tab row. */
@@ -54,17 +75,15 @@
   width: auto;
 }
 
-/* The wordmark asset is white — tint it dark on the light bar so it reads. */
-.top-nav-logo-full { filter: brightness(0) opacity(0.85); }
-@media (prefers-color-scheme: dark) {
-  .top-nav-logo-full { filter: none; }
-}
+/* The wordmark asset is white; the bar is brand-purple in both themes, so it
+   stays white with a soft shadow for depth. */
+.top-nav-logo-full { filter: drop-shadow(0 1px 2px rgba(30, 12, 60, 0.35)); }
 
 /* Desktop: the league tabs sit in a second row below the logo/search line,
    divided by a hairline. Mobile hides this — the bottom bar takes over. */
 .top-nav-leagues-slot {
   display: block;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--nav-line);
   padding: 0 8px;
 }
 
@@ -95,7 +114,7 @@
   width: 1px;
   height: 22px;
   margin: 0 6px;
-  background: var(--border-strong);
+  background: var(--nav-line-strong);
 }
 
 .league-btn {
@@ -113,13 +132,13 @@
 }
 
 .league-btn:hover {
-  background: var(--surface-sub);
+  background: var(--nav-hover);
   transform: translateY(-1px);
 }
 
 .league-btn.active {
-  background: var(--accent-muted);
-  border-color: var(--accent-border);
+  background: var(--nav-active);
+  border-color: var(--nav-line-strong);
 }
 
 .league-btn img {
@@ -128,11 +147,10 @@
   object-fit: contain;
 }
 
-/* Some crests read dark; force them white on the dark-mode bar so they stay visible. */
-@media (prefers-color-scheme: dark) {
-  .league-btn-white img {
-    filter: brightness(0) invert(1);
-  }
+/* Some crests read dark; the bar is deep purple in both themes now, so force
+   these white so they stay visible. */
+.league-btn-white img {
+  filter: brightness(0) invert(1);
 }
 
 .league-btn-fallback {
@@ -140,7 +158,7 @@
   font-weight: 700;
   letter-spacing: 0.03em;
   text-transform: uppercase;
-  color: var(--text-dim);
+  color: var(--nav-fg-dim);
 }
 
 /* The crest buttons carry a text label too; shown as tabs in the desktop
@@ -190,15 +208,15 @@
   font-size: 13px;
   font-weight: 600;
   letter-spacing: -0.01em;
-  color: var(--text-dim);
+  color: var(--nav-fg-dim);
   white-space: nowrap;
   transition: color var(--t-fast);
 }
 .top-nav-leagues-slot .league-btn:hover .league-btn-label {
-  color: var(--text-h);
+  color: var(--nav-fg);
 }
 .top-nav-leagues-slot .league-btn.active .league-btn-label {
-  color: var(--accent-2);
+  color: var(--nav-fg);
 }
 .top-nav-leagues-slot .league-btn.active::after {
   content: '';
@@ -208,7 +226,7 @@
   bottom: 0;
   height: 2px;
   border-radius: 2px 2px 0 0;
-  background: var(--accent);
+  background: var(--nav-fg);
 }
 
 /* Search — pinned to the right of the bar with a results dropdown. */
@@ -226,15 +244,15 @@
   height: 38px;
   padding: 0 12px;
   border-radius: 10px;
-  border: 1px solid var(--border);
-  background: var(--surface-sub);
-  color: var(--text-dim);
+  border: 1px solid var(--nav-line);
+  background: var(--nav-field-bg);
+  color: var(--nav-fg-dim);
   transition: border-color var(--t-fast), background var(--t-fast);
 }
 
 .top-nav-search-field:focus-within {
-  border-color: var(--accent-border);
-  background: var(--surface);
+  border-color: var(--nav-line-strong);
+  background: var(--nav-field-bg-focus);
 }
 
 .top-nav-search-field input {
@@ -245,11 +263,11 @@
   background: transparent;
   font-family: var(--font-sans);
   font-size: 13px;
-  color: var(--text-h);
+  color: var(--nav-fg);
 }
 
 .top-nav-search-field input::placeholder {
-  color: var(--text-dim);
+  color: var(--nav-fg-faint);
 }
 
 .top-nav-search-results {

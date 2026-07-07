@@ -29,6 +29,20 @@ export default function EsportsLayout({
   const bodyRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
   const [subHeaderEl, setSubHeaderEl] = useState<HTMLDivElement | null>(null);
+  // Tracks the fixed header's rendered height so the independently-scrolling
+  // right rail can start at the same offset as the main body's content
+  // (rather than at the top of the grid row, above the header).
+  const [headerHeight, setHeaderHeight] = useState(0);
+
+  useEffect(() => {
+    const head = headerRef.current;
+    if (!head) return;
+    // Use offsetHeight (border-box), not the ResizeObserver entry's contentRect,
+    // which excludes the header's own padding.
+    const ro = new ResizeObserver(() => setHeaderHeight(head.offsetHeight));
+    ro.observe(head);
+    return () => ro.disconnect();
+  }, [header]);
 
   useEffect(() => {
     const body = bodyRef.current;
@@ -87,6 +101,12 @@ export default function EsportsLayout({
     padding: '20px 0 48px',
   };
 
+  // Gap between the fixed header and the first piece of body content, on top
+  // of the header's own 12px paddingBottom — together these make 16px, matching
+  // the .es-shell horizontal gap. Reused below to offset the right rail so its
+  // first card lines up with the body's first card instead of the header's top.
+  const BODY_TOP_GAP = 4;
+
   return (
     <div style={{ height: '100%', display: 'flex', justifyContent: 'center' }}>
       <div
@@ -105,13 +125,16 @@ export default function EsportsLayout({
                 filter into. Sits above the scroll body. */}
             <div
               ref={headerRef}
-              style={{ flexShrink: 0, paddingTop: 20, paddingBottom: 12, position: 'relative', zIndex: 1 }}
+              // paddingTop: 3 — .app-main's fixed clearance already overshoots the
+              // nav's actual rendered height by ~13px, so this tops up to a 16px
+              // visual gap below the nav (matching the .es-shell horizontal gap).
+              style={{ flexShrink: 0, paddingTop: 3, paddingBottom: 12, position: 'relative', zIndex: 1 }}
             >
               {header}
               <div ref={setSubHeaderEl} />
             </div>
             <SubHeaderContext.Provider value={subHeaderEl}>
-              <div ref={bodyRef} className="es-scroll" style={{ flex: 1, minHeight: 0, overflowY: 'auto', paddingBottom: 48 }}>
+              <div ref={bodyRef} className="es-scroll" style={{ flex: 1, minHeight: 0, overflowY: 'auto', paddingTop: BODY_TOP_GAP, paddingBottom: 48 }}>
                 {children}
               </div>
             </SubHeaderContext.Provider>
@@ -120,7 +143,14 @@ export default function EsportsLayout({
           <div className="es-scroll" style={{ gridColumn: 1, minWidth: 0, ...column }}>{children}</div>
         )}
 
-        {right && <Sidebar className="es-scroll es-rail" style={{ gridColumn: 2, ...column }}>{right}</Sidebar>}
+        {right && (
+          <Sidebar
+            className="es-scroll es-rail"
+            style={{ gridColumn: 2, ...column, ...(header ? { paddingTop: headerHeight + BODY_TOP_GAP } : {}) }}
+          >
+            {right}
+          </Sidebar>
+        )}
       </div>
     </div>
   );

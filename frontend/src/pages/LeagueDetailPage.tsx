@@ -317,7 +317,7 @@ export default function LeagueDetailPage() {
       </div>
       }
     >
-          <div style={{ marginTop: 24 }}>
+          <div>
           {events.length === 0 ? (
             <p className="text-sm text-(--text-dim) py-6">No editions found.</p>
           ) : activeEventId === null ? null : (

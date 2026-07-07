@@ -386,10 +386,8 @@
 .logo-themed {
   filter: brightness(0) opacity(0.82);
 }
-@media (prefers-color-scheme: dark) {
-  .logo-themed {
-    filter: brightness(0) invert(1);
-  }
+.dark .logo-themed {
+  filter: brightness(0) invert(1);
 }
 
 /* Styled select */
