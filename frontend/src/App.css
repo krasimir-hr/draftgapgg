@@ -1,82 +1,3 @@
-/* Navigation */
-.app-nav {
-  position: sticky;
-  top: 0;
-  z-index: 50;
-  height: 56px;
-  padding: 0 max(20px, env(safe-area-inset-left));
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  background: var(--nav-bg);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-bottom: 1px solid var(--border);
-}
-
-.nav-logo {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  margin-right: 20px;
-  cursor: pointer;
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 19px;
-  color: var(--text-h);
-  letter-spacing: -0.025em;
-}
-
-.nav-link {
-  padding: 7px 12px;
-  border-radius: 7px;
-  font-family: var(--font-sans);
-  font-size: 13.5px;
-  font-weight: 500;
-  color: var(--text);
-  background: transparent;
-  transition: color var(--t-fast), background var(--t-fast);
-  letter-spacing: -0.005em;
-}
-
-.nav-link:hover {
-  color: var(--text-h);
-  background: var(--surface-sub);
-}
-
-.nav-link.active {
-  color: var(--text-h);
-  background: var(--surface-sub);
-}
-
-.nav-patch {
-  font-size: 11px;
-  color: var(--text-dim);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  margin-right: 14px;
-  font-variant-numeric: tabular-nums;
-}
-
-.nav-cta {
-  padding: 7px 13px;
-  border-radius: 7px;
-  border: 1px solid var(--accent-border);
-  background: var(--accent-muted);
-  color: var(--accent-2);
-  font-family: var(--font-sans);
-  font-size: 12.5px;
-  font-weight: 600;
-  cursor: pointer;
-  letter-spacing: -0.005em;
-  transition: background var(--t-fast), border-color var(--t-fast);
-}
-
-.nav-cta:hover {
-  background: var(--accent-muted);
-  border-color: var(--accent);
-}
-
 /* Fantasy: compact inline action button (swap / set captain) */
 .fantasy-mini-btn {
   padding: 5px 11px;
@@ -100,21 +21,21 @@
 }
 
 .fantasy-mini-btn[data-active] {
-  background: var(--accent-muted);
-  border-color: var(--accent-border);
-  color: var(--accent-2);
+  background: var(--surface-sub);
+  border-color: var(--border-strong);
+  color: var(--text-h);
 }
 
 .fantasy-mini-btn[data-active]:hover {
-  border-color: var(--accent);
+  border-color: var(--text-faint);
 }
 
 /* Card */
 .card {
-  background: linear-gradient(135deg, color-mix(in srgb, var(--accent-muted) 40%, transparent) 0%, transparent 55%, color-mix(in srgb, var(--accent-muted) 40%, transparent) 100%), var(--surface);
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
-  transition: box-shadow var(--t-fast), background var(--t-fast), border-color var(--t-fast);
+  transition: background var(--t-fast), border-color var(--t-fast);
 }
 
 .card-xl {
@@ -122,9 +43,8 @@
 }
 
 .card-link:hover {
-  background: var(--surface-hover);
+  background: var(--surface-sub);
   border-color: var(--border-strong);
-  box-shadow: var(--shadow-md);
 }
 
 .card-soft-shadow {
@@ -135,22 +55,13 @@
   user-select: none;
 }
 
-/* Match card hover — magnetic lift + accent glow */
+/* Match card hover — flat: border + surface shift only */
 .match-card {
-  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
-              box-shadow 0.28s cubic-bezier(0.22, 1, 0.36, 1),
-              border-color 0.28s ease;
-  will-change: transform;
+  transition: background var(--t-fast), border-color var(--t-fast);
 }
 .match-card:hover {
-  transform: translateY(-4px);
-  border-color: var(--accent-border);
-  box-shadow: var(--shadow-lg), 0 0 0 1px var(--accent-border),
-              0 8px 28px -6px var(--accent-muted);
-}
-.match-card:active {
-  transform: translateY(-1px);
-  transition-duration: 0.1s;
+  border-color: var(--border-strong);
+  background: var(--surface-sub);
 }
 
 /* Eyebrow label */
@@ -161,7 +72,7 @@
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--accent);
+  color: var(--text-dim);
 }
 
 /* Display heading helpers */
@@ -199,7 +110,7 @@
 .section-tab:hover { color: var(--text-h); }
 
 .section-tab.active {
-  color: var(--accent-2);
+  color: var(--text-h);
   border-bottom-color: var(--accent);
 }
 
@@ -223,7 +134,7 @@
   line-height: 1.5;
 }
 
-.badge-accent { color: var(--accent-2); background: var(--accent-muted); }
+.badge-accent { color: var(--text-h); background: var(--surface-sub); }
 .badge-green  { color: var(--green);    background: var(--green-muted); }
 .badge-red    { color: var(--red);      background: var(--red-muted); }
 .badge-amber  { color: var(--amber);    background: var(--amber-muted); }
@@ -257,11 +168,14 @@
 .chip:hover { color: var(--text-h); }
 
 .chip.active {
-  /* Solid accent pill: readable in light mode (deep purple + near-white text)
-     and dark mode (light purple + near-black text). Plain `#fff` text with no
-     background rendered invisible on light surfaces. */
-  background: var(--accent);
-  color: var(--bg);
+  /* Segmented-control active: raised neutral pill on the muted track. */
+  background: var(--surface);
+  color: var(--text-h);
+  box-shadow: var(--shadow-sm);
+}
+
+.dark .chip.active {
+  background: var(--surface-hover);
 }
 
 /* Pagination button */
@@ -306,8 +220,8 @@
 
 @keyframes spin { to { transform: rotate(360deg); } }
 @keyframes pulse {
-  0%, 100% { box-shadow: 0 0 0 4px rgba(192, 67, 47, 0.18); }
-  50%      { box-shadow: 0 0 0 6px rgba(192, 67, 47, 0.0); }
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.45; }
 }
 @keyframes drawerFadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes drawerSlideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
@@ -316,7 +230,7 @@
 .drawer-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(20, 16, 8, 0.42);
+  background: rgba(0, 0, 0, 0.4);
   z-index: 80;
   animation: drawerFadeIn 180ms ease-out;
 }
@@ -376,7 +290,6 @@
   height: 8px;
   border-radius: 999px;
   background: var(--red);
-  box-shadow: 0 0 0 4px rgba(192, 67, 47, 0.18);
   animation: pulse 1.6s ease-in-out infinite;
   display: inline-block;
 }
@@ -395,10 +308,10 @@
   appearance: none;
   -webkit-appearance: none;
   background-color: var(--surface-sub);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 4.5L6 8l3.5-3.5' stroke='%238a8778' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 4.5L6 8l3.5-3.5' stroke='%23737373' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 8px center;
-  border: 1px solid transparent;
+  border: 1px solid var(--border);
   border-radius: 8px;
   color: var(--text-h);
   font-size: 12.5px;
@@ -480,11 +393,10 @@
 
 /* Side rail (used on league / matches pages) */
 .side-rail {
-  background: linear-gradient(135deg, color-mix(in srgb, var(--accent-muted) 40%, transparent) 0%, transparent 55%, color-mix(in srgb, var(--accent-muted) 40%, transparent) 100%), var(--surface);
+  background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--r-lg);
   overflow: hidden;
-  box-shadow: var(--shadow-sm);
 }
 
 .side-rail-header {
@@ -503,7 +415,7 @@
   padding: 11px 18px;
   border-top: 1px solid var(--border);
   font-size: 12px;
-  color: var(--accent-2);
+  color: var(--accent); /* link — purple trace */
   font-weight: 600;
   cursor: pointer;
 }
@@ -521,10 +433,10 @@
   background: var(--surface-sub);
 }
 .match-rail-row.current {
-  background: var(--accent-muted);
+  background: var(--surface-sub);
 }
 .match-rail-row.current:hover {
-  background: color-mix(in srgb, var(--accent-muted) 65%, var(--surface-sub));
+  background: var(--surface-hover);
 }
 /* Left accent bar marks the match currently being viewed. */
 .match-rail-row.current::before {
@@ -635,10 +547,10 @@
   background: var(--surface-sub);
 }
 .league-nav-row.active {
-  background: var(--accent-muted);
+  background: var(--surface-sub);
 }
 .league-nav-row.active:hover {
-  background: color-mix(in srgb, var(--accent-muted) 65%, var(--surface-sub));
+  background: var(--surface-hover);
 }
 /* Accent bar on the active league, flush to the panel's left edge. */
 .league-nav-row.active::before {
@@ -652,6 +564,8 @@
   border-radius: 0 2px 2px 0;
 }
 
+/* Crest chip: a fixed dark plate in both themes so white-inked crests always
+   read; active state is carried by the left bar + name color instead. */
 .league-nav-logo {
   width: 30px;
   height: 30px;
@@ -659,31 +573,21 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 9px;
-  background: #121116;
+  border-radius: var(--r-md);
+  background: #171717;
   overflow: hidden;
-}
-.league-nav-row.active .league-nav-logo {
-  background: #f5f4ef;
 }
 .league-nav-logo img {
   width: 20px;
   height: 20px;
   object-fit: contain;
   filter: brightness(0) invert(1);
-  transition: filter var(--t-fast);
-}
-.league-nav-row.active .league-nav-logo img {
-  filter: brightness(0);
 }
 
 .league-nav-fallback {
   font-size: 10px;
   font-weight: 700;
-  color: #fff;
-}
-.league-nav-row.active .league-nav-fallback {
-  color: #121116;
+  color: #fafafa;
 }
 
 .league-nav-name {
@@ -823,17 +727,13 @@ button { font-family: inherit; }
   letter-spacing: -0.015em;
 }
 
-.hero-stat-value.accent { color: var(--accent-2); }
+.hero-stat-value.accent { color: var(--text-h); }
 
 /* Playoff bracket */
 .bracket-match {
-  transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1),
-              box-shadow 0.22s cubic-bezier(0.22, 1, 0.36, 1),
-              border-color 0.15s ease;
-  will-change: transform;
+  transition: border-color 0.15s ease;
 }
 .bracket-match:hover {
-  transform: translateY(-2px);
   border-color: var(--border-strong);
 }
 
@@ -847,7 +747,6 @@ button { font-family: inherit; }
 }
 @media (prefers-reduced-motion: reduce) {
   .bracket-match { transition: none; }
-  .bracket-match:hover { transform: none; }
 }
 
 /* ============================================================
