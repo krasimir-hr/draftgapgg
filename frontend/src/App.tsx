@@ -1,4 +1,8 @@
-import { createBrowserRouter, RouterProvider, Outlet, Link, NavLink, redirect } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { createBrowserRouter, RouterProvider, Outlet, redirect } from 'react-router-dom';
+import TopNav, { type TopNavLeague } from './components/TopNav';
+import { getLeagues } from './api/core';
+import { slugify } from './utils/slugs';
 import HomePage, { homeLoader } from './pages/HomePage';
 import ChampionsPage, { championsLoader } from './pages/ChampionsPage';
 import ChampionDetailPage, { championLoader } from './pages/ChampionDetailPage';
@@ -17,34 +21,49 @@ import TopLoadingBar from './components/TopLoadingBar';
 import RouteError from './components/RouteError';
 import './App.css';
 
-const navClass = ({ isActive }: { isActive: boolean }) =>
-  `nav-link${isActive ? ' active' : ''}`;
+// League short-names shown as icon-buttons, grouped (a divider separates the two).
+const REGIONAL = ['LCK', 'LPL', 'LEC', 'LCS', 'CBLOL', 'LCP'];
+const INTERNATIONAL = ['Worlds', 'MSI', 'First Stand', 'EWC'];
+
+/** Loads the leagues shown as icon-buttons in the top bar. */
+function useLeagues(): TopNavLeague[] {
+  const [byShort, setByShort] = useState<Record<string, { logo: string | null; label: string }>>({});
+
+  useEffect(() => {
+    getLeagues({ page: 1, page_size: 100 })
+      .then((res) => {
+        const map: Record<string, { logo: string | null; label: string }> = {};
+        for (const l of res.data.results) {
+          const label = l.short_name ?? l.name;
+          if (l.short_name) map[l.short_name] = { logo: l.logo, label };
+        }
+        setByShort(map);
+      })
+      .catch(() => {});
+  }, []);
+
+  return useMemo(() => {
+    const build = (shorts: string[], group: TopNavLeague['group']): TopNavLeague[] =>
+      shorts
+        .filter((s) => byShort[s])
+        .map((s) => ({ label: byShort[s].label, slug: slugify(byShort[s].label), logo: byShort[s].logo, group }));
+    return [...build(REGIONAL, 'regional'), ...build(INTERNATIONAL, 'international')];
+  }, [byShort]);
+}
 
 function RootLayout() {
+  const leagues = useLeagues();
   return (
     <DrawerProvider>
       <TopLoadingBar />
-      <nav className="app-nav">
-        <Link to="/" className="nav-logo">
-          <img src="/draftgap-logo.webp" alt="DraftGap" className="h-7 w-auto" width={28} height={28} decoding="async" fetchPriority="high" />
-        </Link>
-        <NavLink to="/matches" className={navClass}>Matches</NavLink>
-        <NavLink to="/fantasy" className={navClass}>Fantasy</NavLink>
-        <div className="flex-1" />
-        <a
-          href={`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/admin/`}
-          target="_blank"
-          rel="noreferrer"
-          className="nav-link"
-        >
-          Admin
-        </a>
-        <span className="nav-patch">Patch 16.10</span>
-        <Link to="/fantasy" className="nav-cta">My team →</Link>
-      </nav>
+      <TopNav
+        logo="/draftgap-logo.webp"
+        logoAlt="DraftGap"
+        leagues={leagues}
+      />
 
       <div className="flex flex-1" style={{ position: 'relative', zIndex: 1 }}>
-        <main className="flex-1 min-w-0 overflow-hidden" style={{ height: 'calc(100svh - 56px)' }}>
+        <main className="app-main flex-1 min-w-0 overflow-hidden" style={{ height: '100svh' }}>
           <Outlet />
         </main>
       </div>

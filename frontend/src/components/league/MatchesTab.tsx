@@ -248,7 +248,7 @@ function MatchListItem({
     <button
       type="button"
       onClick={onClick}
-      className="w-full grid items-center transition-colors hover:bg-(--surface-sub) text-left"
+      className="match-feed-row w-full grid items-center transition-colors hover:bg-(--surface-sub) text-left"
       style={{
         padding: '14px 20px',
         borderBottom: isLast ? 'none' : '1px solid var(--border)',
@@ -258,7 +258,7 @@ function MatchListItem({
     >
       {/* Time */}
       <div
-        className="tabular-nums font-medium"
+        className="match-feed-time tabular-nums font-medium"
         style={{ fontSize: 12.5, color: 'var(--text-dim)' }}
       >
         {time}
@@ -342,7 +342,7 @@ function MatchListItem({
             </span>
           )}
         </span>
-        <span className="font-semibold tracking-wide text-(--text-dim)" style={{ fontSize: 11 }}>BO{m.best_of}</span>
+        <span className="match-feed-bo font-semibold tracking-wide text-(--text-dim)" style={{ fontSize: 11 }}>BO{m.best_of}</span>
       </div>
     </button>
   );

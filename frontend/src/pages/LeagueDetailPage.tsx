@@ -1,5 +1,5 @@
 import { useNavigate, useLoaderData, useParams, redirect, type LoaderFunctionArgs } from 'react-router-dom';
-import { useMemo } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { getLeagues, getEvents } from '../api/core';
 import type { League, Event, Match } from '../types/models';
 import OverviewTab from '../components/league/OverviewTab';
@@ -24,6 +24,49 @@ import {
   loadTeamMeta, loadLeagueTab, loadRails, loadBracketMatches,
   type LeagueTabData, type RailsData,
 } from '../lib/leagueData';
+
+// Icons for the section-tab menu. Shown in place of the text label on mobile
+// (see .league-hero-tabs in App.css); desktop keeps the text. navTabs is always
+// this fixed set — sub-stages never become tabs — so every tab has an icon.
+const svg = (children: ReactNode) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round">
+    {children}
+  </svg>
+);
+const TAB_ICONS: Record<string, ReactNode> = {
+  Overview: svg(<>
+    <rect x="3.5" y="3.5" width="7" height="7" rx="1.6" />
+    <rect x="13.5" y="3.5" width="7" height="7" rx="1.6" />
+    <rect x="3.5" y="13.5" width="7" height="7" rx="1.6" />
+    <rect x="13.5" y="13.5" width="7" height="7" rx="1.6" />
+  </>),
+  Matches: svg(<>
+    <rect x="2.5" y="8" width="19" height="8.5" rx="4.25" />
+    <path d="M6.5 10.75v3" />
+    <path d="M5 12.25h3" />
+    <circle cx="15.3" cy="11.6" r="0.5" fill="currentColor" stroke="none" />
+    <circle cx="18" cy="13.4" r="0.5" fill="currentColor" stroke="none" />
+  </>),
+  'Team Stats': svg(<>
+    <path d="M5 20v-6" />
+    <path d="M12 20V5.5" />
+    <path d="M19 20v-9.5" />
+  </>),
+  Players: svg(<>
+    <circle cx="9" cy="8" r="3.3" />
+    <path d="M3.8 19.5a5.4 5.4 0 0 1 10.4 0" />
+    <path d="M15.6 5.2a3.2 3.2 0 0 1 0 5.7" />
+    <path d="M16.3 14.3a5.4 5.4 0 0 1 3.9 5.2" />
+  </>),
+  Champions: svg(<>
+    <path d="M14.5 17.5 3.5 6.5v-3h3l11 11" />
+    <path d="M13 19l6-6" />
+    <path d="M16 16l4.5 4.5" />
+    <path d="M14.5 6.5 17.5 3.5h3v3l-3 3" />
+    <path d="M5 14l4 4" />
+    <path d="M7.5 16.5 3.5 20.5" />
+  </>),
+};
 
 // Cached across league pages so switching leagues/tabs resolves from memory.
 let leaguesCache: League[] | null = null;
@@ -182,7 +225,7 @@ export default function LeagueDetailPage() {
         >
         <div className="league-hero-topwrap">
         <div className="league-hero-top flex items-center gap-4 px-7 py-6 flex-wrap">
-          <div className="flex items-center justify-center shrink-0" style={{ width: 80, height: 80 }}>
+          <div className="league-hero-logo flex items-center justify-center shrink-0" style={{ width: 80, height: 80 }}>
             {league.logo ? (
               <img
                 src={league.logo}
@@ -209,7 +252,7 @@ export default function LeagueDetailPage() {
 
           <div className="flex-1 min-w-0">
             <h1
-              className="h-display"
+              className="h-display league-hero-title"
               style={{ fontSize: 32, fontWeight: 700, lineHeight: 1.1 }}
             >
               {leagueLabel}{effectiveYear ? ` ${NO_STANDINGS.has(leagueLabel) ? '' : 'Season '}${effectiveYear}` : ''}
@@ -239,19 +282,24 @@ export default function LeagueDetailPage() {
             />
           )}
           <div className="league-hero-tabs flex">
-            {navTabs.map((t) => (
-              <button
-                key={t}
-                type="button"
-                onClick={() => handleTabSelect(t)}
-                className={`section-tab${t === activeTab ? ' active' : ''}`}
-              >
-                {t}
-              </button>
-            ))}
+            {navTabs.map((t) => {
+              const icon = TAB_ICONS[t];
+              return (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => handleTabSelect(t)}
+                  className={`section-tab${t === activeTab ? ' active' : ''}${icon ? ' section-tab--icon' : ''}`}
+                  aria-label={t}
+                >
+                  {icon && <span className="section-tab-icon" aria-hidden="true">{icon}</span>}
+                  <span className="section-tab-text">{t}</span>
+                </button>
+              );
+            })}
           </div>
           <span className="league-hero-spacer" aria-hidden="true" />
-          <div className="flex items-center gap-2">
+          <div className="league-hero-selects flex items-center gap-2">
             {years.length > 0 && (
               <select className="field-select" value={effectiveYear ?? ''} onChange={(e) => handleYearSelect(Number(e.target.value))}>
                 {years.map((y) => <option key={y} value={y}>{y}</option>)}

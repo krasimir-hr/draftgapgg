@@ -1,0 +1,386 @@
+/* TopNav — floating pill bar with the app logo and league icon-buttons.
+   Themed with the app's design tokens so it follows light/dark automatically. */
+
+.top-nav-container {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(100% - 48px); /* matches the content frame's 24px side padding */
+  max-width: 1232px;        /* matches EsportsLayout: 1280 max − 48 padding */
+  z-index: 60;
+  top: 14px;
+}
+
+.top-nav {
+  height: 60px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 14px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--nav-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+}
+
+/* Desktop top pill stacks two rows: logo + search, then the league tab row. */
+.top-nav-container .top-nav {
+  flex-direction: column;
+  align-items: stretch;
+  height: auto;
+  gap: 0;
+  padding: 0;
+}
+
+.top-nav-main {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  height: 56px;
+  padding: 0 14px;
+}
+
+.top-nav-logo {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding-right: 4px;
+}
+
+.top-nav-logo img {
+  height: 28px;
+  width: auto;
+}
+
+/* The wordmark asset is white — tint it dark on the light bar so it reads. */
+.top-nav-logo-full { filter: brightness(0) opacity(0.85); }
+@media (prefers-color-scheme: dark) {
+  .top-nav-logo-full { filter: none; }
+}
+
+/* Desktop: the league tabs sit in a second row below the logo/search line,
+   divided by a hairline. Mobile hides this — the bottom bar takes over. */
+.top-nav-leagues-slot {
+  display: block;
+  border-top: 1px solid var(--border);
+  padding: 0 8px;
+}
+
+/* Mobile-only bottom bar for the league icon-buttons. */
+.bottom-nav-container {
+  display: none;
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(10px + env(safe-area-inset-bottom));
+  width: calc(100% - 20px);
+  z-index: 60;
+}
+
+.top-nav-leagues {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  overflow-x: auto;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* Separates the regional leagues from the international events. */
+.top-nav-divider {
+  flex-shrink: 0;
+  width: 1px;
+  height: 22px;
+  margin: 0 6px;
+  background: var(--border-strong);
+}
+
+.league-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  border-radius: 11px;
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  transition: background var(--t-fast), border-color var(--t-fast), transform var(--t-fast);
+}
+
+.league-btn:hover {
+  background: var(--surface-sub);
+  transform: translateY(-1px);
+}
+
+.league-btn.active {
+  background: var(--accent-muted);
+  border-color: var(--accent-border);
+}
+
+.league-btn img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+
+/* Some crests read dark; force them white on the dark-mode bar so they stay visible. */
+@media (prefers-color-scheme: dark) {
+  .league-btn-white img {
+    filter: brightness(0) invert(1);
+  }
+}
+
+.league-btn-fallback {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+/* The crest buttons carry a text label too; shown as tabs in the desktop
+   second row, hidden in the mobile bottom dock (which stays icon-only). */
+.league-btn-label { display: none; }
+
+/* ==================================================================
+   Desktop second-row league tabs: crest + label, with an active underline.
+   Scoped to .top-nav-leagues-slot so the mobile bottom dock keeps the plain
+   .league-btn icon styling.
+   ================================================================== */
+.top-nav-leagues-slot .top-nav-leagues {
+  justify-content: flex-start;
+  gap: 0;
+}
+
+.top-nav-leagues-slot .league-btn {
+  position: relative;
+  width: auto;
+  height: 46px;
+  gap: 8px;
+  padding: 0 14px;
+  border-radius: 0;
+  border: none;
+}
+.top-nav-leagues-slot .league-btn:hover {
+  background: transparent;
+  transform: none;
+}
+.top-nav-leagues-slot .league-btn.active {
+  background: transparent;
+  border: none;
+}
+.top-nav-leagues-slot .league-btn img {
+  width: 20px;
+  height: 20px;
+  opacity: 0.7;
+  transition: opacity var(--t-fast);
+}
+.top-nav-leagues-slot .league-btn:hover img,
+.top-nav-leagues-slot .league-btn.active img {
+  opacity: 1;
+}
+.top-nav-leagues-slot .league-btn-label {
+  display: block;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text-dim);
+  white-space: nowrap;
+  transition: color var(--t-fast);
+}
+.top-nav-leagues-slot .league-btn:hover .league-btn-label {
+  color: var(--text-h);
+}
+.top-nav-leagues-slot .league-btn.active .league-btn-label {
+  color: var(--accent-2);
+}
+.top-nav-leagues-slot .league-btn.active::after {
+  content: '';
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: 0;
+  height: 2px;
+  border-radius: 2px 2px 0 0;
+  background: var(--accent);
+}
+
+/* Search — pinned to the right of the bar with a results dropdown. */
+.top-nav-search {
+  position: relative;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.top-nav-search-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 200px;
+  height: 38px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface-sub);
+  color: var(--text-dim);
+  transition: border-color var(--t-fast), background var(--t-fast);
+}
+
+.top-nav-search-field:focus-within {
+  border-color: var(--accent-border);
+  background: var(--surface);
+}
+
+.top-nav-search-field input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--text-h);
+}
+
+.top-nav-search-field input::placeholder {
+  color: var(--text-dim);
+}
+
+.top-nav-search-results {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 260px;
+  max-height: 340px;
+  overflow-y: auto;
+  padding: 5px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.18);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  z-index: 10;
+}
+
+.top-nav-search-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--t-fast);
+}
+
+.top-nav-search-item.active,
+.top-nav-search-item:hover {
+  background: var(--surface-sub);
+}
+
+.top-nav-search-item img {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.top-nav-search-icon {
+  width: 20px;
+  text-align: center;
+  color: var(--text-dim);
+  flex-shrink: 0;
+}
+
+.top-nav-search-label {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--text-h);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.top-nav-search-cat {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  flex-shrink: 0;
+}
+
+/* ------------------------------------------------------------------
+   Mobile: two bars. The top pill keeps the wordmark + search; the
+   league icon-buttons move into their own bottom pill (Instagram-style
+   tab bar). Search results still open downward from the top bar.
+   ------------------------------------------------------------------ */
+@media (max-width: 768px) {
+  .top-nav-container {
+    top: 10px;
+    width: calc(100% - 20px);
+  }
+
+  /* Single row again on mobile: the league tab row is hidden and the bottom
+     dock takes over, so the pill collapses back to logo + search. */
+  .top-nav-container .top-nav {
+    flex-direction: row;
+    align-items: center;
+    height: 54px;
+    gap: 10px;
+    padding: 0 12px;
+  }
+  .top-nav-main {
+    display: contents;
+  }
+
+  .top-nav-logo img { height: 24px; }
+
+  /* Leagues leave the top bar… */
+  .top-nav-leagues-slot { display: none; }
+
+  /* …and the search stretches to fill the freed space. */
+  .top-nav-search { flex: 1 1 auto; min-width: 0; }
+  .top-nav-search-field { width: 100%; height: 38px; }
+
+  .top-nav-search-results {
+    min-width: 0;
+    width: 100%;
+    max-width: calc(100vw - 24px);
+  }
+
+  /* Bottom bar: league icon-buttons, horizontally scrollable. */
+  .bottom-nav-container { display: block; }
+
+  .bottom-nav {
+    height: 58px;
+    padding: 0 8px;
+    justify-content: center;
+  }
+
+  .bottom-nav .top-nav-leagues {
+    gap: 4px;
+    justify-content: flex-start;
+  }
+
+  .league-btn {
+    width: 42px;
+    height: 42px;
+    border-radius: 11px;
+  }
+  .league-btn img { width: 23px; height: 23px; }
+}

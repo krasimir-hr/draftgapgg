@@ -302,29 +302,19 @@ function PlayersTable({
                   </div>
                 </td>
                 <td style={{ padding: cellPad, verticalAlign: 'middle' }}>
-                  <div className="flex items-center" style={{ gap: 10 }}>
-                    <PlayerAvatar
-                      name={p.name}
-                      image={p.image}
-                      role={p.role}
-                      size={34}
-                    />
-                    <div>
-                      <div
-                        style={{ color: 'var(--text-h)', fontWeight: 600, fontSize: 13 }}
-                      >
-                        {p.name}
-                      </div>
-                      {p.nationality && (
-                        <div
-                          className="text-(--text-dim)"
-                          style={{ fontSize: 11, marginTop: 1 }}
-                        >
-                          {p.nationality}
-                        </div>
-                      )}
-                    </div>
+                  <div
+                    style={{ color: 'var(--text-h)', fontWeight: 600, fontSize: 13 }}
+                  >
+                    {p.name}
                   </div>
+                  {p.nationality && (
+                    <div
+                      className="text-(--text-dim)"
+                      style={{ fontSize: 11, marginTop: 1 }}
+                    >
+                      {p.nationality}
+                    </div>
+                  )}
                 </td>
                 <NumTd>{p.games}</NumTd>
                 <NumTd color="var(--accent-2)" weight={700}>{p.pr != null ? p.pr.toFixed(1) : '—'}</NumTd>

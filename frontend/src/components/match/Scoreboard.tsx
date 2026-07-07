@@ -132,7 +132,7 @@ function TeamBanners({
         </div>
         <div
           className="font-display tabular-nums"
-          style={{ fontSize: 52, fontWeight: 700, color: 'var(--text-h)', letterSpacing: '-0.04em', lineHeight: 1, marginTop: 6 }}
+          style={{ fontSize: 'clamp(34px, 9vw, 52px)', fontWeight: 700, color: 'var(--text-h)', letterSpacing: '-0.04em', lineHeight: 1, marginTop: 6 }}
         >
           <span style={{ color: blueWon ? 'var(--text-h)' : 'var(--text)' }}>{game.team1_kills}</span>
           <span style={{ color: 'var(--text-faint)', fontWeight: 400, padding: '0 12px' }}>–</span>

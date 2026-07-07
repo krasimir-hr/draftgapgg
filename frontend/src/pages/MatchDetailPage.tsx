@@ -121,7 +121,7 @@ function MatchDetailView() {
         <div style={{ padding: '24px 28px 12px' }}>
           <div className="grid items-center" style={{ gridTemplateColumns: 'minmax(0, 1fr) auto minmax(0, 1fr)', gap: 18 }}>
             <TeamHeader team={t1} won={t1Win} played={played} align="left" onClick={() => openTeam(t1.name)} />
-            <div className="font-display tabular-nums text-center" style={{ fontSize: 56, fontWeight: 700, color: 'var(--text-h)', letterSpacing: '-0.04em', lineHeight: 1, padding: '0 12px' }}>
+            <div className="font-display tabular-nums text-center" style={{ fontSize: 'clamp(32px, 9vw, 56px)', fontWeight: 700, color: 'var(--text-h)', letterSpacing: '-0.04em', lineHeight: 1, padding: '0 12px' }}>
               {played ? (
                 <>{match.team1_score} <span style={{ color: 'var(--text-faint)', fontWeight: 500 }}>–</span> {match.team2_score}</>
               ) : (

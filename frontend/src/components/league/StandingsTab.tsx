@@ -86,20 +86,21 @@ export default function StandingsTab({ list: initialList, teamShortNames, eventI
           <StagePicker stages={stages} selected={selectedStageId} onSelect={setSelectedStageId} />
         </div>
       )}
-      <div className="card overflow-hidden">
+      <div className="card" style={{ overflowX: 'auto' }}>
         <table className="w-full font-sans" style={{ borderCollapse: 'collapse', fontSize: 12.5 }}>
           <thead>
             <tr style={{ borderBottom: '1px solid var(--border)' }}>
-              <Th style={{ width: 42, textAlign: 'center', padding: '10px 8px' }}>#</Th>
+              <Th style={{ width: 58, textAlign: 'center', padding: '10px 8px 10px 24px' }}>#</Th>
               <Th style={{ textAlign: 'left', paddingLeft: 16 }}>Team</Th>
-              {COLS.map((col) => {
+              {COLS.map((col, ci) => {
                 const active = sortKey === col.key;
+                const last = ci === COLS.length - 1;
                 return (
                   <Th
                     key={col.key}
                     title={col.title}
                     onClick={() => handleSort(col)}
-                    style={{ cursor: 'pointer', userSelect: 'none', textAlign: col.align ?? 'center' }}
+                    style={{ cursor: 'pointer', userSelect: 'none', textAlign: col.align ?? 'center', paddingRight: last ? 24 : undefined }}
                     active={active}
                   >
                     {col.label}
@@ -132,7 +133,7 @@ function StandingsRow({ entry, index, sortKey, teamShortNames }: { entry: Standi
       {/* Row number */}
       <td
         className="tabular-nums"
-        style={{ padding: '12px 8px', textAlign: 'center', color: 'var(--text-dim)', fontSize: 11.5, fontWeight: 600, width: 42 }}
+        style={{ padding: '12px 8px 12px 24px', textAlign: 'center', color: 'var(--text-dim)', fontSize: 11.5, fontWeight: 600, width: 58 }}
       >
         {index + 1}
       </td>
@@ -188,7 +189,7 @@ function StandingsRow({ entry, index, sortKey, teamShortNames }: { entry: Standi
       {/* BRN/G */}
       <Td dim active={s === 'barons_per_game'}>{entry.barons_per_game}</Td>
       {/* AVG LEN */}
-      <Td dim active={s === 'avg_game_length'}>{entry.avg_game_length ? `${entry.avg_game_length}m` : '—'}</Td>
+      <Td dim active={s === 'avg_game_length'} padRight>{entry.avg_game_length ? `${entry.avg_game_length}m` : '—'}</Td>
     </tr>
   );
 }
@@ -203,7 +204,7 @@ function Th({
   active?: boolean;
 }) {
   const [hovered, setHovered] = useState(false);
-  const color = active ? 'var(--accent-2)' : hovered && onClick ? '#fff' : 'var(--text-dim)';
+  const color = active ? 'var(--accent-2)' : hovered && onClick ? 'var(--text-h)' : 'var(--text-dim)';
   return (
     <th
       onClick={onClick}
@@ -231,14 +232,14 @@ function Th({
   );
 }
 
-function Td({ children, dim, bright, active, alignRight }: { children: React.ReactNode; dim?: boolean; bright?: boolean; active?: boolean; alignRight?: boolean }) {
+function Td({ children, dim, bright, active, alignRight, padRight }: { children: React.ReactNode; dim?: boolean; bright?: boolean; active?: boolean; alignRight?: boolean; padRight?: boolean }) {
   return (
     <td
       className="tabular-nums"
       style={{
-        padding: '10px 8px',
+        padding: padRight ? '10px 24px 10px 8px' : '10px 8px',
         textAlign: alignRight ? 'right' : 'center',
-        color: active ? '#fff' : bright ? 'var(--text-h)' : dim ? 'var(--text-dim)' : 'var(--text)',
+        color: active ? 'var(--text-h)' : bright ? 'var(--text-h)' : dim ? 'var(--text-dim)' : 'var(--text)',
         fontWeight: active || bright ? 600 : 500,
         fontSize: 12.5,
         whiteSpace: 'nowrap',

@@ -74,7 +74,7 @@ export default function LeaguesPage() {
     <EsportsLayout>
       <header className="mb-8">
         <div className="eyebrow mb-2">Pro League · Directory</div>
-        <h1 className="h-display" style={{ fontSize: 44 }}>Leagues</h1>
+        <h1 className="h-display" style={{ fontSize: 'clamp(30px, 8vw, 44px)' }}>Leagues</h1>
         <p className="mt-3 text-(--text)" style={{ fontSize: 15.5, maxWidth: 560, lineHeight: 1.55 }}>
           {count > 0 ? <><b className="text-(--text-h) font-semibold">{count}</b> leagues tracked.</> : 'Browse the leagues we cover.'} Pick one to see standings, schedules, and player leaders.
         </p>

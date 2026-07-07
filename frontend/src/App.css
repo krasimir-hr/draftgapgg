@@ -203,6 +203,11 @@
   border-bottom-color: var(--accent);
 }
 
+/* Tab icons ride alongside the label; only surfaced on mobile (see the hero
+   tab rules in the responsive block). Desktop stays text-only. */
+.section-tab-icon { display: none; }
+.section-tab-icon svg { width: 20px; height: 20px; display: block; }
+
 /* Badges */
 .badge {
   display: inline-flex;
@@ -252,7 +257,11 @@
 .chip:hover { color: var(--text-h); }
 
 .chip.active {
-  color: #fff;
+  /* Solid accent pill: readable in light mode (deep purple + near-white text)
+     and dark mode (light purple + near-black text). Plain `#fff` text with no
+     background rendered invisible on light surfaces. */
+  background: var(--accent);
+  color: var(--bg);
 }
 
 /* Pagination button */
@@ -372,9 +381,15 @@
   display: inline-block;
 }
 
-/* League / team logos */
+/* League / team logos: monochrome-tint to match the theme — dark on light
+   surfaces, white on dark. (Was always white, which vanished in light mode.) */
 .logo-themed {
-  filter: brightness(0) invert(1);
+  filter: brightness(0) opacity(0.82);
+}
+@media (prefers-color-scheme: dark) {
+  .logo-themed {
+    filter: brightness(0) invert(1);
+  }
 }
 
 /* Styled select */
@@ -535,6 +550,27 @@
 /* Scroll columns with no visible scrollbar (Firefox / IE / WebKit). */
 .es-scroll { scrollbar-width: none; -ms-overflow-style: none; }
 .es-scroll::-webkit-scrollbar { width: 0; height: 0; display: none; }
+
+/* Esports frame grid: main column + optional right siderail.
+   The column template lives here (not inline) so it can respond to viewport
+   width — on smaller laptops the siderail and gap shrink to hand the main
+   column more room, keeping the wide Team Stats / Players tables from cramming. */
+.es-shell {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 20px;
+}
+.es-shell--rail {
+  grid-template-columns: minmax(0, 1064px) 220px;
+}
+@media (max-width: 1600px) {
+  .es-shell { gap: 16px; }
+  .es-shell--rail { grid-template-columns: minmax(0, 1fr) 200px; }
+}
+@media (max-width: 1360px) {
+  .es-shell { gap: 14px; }
+  .es-shell--rail { grid-template-columns: minmax(0, 1fr) 186px; }
+}
 
 /* League hero shrink-on-scroll: the big logo + title collapse, leaving a
    compact bar with a small logo on the left and the tabs/menu sliding right.
@@ -790,3 +826,156 @@ button { font-family: inherit; }
 }
 
 .hero-stat-value.accent { color: var(--accent-2); }
+
+/* Playoff bracket */
+.bracket-match {
+  transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+              box-shadow 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+              border-color 0.15s ease;
+  will-change: transform;
+}
+.bracket-match:hover {
+  transform: translateY(-2px);
+  border-color: var(--border-strong);
+}
+
+/* Wiring editor button: hidden until the card is hovered (always visible on
+   touch devices, which have no hover). */
+.bracket-edit-btn { opacity: 0; transition: opacity 0.15s ease; }
+.bracket-slot:hover .bracket-edit-btn,
+.bracket-edit-btn:focus-visible { opacity: 1; }
+@media (hover: none) {
+  .bracket-edit-btn { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bracket-match { transition: none; }
+  .bracket-match:hover { transform: none; }
+}
+
+/* ============================================================
+   Mobile / responsive
+   The app is designed desktop-first. Below ~768px we collapse the
+   two-column esports frame to a single column, drop the supplementary
+   right rail, tighten the frame padding, and shrink the league hero.
+   Each scroll column already computes overflow-x: auto (overflow-y is
+   auto), so wide stat tables scroll sideways within the body instead of
+   being clipped by the overflow-hidden main region.
+   ============================================================ */
+
+/* Clears the two-row nav pill (logo/search row + league tab row). */
+.app-main { padding-top: 132px; }
+
+@media (max-width: 768px) {
+  /* Two nav bars on mobile (see TopNav.css): logo + search pill on top,
+     league icons pill on the bottom. Reserve room for both, plus the iOS
+     home indicator below the bottom bar. */
+  .app-main {
+    padding-top: 72px;
+    padding-bottom: calc(80px + env(safe-area-inset-bottom));
+  }
+
+  /* Single-column frame: drop the right rail, tighten side padding. */
+  .es-shell,
+  .es-shell--rail {
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 0 !important;
+    padding: 0 12px !important;
+  }
+  .es-rail { display: none !important; }
+
+  /* League hero on mobile collapses to a two-liner:
+       line 1 — logo + year/league selects
+       line 2 — the section-tab menu (Overview / Matches / …)
+     The big title block is dropped; the top nav + selects already say which
+     league and year you're viewing. */
+  .league-hero-topwrap { display: none; }
+
+  .league-hero-bar {
+    flex-wrap: wrap;
+    align-items: center;
+    row-gap: 4px;
+    padding: 10px 12px !important;
+    border-top: 0 !important;
+  }
+
+  /* Line 1, left: the small crest (normally revealed only on scroll). */
+  .league-hero-bar-logo {
+    order: 0;
+    width: 30px !important;
+    height: 30px !important;
+    opacity: 1 !important;
+    margin: 0 !important;
+  }
+
+  /* Line 1, right: the year + stage selects, pushed to the far edge. */
+  .league-hero-selects {
+    order: 1;
+    margin-left: auto;
+  }
+  .league-hero-selects .field-select { font-size: 13px; padding: 8px 28px 8px 11px; }
+
+  .league-hero-spacer { display: none; }
+
+  /* Line 2: icon-only tab menu, full width with a divider above it. The five
+     tabs share the width evenly so nothing scrolls off, and the row runs flush
+     to the card's side + bottom edges so the active underline sits right on the
+     hero's bottom border. */
+  .league-hero-tabs {
+    order: 2;
+    /* Break out of the bar's 12px side padding so the row spans the full card
+       width (basis = content box + the 24px of horizontal padding). */
+    flex: 1 0 calc(100% + 24px);
+    min-width: 0;
+    justify-content: space-between;
+    margin: 6px -12px -10px;
+    padding: 0 12px;
+    border-top: 1px solid var(--border);
+  }
+  .league-hero-tabs .section-tab {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 15px;
+    margin-bottom: 0;
+  }
+  .league-hero-tabs .section-tab-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  /* Keep the label in the DOM for screen readers, hidden visually. */
+  .league-hero-tabs .section-tab--icon .section-tab-text {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  /* Match feed rows: tighter time column, drop the BOx tag so the team
+     names keep readable width. */
+  .match-feed-row {
+    grid-template-columns: 52px minmax(0, 1fr) auto !important;
+    gap: 10px !important;
+    padding: 12px 14px !important;
+  }
+  .match-feed-time { font-size: 11px !important; }
+  .match-feed-bo { display: none; }
+
+  /* Big display headings scale down (h1 is 48px on desktop). */
+  h1 { font-size: 32px; }
+  h2 { font-size: 26px; }
+  h3 { font-size: 22px; }
+}
+
+@media (max-width: 480px) {
+  .es-shell,
+  .es-shell--rail { padding: 0 10px !important; }
+  .section-tabs { overflow-x: auto; scrollbar-width: none; }
+  .section-tabs::-webkit-scrollbar { display: none; }
+}

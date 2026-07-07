@@ -94,7 +94,7 @@ function MatchRow({ m, isLast }: { m: Match; isLast: boolean }) {
     <button
       type="button"
       onClick={() => openMatch(m.id)}
-      className="w-full grid items-center transition-colors hover:bg-(--surface-sub) text-left"
+      className="match-feed-row w-full grid items-center transition-colors hover:bg-(--surface-sub) text-left"
       style={{
         padding: '14px 20px',
         borderBottom: isLast ? 'none' : '1px solid var(--border)',
@@ -104,7 +104,7 @@ function MatchRow({ m, isLast }: { m: Match; isLast: boolean }) {
     >
       {/* Time */}
       <div
-        className="tabular-nums font-medium"
+        className="match-feed-time tabular-nums font-medium"
         style={{ fontSize: 12.5, color: 'var(--text-dim)' }}
       >
         {time}
@@ -186,7 +186,7 @@ function MatchRow({ m, isLast }: { m: Match; isLast: boolean }) {
             </span>
           )}
         </span>
-        <span className="font-semibold tracking-wide text-(--text-dim)" style={{ fontSize: 11 }}>BO{m.best_of}</span>
+        <span className="match-feed-bo font-semibold tracking-wide text-(--text-dim)" style={{ fontSize: 11 }}>BO{m.best_of}</span>
       </div>
     </button>
   );
@@ -255,7 +255,7 @@ export default function MatchesPage({ status }: Props) {
       {/* Hero header */}
       <header className="mb-6">
         <div className="eyebrow mb-2">Pro League · Schedule</div>
-        <h1 className="h-display" style={{ fontSize: 44 }}>Matches</h1>
+        <h1 className="h-display" style={{ fontSize: 'clamp(30px, 8vw, 44px)' }}>Matches</h1>
         <p className="mt-3 text-(--text)" style={{ fontSize: 15.5, maxWidth: 560, lineHeight: 1.55 }}>
           The full match feed. {count > 0 && <><b className="text-(--text-h) font-semibold">{count}</b> total. </>}
           Click any match for picks, bans, and game-by-game stats.

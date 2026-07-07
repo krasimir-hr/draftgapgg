@@ -62,9 +62,11 @@ export default function OverviewTab({
       <AccoladesRow highlights={highlights} />
 
       <div>
-        <h2 className="section-label pl-1" style={{ marginBottom: 10 }}>
-          {stageNav ? 'Stages' : 'Tournament Standings'}
-        </h2>
+        {!stageNav && (
+          <h2 className="section-label pl-1" style={{ marginBottom: 10 }}>
+            Tournament Standings
+          </h2>
+        )}
         <div className="card card-soft-shadow overflow-hidden" style={{ borderRadius: 12 }}>
         {stageNav && (
           <div
@@ -120,8 +122,11 @@ const CARD_H = 175;
 const CARD_RADIUS = 14;
 const CARD_BORDER = '1px solid var(--border)';
 
+// Player of the Month / Inform Team / Must Pick cards hidden for now.
+const SHOW_ACCOLADES = false;
+
 function AccoladesRow({ highlights }: { highlights: EventHighlights | null }) {
-  const hasAccolades = !!(highlights?.player_of_month || highlights?.inform_team || highlights?.must_pick);
+  const hasAccolades = SHOW_ACCOLADES && !!(highlights?.player_of_month || highlights?.inform_team || highlights?.must_pick);
   if (!hasAccolades) return null;
 
   return (

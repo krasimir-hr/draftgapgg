@@ -40,3 +40,6 @@ npm-debug.log*
 # Oracle's Elixir match data (downloaded/mirrored, non-commercial license)
 *_LoL_esports_match_data_from_OraclesElixir*.csv
 backend/oe_data/
+
+# Local data dump for seeding production (do not commit)
+initial_data.json

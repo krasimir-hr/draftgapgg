@@ -382,7 +382,7 @@ function RoleSpread({ roles, gap = 10 }: { roles: RoleShare[]; gap?: number }) {
           style={{ gap: 4 }}
           title={`${role}: ${picks} pick${picks === 1 ? '' : 's'}`}
         >
-          <RoleIcon role={role} size={14} color="#fff" />
+          <RoleIcon role={role} size={14} color="var(--text)" />
           <span className="tabular-nums text-(--text-dim)" style={{ fontSize: 11 }}>
             {picks}
           </span>

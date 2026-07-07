@@ -1,5 +1,4 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
-import LeagueSidebar from './LeagueSidebar';
 import { Sidebar } from './Sidebar';
 
 // Portal target for a page's fixed sub-header (e.g. a tab's filter bar). A tab
@@ -39,8 +38,7 @@ export default function EsportsLayout({
     // is consumed to collapse the hero — only further scrolling moves the content.
     // In reverse, once the body is scrolled back to the top, the next upward pull
     // is consumed to expand the hero. Toggled imperatively (no re-render).
-    let collapsed = body.scrollTop > 0;
-    head.classList.toggle('es-header-stuck', collapsed);
+    let collapsed = false;
 
     const onWheel = (e: WheelEvent) => {
       if (e.deltaY > 0) {
@@ -57,8 +55,28 @@ export default function EsportsLayout({
         }
       }
     };
-    body.addEventListener('wheel', onWheel, { passive: false });
-    return () => body.removeEventListener('wheel', onWheel);
+
+    // Mobile shows a compact static header (see the responsive block in
+    // App.css) — no shrink-on-scroll, so the collapse mechanism is disabled
+    // there and re-enabled if the viewport grows back to desktop.
+    const mq = window.matchMedia('(max-width: 768px)');
+    const setup = () => {
+      if (mq.matches) {
+        collapsed = false;
+        head.classList.remove('es-header-stuck');
+        body.removeEventListener('wheel', onWheel);
+      } else {
+        collapsed = body.scrollTop > 0;
+        head.classList.toggle('es-header-stuck', collapsed);
+        body.addEventListener('wheel', onWheel, { passive: false });
+      }
+    };
+    setup();
+    mq.addEventListener('change', setup);
+    return () => {
+      mq.removeEventListener('change', setup);
+      body.removeEventListener('wheel', onWheel);
+    };
   }, []);
 
   // Each scrolling column: fill the row height, allow shrink (min-height: 0 so
@@ -72,21 +90,17 @@ export default function EsportsLayout({
   return (
     <div style={{ height: '100%', display: 'flex', justifyContent: 'center' }}>
       <div
+        className={right ? 'es-shell es-shell--rail' : 'es-shell'}
         style={{
           width: '100%',
-          maxWidth: 1592,
+          maxWidth: 1280,
           height: '100%',
           boxSizing: 'border-box',
           padding: '0 24px',
-          display: 'grid',
-          gridTemplateColumns: right ? '220px minmax(0, 1064px) 220px' : '220px minmax(0, 1fr)',
-          gap: 20,
         }}
       >
-        <LeagueSidebar className="es-scroll" style={{ gridColumn: 1, ...column }} />
-
         {header ? (
-          <div style={{ gridColumn: 2, minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+          <div style={{ gridColumn: 1, minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
             {/* Fixed header region: hero + a sub-header slot tabs can portal a
                 filter into. Sits above the scroll body. */}
             <div
@@ -103,10 +117,10 @@ export default function EsportsLayout({
             </SubHeaderContext.Provider>
           </div>
         ) : (
-          <div className="es-scroll" style={{ gridColumn: 2, minWidth: 0, ...column }}>{children}</div>
+          <div className="es-scroll" style={{ gridColumn: 1, minWidth: 0, ...column }}>{children}</div>
         )}
 
-        {right && <Sidebar className="es-scroll" style={{ gridColumn: 3, ...column }}>{right}</Sidebar>}
+        {right && <Sidebar className="es-scroll es-rail" style={{ gridColumn: 2, ...column }}>{right}</Sidebar>}
       </div>
     </div>
   );
