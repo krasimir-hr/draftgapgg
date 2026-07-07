@@ -169,7 +169,7 @@ body::before {
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  background-image: radial-gradient(var(--dot-grid) 1px, transparent 1px);
+  background-image: radial-gradient(var(--dot-grid) 0.5px, transparent 1px);
   background-size: 18px 18px;
   -webkit-mask-image: radial-gradient(ellipse 110% 100% at 50% 0%, #000 45%, transparent 85%);
   mask-image: radial-gradient(ellipse 110% 100% at 50% 0%, #000 45%, transparent 85%);
