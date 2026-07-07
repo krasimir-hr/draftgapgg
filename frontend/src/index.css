@@ -196,7 +196,8 @@ body::before {
     radial-gradient(circle at 100% 100%, var(--dot-grid) 1.5px, transparent 0);
   background-size: 20px 20px;
   background-position: 0 0, 10px 10px;
-  --glow: radial-gradient(ellipse 88% 72% at 50% 26%, #000 0%, #000 30%, transparent 80%);
+  /* Centered in the content area (below the ~102px fixed header), spreading out. */
+  --glow: radial-gradient(ellipse 88% 72% at 50% 55%, #000 0%, #000 22%, transparent 80%);
   -webkit-mask-image: var(--glow);
   mask-image: var(--glow);
 }
