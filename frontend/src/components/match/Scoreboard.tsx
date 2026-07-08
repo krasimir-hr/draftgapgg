@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import type {
   GameDetail, PlayerPerformance, PerformanceRatingInfo, Champion, Item, Rune, SummonerSpell,
 } from '../../types/models';
-import { ROLE_COLOR, ROLE_ICON, ROLE_ABBR } from '../league/shared';
+import { ROLE_ICON, ROLE_ABBR } from '../league/shared';
 import { ChampionIcon } from '../ChampionIcon';
 
 export interface TeamMeta {
