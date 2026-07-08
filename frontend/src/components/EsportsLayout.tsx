@@ -23,19 +23,30 @@ export default function EsportsLayout({
   header,
   children,
   className,
+  stickyHeader = true,
+  pageScroll = false,
 }: {
   right?: React.ReactNode;
   header?: React.ReactNode;
   children: React.ReactNode;
   // Extra class on the outer container (frame or shell).
   className?: string;
+  // When false, the header scrolls away with the body instead of pinning as a
+  // fixed top bar (used by the match page, whose hero is tall and one-off).
+  stickyHeader?: boolean;
+  // When true, the frame grows to its natural height and the whole region
+  // scrolls as a page, instead of the body scrolling inside a fixed-height
+  // frame. Implies a non-sticky header (match page).
+  pageScroll?: boolean;
 }) {
   if (header) {
+    const headerNode = <div className="es-frame-header">{header}</div>;
     return (
-      <div className="es-frame-outer">
-        <div className={`es-frame${right ? ' es-frame--rail' : ''}${className ? ` ${className}` : ''}`}>
-          <div className="es-frame-header">{header}</div>
-          <div className="es-frame-body es-scroll">
+      <div className={`es-frame-outer${pageScroll ? ' es-frame-outer--flow' : ''}`}>
+        <div className={`es-frame${right ? ' es-frame--rail' : ''}${pageScroll ? ' es-frame--flow' : ''}${className ? ` ${className}` : ''}`}>
+          {stickyHeader && headerNode}
+          <div className={`es-frame-body${pageScroll ? '' : ' es-scroll'}`}>
+            {!stickyHeader && headerNode}
             <div className="es-frame-grid">
               <div className="es-frame-main">{children}</div>
               {right && <Sidebar className="es-frame-rail">{right}</Sidebar>}

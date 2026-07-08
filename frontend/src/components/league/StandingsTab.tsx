@@ -80,7 +80,7 @@ export default function StandingsTab({ list: initialList, teamShortNames, eventI
   });
 
   return (
-    <div className="flex flex-col" style={{ gap: 20 }}>
+    <div className="flex flex-col" style={{ gap: 6 }}>
       {stages.length > 0 && (
         <div className="card card-soft-shadow" style={{ padding: '8px 14px' }}>
           <StagePicker stages={stages} selected={selectedStageId} onSelect={setSelectedStageId} />

@@ -1,6 +1,7 @@
 import React, { useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { ChampionIcon } from '../ChampionIcon';
+import { Select } from '../ui/Select';
 import type { EventStage, FormGame, ChampStat, FormMatch } from '../../types/models';
 
 /* Role tokens */
@@ -661,7 +662,7 @@ export function LayoutSwitcher<L extends ViewLayout>({
 
 /* Stage picker — same button style as LayoutSwitcher */
 
-const pickerBtnStyle = (active: boolean): React.CSSProperties => ({
+export const pickerBtnStyle = (active: boolean): React.CSSProperties => ({
   height: 30,
   padding: '0 10px',
   border: '1px solid ' + (active ? 'var(--accent-border)' : 'transparent'),
@@ -678,7 +679,7 @@ const pickerBtnStyle = (active: boolean): React.CSSProperties => ({
   whiteSpace: 'nowrap',
 });
 
-const Pipe = ({ style }: { style?: React.CSSProperties }) => (
+export const Pipe = ({ style }: { style?: React.CSSProperties }) => (
   <span aria-hidden style={{ color: 'var(--text-faint)', fontSize: 13, userSelect: 'none', flexShrink: 0, ...style }}>|</span>
 );
 
@@ -787,14 +788,25 @@ export function FilterBar({
       {/* Right: team / sort / layout */}
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8 }}>
         {teamOptions && onTeam && (
-          <select className="field-select" style={{ height: 30, boxSizing: 'border-box' }} value={team ?? 'All'} onChange={(e) => onTeam(e.target.value)}>
-            {teamOptions.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
-          </select>
+          <Select
+            ariaLabel="Team"
+            style={{ height: 30 }}
+            value={team ?? 'All'}
+            options={teamOptions}
+            onChange={onTeam}
+            align="right"
+          />
         )}
         {sortOptions && sort != null && onSort && (
-          <select className="field-select" style={{ height: 30, boxSizing: 'border-box' }} value={sort} onChange={(e) => onSort(e.target.value)}>
-            {sortOptions.map((s) => <option key={s.key} value={s.key}>Sort: {s.label}</option>)}
-          </select>
+          <Select
+            ariaLabel="Sort by"
+            prefix="Sort"
+            style={{ height: 30 }}
+            value={sort}
+            options={sortOptions.map((s) => ({ value: s.key, label: s.label }))}
+            onChange={onSort}
+            align="right"
+          />
         )}
         {layoutSwitcher}
       </div>

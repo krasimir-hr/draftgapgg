@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import type { Match } from '../../types/models';
-import { TeamMark } from './shared';
+import { TeamMark, pickerBtnStyle } from './shared';
+import { Select } from '../ui/Select';
 
 type Scope = 'upcoming' | 'recent';
 
@@ -26,9 +27,8 @@ function groupByDate(matches: Match[]): DateGroup[] {
     if (diffDays === 0)       label = 'Today';
     else if (diffDays === 1)  label = 'Tomorrow';
     else if (diffDays === -1) label = 'Yesterday';
-    else if (diffDays >= -6 && diffDays <= -2) label = `${Math.abs(diffDays)} days ago`;
-    else if (diffDays >= 2 && diffDays <= 6)   label = d.toLocaleDateString(undefined, { weekday: 'long' });
-    else                      label = d.toLocaleDateString(undefined, { month: 'long', day: 'numeric' });
+    else if (diffDays > 0)    label = `In ${diffDays} days`;
+    else                      label = `${Math.abs(diffDays)} days ago`;
 
     const key = `${label}|${dayStart.toISOString()}`;
     if (!groups.has(key)) groups.set(key, { label, date: dayStart, matches: [] });
@@ -95,13 +95,15 @@ export default function MatchesTab({
   }, [filtered, scope]);
 
   return (
-    <div className="flex flex-col" style={{ gap: 20 }}>
-      {/* Filter bar */}
+    <div className="flex flex-col" style={{ gap: 22 }}>
+      {/* Filter bar — matches the Players tab: flat surface, segmented scope
+          picker with a purple active state, pipe divider, selects on the right. */}
       <div
-        className="card card-soft-shadow flex flex-wrap items-center"
-        style={{ padding: '10px 14px', gap: 12 }}
+        className="card card-soft-shadow flex items-center flex-wrap"
+        style={{ padding: '8px 14px', background: 'var(--surface)', border: 'none', gap: 8 }}
       >
-        <div className="chip-group">
+        {/* Scope: Upcoming / Recent */}
+        <div className="flex items-center" style={{ gap: 4 }}>
           {([
             { k: 'upcoming', label: 'Upcoming' },
             { k: 'recent',   label: 'Recent' },
@@ -110,47 +112,43 @@ export default function MatchesTab({
               key={s.k}
               type="button"
               onClick={() => setScope(s.k)}
-              className={`chip${scope === s.k ? ' active' : ''}`}
+              className="transition-all"
+              style={pickerBtnStyle(scope === s.k)}
             >
               {s.label}
             </button>
           ))}
         </div>
 
-        <select
-          className="field-select"
-          value={stage}
-          onChange={(e) => setStage(e.target.value)}
-        >
-          {stageOptions.map((s) => (
-            <option key={s} value={s}>{s === 'All' ? 'All stages' : s}</option>
-          ))}
-        </select>
+        {/* Stage / team filters */}
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8 }}>
+          <Select
+            ariaLabel="Stage"
+            style={{ height: 30 }}
+            value={stage}
+            options={stageOptions.map((s) => ({ value: s, label: s === 'All' ? 'All stages' : s }))}
+            onChange={setStage}
+            align="right"
+          />
 
-        <select
-          className="field-select"
-          value={team}
-          onChange={(e) => setTeam(e.target.value)}
-        >
-          {teamOptions.map((t) => (
-            <option key={t} value={t}>
-              {t === 'All' ? 'All teams' : (teamShortNames[t] || t)}
-            </option>
-          ))}
-        </select>
-
-        <div
-          className="ml-auto tabular-nums text-(--text-dim)"
-          style={{ fontSize: 12 }}
-        >
-          {filtered.length} {filtered.length === 1 ? 'match' : 'matches'}
+          <Select
+            ariaLabel="Team"
+            style={{ height: 30 }}
+            value={team}
+            options={teamOptions.map((t) => ({
+              value: t,
+              label: t === 'All' ? 'All teams' : teamShortNames[t] || t,
+            }))}
+            onChange={setTeam}
+            align="right"
+          />
         </div>
       </div>
 
       {/* Date groups */}
       {groups.length === 0 ? (
         <div
-          className="card text-center text-(--text-dim)"
+          className="text-center text-(--text-dim)"
           style={{ padding: 60, fontSize: 13 }}
         >
           No matches for this filter.
@@ -185,40 +183,37 @@ function DateGroupSection({
 
   return (
     <section>
-      <div className="flex items-baseline" style={{ gap: 12, marginBottom: 12 }}>
+      <div
+        className="flex items-center"
+        style={{ gap: 10, paddingLeft: 4, paddingBottom: 9, borderBottom: '1px solid var(--border)' }}
+      >
         <h2
           className="font-display"
           style={{
-            fontSize: 22,
-            fontWeight: 600,
-            color: isToday ? 'var(--accent-2)' : 'var(--text-h)',
-            letterSpacing: '-0.02em',
+            fontSize: 12,
+            fontWeight: 700,
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase',
+            color: isToday ? 'var(--accent-2)' : 'var(--text-dim)',
           }}
         >
           {group.label}
         </h2>
         {showDate && (
           <span
-            className="tabular-nums text-(--text-dim)"
-            style={{ fontSize: 11 }}
+            className="tabular-nums text-(--text-faint)"
+            style={{ fontSize: 11, fontWeight: 500 }}
           >
             {group.date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
           </span>
         )}
-        <span
-          className="ml-auto text-(--text-dim)"
-          style={{ fontSize: 11 }}
-        >
-          {group.matches.length} {group.matches.length === 1 ? 'match' : 'matches'}
-        </span>
       </div>
 
-      <div className="card card-soft-shadow overflow-hidden">
-        {group.matches.map((m, i) => (
+      <div>
+        {group.matches.map((m) => (
           <MatchListItem
             key={m.id}
             m={m}
-            isLast={i === group.matches.length - 1}
             teamLogos={teamLogos}
             teamShortNames={teamShortNames}
             onClick={() => onMatchSelect(m.id)}
@@ -230,10 +225,9 @@ function DateGroupSection({
 }
 
 function MatchListItem({
-  m, isLast, teamLogos, teamShortNames, onClick,
+  m, teamLogos, teamShortNames, onClick,
 }: {
   m: Match;
-  isLast: boolean;
   teamLogos: Record<string, string | null>;
   teamShortNames: Record<string, string>;
   onClick: () => void;
@@ -243,16 +237,17 @@ function MatchListItem({
   const t2Win = m.winner === 2;
   const dt = m.datetime_utc ? new Date(m.datetime_utc) : null;
   const time = dt ? dt.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }) : '—';
+  const name1 = teamShortNames[m.team1] || m.team1;
+  const name2 = teamShortNames[m.team2] || m.team2;
 
   return (
     <button
       type="button"
       onClick={onClick}
-      className="match-feed-row w-full grid items-center transition-colors hover:bg-(--surface-sub) text-left"
+      className="match-feed-row w-full grid items-center text-left"
       style={{
-        padding: '14px 20px',
-        borderBottom: isLast ? 'none' : '1px solid var(--border)',
-        gridTemplateColumns: '74px minmax(0, 1fr) auto',
+        padding: '13px 20px',
+        gridTemplateColumns: '74px minmax(0, 1fr) 128px',
         gap: 16,
       }}
     >
@@ -264,44 +259,56 @@ function MatchListItem({
         {time}
       </div>
 
-      {/* Matchup */}
-      <div className="flex items-center min-w-0" style={{ gap: 14 }}>
+      {/* Matchup — clustered around a centered score so the eye reads the
+          pairing as one unit instead of scanning edge to edge. */}
+      <div
+        className="grid items-center"
+        style={{
+          gridTemplateColumns: '1fr auto 1fr',
+          gap: 16,
+          maxWidth: 480,
+          width: '100%',
+          margin: '0 auto',
+        }}
+      >
+        {/* Team 1 — name then logo, pushed toward the score */}
         <div
-          className="flex items-center flex-1 min-w-0"
-          style={{ gap: 10, opacity: played && !t1Win ? 0.55 : 1 }}
+          className="flex items-center justify-end min-w-0"
+          style={{ gap: 10, opacity: played && !t1Win ? 0.5 : 1 }}
         >
-          <TeamMark short={teamShortNames[m.team1] || m.team1} logo={teamLogos[m.team1]} size={28} />
           <span
-            className={`text-sm truncate ${t1Win ? 'font-bold text-(--text-h)' : 'font-medium text-(--text-h)'}`}
+            className={`text-sm truncate text-right ${t1Win ? 'font-bold' : 'font-medium'} text-(--text-h)`}
           >
-            {teamShortNames[m.team1] || m.team1}
+            {name1}
           </span>
+          <TeamMark short={name1} logo={teamLogos[m.team1]} size={30} />
         </div>
 
+        {/* Score / vs */}
         {played ? (
-          <div className="flex items-center tabular-nums" style={{ gap: 2 }}>
+          <div className="flex items-center tabular-nums shrink-0" style={{ gap: 3 }}>
             <span
               className="font-display"
               style={{
-                fontSize: 20,
+                fontSize: 21,
                 fontWeight: t1Win ? 700 : 400,
-                color: t1Win ? 'var(--text-h)' : 'var(--text-dim)',
+                color: t1Win ? 'var(--text-h)' : 'var(--text-faint)',
                 letterSpacing: '-0.03em',
-                minWidth: 18,
+                minWidth: 15,
                 textAlign: 'right',
               }}
             >
               {m.team1_score}
             </span>
-            <span style={{ color: 'var(--text-faint)', fontSize: 14, fontWeight: 300, margin: '0 5px' }}>–</span>
+            <span style={{ color: 'var(--text-faint)', fontSize: 13, fontWeight: 300 }}>–</span>
             <span
               className="font-display"
               style={{
-                fontSize: 20,
+                fontSize: 21,
                 fontWeight: t2Win ? 700 : 400,
-                color: t2Win ? 'var(--text-h)' : 'var(--text-dim)',
+                color: t2Win ? 'var(--text-h)' : 'var(--text-faint)',
                 letterSpacing: '-0.03em',
-                minWidth: 18,
+                minWidth: 15,
                 textAlign: 'left',
               }}
             >
@@ -310,22 +317,23 @@ function MatchListItem({
           </div>
         ) : (
           <span
-            className="font-semibold tracking-wider"
-            style={{ fontSize: 11, color: 'var(--text-faint)', minWidth: 42, textAlign: 'center' }}
+            className="font-semibold tracking-wider shrink-0"
+            style={{ fontSize: 10.5, color: 'var(--text-faint)', textAlign: 'center' }}
           >
-            vs
+            VS
           </span>
         )}
 
+        {/* Team 2 — logo then name, pushed toward the score */}
         <div
-          className="flex items-center flex-1 min-w-0 flex-row-reverse"
-          style={{ gap: 10, opacity: played && !t2Win ? 0.55 : 1 }}
+          className="flex items-center justify-start min-w-0"
+          style={{ gap: 10, opacity: played && !t2Win ? 0.5 : 1 }}
         >
-          <TeamMark short={teamShortNames[m.team2] || m.team2} logo={teamLogos[m.team2]} size={28} />
+          <TeamMark short={name2} logo={teamLogos[m.team2]} size={30} />
           <span
-            className={`text-sm truncate text-right ${t2Win ? 'font-bold text-(--text-h)' : 'font-medium text-(--text-h)'}`}
+            className={`text-sm truncate ${t2Win ? 'font-bold' : 'font-medium'} text-(--text-h)`}
           >
-            {teamShortNames[m.team2] || m.team2}
+            {name2}
           </span>
         </div>
       </div>

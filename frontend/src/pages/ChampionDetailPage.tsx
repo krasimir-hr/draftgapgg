@@ -15,6 +15,7 @@ import { RoleIcon } from '../components/league/shared';
 import { ChampionIcon } from '../components/ChampionIcon';
 import EsportsLayout from '../components/EsportsLayout';
 import { SideRail } from '../components/Sidebar';
+import { Select } from '../components/ui/Select';
 
 export async function championLoader({ params, request }: LoaderFunctionArgs): Promise<ChampionProfile> {
   const url = new URL(request.url);
@@ -446,10 +447,16 @@ function ChampionDetailView() {
               ))}
             </div>
             {available_years.length > 0 && (
-              <select className="field-select" value={selectedYear} onChange={(e) => handleYearChange(e.target.value)}>
-                <option value="">All years</option>
-                {available_years.map((y) => <option key={y} value={y}>{y}</option>)}
-              </select>
+              <Select
+                ariaLabel="Year"
+                value={selectedYear}
+                options={[
+                  { value: '', label: 'All years' },
+                  ...available_years.map((y) => ({ value: String(y), label: String(y) })),
+                ]}
+                onChange={(v) => handleYearChange(String(v))}
+                align="right"
+              />
             )}
           </div>
         </div>

@@ -165,7 +165,7 @@ export default function ChampsTab({ champions: initialChampions, eventId, stages
   );
 
   return (
-    <div className="flex flex-col" style={{ gap: 20 }}>
+    <div className="flex flex-col" style={{ gap: 6 }}>
       {/* Filter lives in the fixed header region (portaled) so only the data scrolls. */}
       {subHeaderEl ? createPortal(<div style={{ marginTop: 12 }}>{filter}</div>, subHeaderEl) : filter}
 

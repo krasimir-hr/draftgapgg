@@ -97,6 +97,8 @@ function MatchDetailView() {
 
   return (
     <EsportsLayout
+      stickyHeader={false}
+      pageScroll
       right={
         <MatchRails
           eventIds={[match.event.id]}
@@ -108,93 +110,85 @@ function MatchDetailView() {
           currentMatchId={matchId}
         />
       }
-    >
-      {/* Header */}
-      <div
-        style={{
-          background: 'var(--surface)',
-          border: '1px solid var(--border)',
-          borderRadius: 16,
-          overflow: 'hidden',
-        }}
-      >
-        <div style={{ padding: '24px 28px 12px' }}>
-          <div className="grid items-center" style={{ gridTemplateColumns: 'minmax(0, 1fr) auto minmax(0, 1fr)', gap: 18 }}>
-            <TeamHeader team={t1} won={t1Win} played={played} align="left" onClick={() => openTeam(t1.name)} />
-            <div className="font-display tabular-nums text-center" style={{ fontSize: 'clamp(32px, 9vw, 56px)', fontWeight: 700, color: 'var(--text-h)', letterSpacing: '-0.04em', lineHeight: 1, padding: '0 12px' }}>
-              {played ? (
-                <>{match.team1_score} <span style={{ color: 'var(--text-faint)', fontWeight: 500 }}>–</span> {match.team2_score}</>
-              ) : (
-                <span style={{ fontSize: 26, color: 'var(--text-dim)', letterSpacing: '0.04em' }}>vs</span>
-              )}
+      header={
+        <div className="match-hero-bar">
+          {/* Score row */}
+          <div className="match-hero-score">
+            <div className="grid items-center" style={{ gridTemplateColumns: 'minmax(0, 1fr) auto minmax(0, 1fr)', gap: 18 }}>
+              <TeamHeader team={t1} won={t1Win} played={played} align="left" onClick={() => openTeam(t1.name)} />
+              <div className="font-display tabular-nums text-center" style={{ fontSize: 'clamp(30px, 7vw, 46px)', fontWeight: 700, color: 'var(--text-h)', letterSpacing: '-0.04em', lineHeight: 1, padding: '0 12px' }}>
+                {played ? (
+                  <>{match.team1_score} <span style={{ color: 'var(--text-faint)', fontWeight: 500 }}>–</span> {match.team2_score}</>
+                ) : (
+                  <span style={{ fontSize: 24, color: 'var(--text-dim)', letterSpacing: '0.04em' }}>vs</span>
+                )}
+              </div>
+              <TeamHeader team={t2} won={t2Win} played={played} align="right" onClick={() => openTeam(t2.name)} />
             </div>
-            <TeamHeader team={t2} won={t2Win} played={played} align="right" onClick={() => openTeam(t2.name)} />
           </div>
-        </div>
 
-        <div
-          className="flex items-center justify-center flex-wrap"
-          style={{ padding: '11px 20px', gap: 9 }}
-        >
-          <span className="inline-flex items-center" style={{ gap: 5 }}>
-            {match.event.league.logo && (
-              <img src={match.event.league.logo} alt="" className="logo-themed" style={{ width: 13, height: 13, objectFit: 'contain', opacity: 0.6 }} />
-            )}
-            <span style={{ fontSize: 11, color: 'var(--text-dim)', fontWeight: 400, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-              {match.event.league.short_name ?? match.event.league.name}
-            </span>
-          </span>
-
-          <span style={{ color: 'var(--text-faint)', fontSize: 11 }}>|</span>
-
-          <span style={{ fontSize: 11, color: 'var(--text-dim)', fontWeight: 400 }}>{match.tab || match.event.name}</span>
-          <Dot />
-          <span className="tabular-nums" style={{ fontSize: 11, color: 'var(--text-dim)', fontWeight: 400 }}>BO{match.best_of}</span>
-          {dt && (
-            <>
-              <Dot />
-              <span className="tabular-nums" style={{ fontSize: 11, color: 'var(--text-dim)', fontWeight: 400 }}>
-                {dt.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+          {/* Meta row */}
+          <div className="flex items-center justify-center flex-wrap" style={{ padding: '0 20px 10px', gap: 9 }}>
+            <span className="inline-flex items-center" style={{ gap: 5 }}>
+              {match.event.league.logo && (
+                <img src={match.event.league.logo} alt="" className="logo-themed" style={{ width: 13, height: 13, objectFit: 'contain', opacity: 0.6 }} />
+              )}
+              <span style={{ fontSize: 11, color: 'var(--text-dim)', fontWeight: 400, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                {match.event.league.short_name ?? match.event.league.name}
               </span>
-            </>
-          )}
-          {match.patch && (
-            <>
-              <Dot />
-              <span className="font-mono" style={{ fontSize: 11, color: 'var(--text-dim)', fontWeight: 400 }}>Patch {match.patch}</span>
-            </>
-          )}
-        </div>
+            </span>
 
-        {/* View switcher */}
-        <div className="flex items-center border-t border-(--border)" style={{ padding: '0 14px' }}>
-          <button
-            type="button"
-            onClick={() => setView('scoreboard')}
-            className={`section-tab${view === 'scoreboard' ? ' active' : ''}`}
-          >
-            Scoreboard
-          </button>
-          {h2h.length > 0 && (
+            <span style={{ color: 'var(--text-faint)', fontSize: 11 }}>|</span>
+
+            <span style={{ fontSize: 11, color: 'var(--text-dim)', fontWeight: 400 }}>{match.tab || match.event.name}</span>
+            <Dot />
+            <span className="tabular-nums" style={{ fontSize: 11, color: 'var(--text-dim)', fontWeight: 400 }}>BO{match.best_of}</span>
+            {dt && (
+              <>
+                <Dot />
+                <span className="tabular-nums" style={{ fontSize: 11, color: 'var(--text-dim)', fontWeight: 400 }}>
+                  {dt.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                </span>
+              </>
+            )}
+            {match.patch && (
+              <>
+                <Dot />
+                <span className="font-mono" style={{ fontSize: 11, color: 'var(--text-dim)', fontWeight: 400 }}>Patch {match.patch}</span>
+              </>
+            )}
+          </div>
+
+          {/* View switcher */}
+          <div className="match-hero-tabs-row flex items-center">
             <button
               type="button"
-              onClick={() => setView('h2h')}
-              className={`section-tab${view === 'h2h' ? ' active' : ''}`}
+              onClick={() => setView('scoreboard')}
+              className={`section-tab${view === 'scoreboard' ? ' active' : ''}`}
             >
-              Head-to-head
+              Scoreboard
             </button>
-          )}
+            {h2h.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setView('h2h')}
+                className={`section-tab${view === 'h2h' ? ' active' : ''}`}
+              >
+                Head-to-head
+              </button>
+            )}
+          </div>
         </div>
-      </div>
-
+      }
+    >
       {/* Body */}
       {view === 'h2h' && h2h.length > 0 ? (
-        <div style={{ marginTop: 22 }}>
+        <div style={{ padding: 16 }}>
           <PastMeetings meetings={h2h} t1={t1} t2={t2} />
         </div>
       ) : match.games.length > 0 ? (
         <>
-          <div className="flex items-center justify-center flex-wrap" style={{ margin: '22px 2px 12px', gap: 8 }}>
+          <div className="flex items-center justify-center flex-wrap" style={{ padding: '14px 16px', gap: 8, borderBottom: '1px solid var(--border)' }}>
             {match.games.map((g, i) => (
               <GameButton key={g.id} index={i} game={g} active={i === gameIdx} teams={teams} fallback1={t1} fallback2={t2} onClick={() => selectGame(i)} />
             ))}

@@ -64,6 +64,12 @@
   background: var(--surface-sub);
 }
 
+/* Matches feed — flat rows split by straight divider lines, mirroring the
+   Team Stats table: no group-card box, no elevated fill. */
+.match-feed-row { transition: background var(--t-fast); }
+.match-feed-row + .match-feed-row { border-top: 1px solid var(--border); }
+.match-feed-row:hover { background: var(--surface-sub); }
+
 /* Eyebrow label */
 .eyebrow {
   display: inline-block;
@@ -337,6 +343,117 @@
   color: var(--text-h);
 }
 
+/* Custom Select (dg-select) — matches the site aesthetic including the popover,
+   which native <select> can't style. See components/ui/Select.tsx. */
+.dg-select-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background-color: var(--surface-sub);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-h);
+  font-size: 12.5px;
+  font-family: var(--font-sans);
+  font-weight: 500;
+  line-height: 1;
+  padding: 0 9px 0 11px;
+  height: 32px;
+  cursor: pointer;
+  position: relative;
+  transition: border-color var(--t-fast), background-color var(--t-fast);
+  outline: none;
+  white-space: nowrap;
+}
+.dg-select-trigger:hover {
+  background-color: var(--surface-hover);
+}
+.dg-select-trigger:focus-visible,
+.dg-select-trigger.is-open {
+  border-color: var(--accent-border);
+}
+.dg-select-trigger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.dg-select-prefix {
+  color: var(--text-dim);
+  font-weight: 500;
+}
+.dg-select-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.dg-select-value.is-placeholder {
+  color: var(--text-dim);
+}
+.dg-select-chevron {
+  margin-left: 3px;
+  color: var(--text-dim);
+  transition: transform var(--t-fast), color var(--t-fast);
+  flex-shrink: 0;
+}
+.dg-select-trigger.is-open .dg-select-chevron {
+  transform: rotate(180deg);
+  color: var(--text-h);
+}
+
+.dg-select-menu {
+  z-index: 1000;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  box-shadow: var(--shadow-lg);
+  padding: 4px;
+  max-height: min(320px, 60vh);
+  overflow-y: auto;
+  font-family: var(--font-sans);
+  animation: dg-select-in 120ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+@keyframes dg-select-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.dg-select-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 7px 8px 7px 10px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text);
+  cursor: pointer;
+  user-select: none;
+}
+.dg-select-option.is-active {
+  background: var(--surface-sub);
+  color: var(--text-h);
+}
+.dg-select-option.is-selected {
+  color: var(--text-h);
+  font-weight: 600;
+}
+.dg-select-option-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+.dg-select-option-check {
+  display: inline-flex;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
 /* Table cells */
 .dg-th {
   text-align: right;
@@ -517,6 +634,21 @@
   border-radius: var(--r-2xl);
   box-shadow: var(--shadow-sm);
 }
+/* Flow mode (match page): the frame grows to its natural height and the region
+   under the header scrolls as one page, instead of the body scrolling inside a
+   fixed-height frame. The outer becomes the scroll container. */
+.es-frame-outer--flow {
+  overflow-y: auto;
+  align-items: flex-start;          /* don't stretch the frame to full height */
+  scrollbar-width: none;
+}
+.es-frame-outer--flow::-webkit-scrollbar { width: 0; height: 0; display: none; }
+.es-frame--flow { height: auto; }
+.es-frame--flow .es-frame-body {
+  flex: initial;
+  overflow: visible;                /* no inner scroll — the outer scrolls */
+}
+
 /* Fixed top bar — never scrolls. */
 .es-frame-header {
   flex-shrink: 0;
@@ -540,6 +672,12 @@
   min-height: 0;
   overflow-y: auto;
 }
+/* Dark-mode backdrop spanning the whole main + rail region: a diagonal gradient
+   from a lighter bottom-left to near-black top-right. The content panels are
+   transparent (see below) so this shows through across both columns. */
+.dark .es-frame-body {
+  background: linear-gradient(to top right, #1b1b1b, #050505);
+}
 /* min-height:100% keeps the grid (and its column divider) filling the body
    even when content is short; it grows past that and scrolls when tall. */
 .es-frame-grid {
@@ -550,17 +688,31 @@
 .es-frame--rail .es-frame-grid {
   grid-template-columns: minmax(0, 1fr) 280px;
 }
+/* The frame itself supplies the rounded outer shell; the content panels inside
+   it sit flush against that shell, so they render square. They also go
+   transparent so the frame-body backdrop (a gradient in dark mode) shows
+   through the whole main + rail region rather than being masked by panel fills. */
+.es-frame-main .card,
+.es-frame-rail .card,
+.es-frame-rail .side-rail {
+  border-radius: 0 !important;
+  /* Flush panels: the frame shell + column divider already draw the outer
+     borders, so the panels drop their own to avoid doubled/tripled lines. */
+  border-color: transparent !important;
+  background: transparent !important;
+}
+.es-frame-rail { gap: 0 !important; }
 .es-frame-main {
   grid-column: 1;
   min-width: 0;
-  padding: 20px 24px 40px;
+  padding: 0;
 }
 .es-frame--rail .es-frame-main {
-  border-right: 1px solid var(--border);
+  border-right: 1px solid var(--border-strong);
 }
 .es-frame-rail {
   grid-column: 2;
-  padding: 20px 16px 40px;
+  padding: 0;
 }
 @media (max-width: 1360px) {
   .es-frame--rail .es-frame-grid { grid-template-columns: minmax(0, 1fr) 240px; }
@@ -572,19 +724,68 @@
   .es-frame { border-radius: 0; border-left: 0; border-right: 0; }
   .es-frame--rail .es-frame-grid { grid-template-columns: minmax(0, 1fr); }
   .es-frame--rail .es-frame-main { border-right: 0; }
-  .es-frame-rail { display: none; }
-  .es-frame-main { padding: 16px 12px 40px; }
+  /* !important: the Sidebar component sets display:flex inline. */
+  .es-frame-rail { display: none !important; }
+  .es-frame-main { padding: 0; }
 }
 
-/* League hero: a single compact bar — small logo on the left, section tabs
-   next to it, and the year/stage selectors pushed to the far right. */
+/* League hero: two stacked rows — row 1 is the crest + name on the left with the
+   year/stage selectors on the right; row 2 is the section-tab menu, divided off
+   by a hairline (mirrors the site header's logo-row / league-row split). */
+
+.league-hero-bar {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+/* Row 1: brand on the left, selects pushed to the far right. */
+.league-hero-top {
+  min-height: 48px;
+  padding: 6px 8px;
+}
+
+/* Row 2: the section tabs, on a hairline divider that breaks out of the frame
+   header's side padding so it spans the full width. */
+.league-hero-tabs-row {
+  margin: 0 -6px;
+  padding: 0 8px;
+  border-top: 1px solid var(--border);
+}
+
+/* Match hero: same frame-header treatment as the league hero — a score/meta
+   block stacked over a full-width tab row divided off by a hairline. */
+.match-hero-bar {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+.match-hero-score {
+  padding: 18px 22px 10px;
+}
+.match-hero-tabs-row {
+  margin: 0 -6px;
+  padding: 0 8px;
+  border-top: 1px solid var(--border);
+}
+
+.league-hero-brand {
+  flex: 0 0 auto;
+  gap: 8px;
+}
 
 .league-hero-bar-logo {
-  width: 28px;
-  height: 28px;
+  width: 34px;
+  height: 34px;
   flex-shrink: 0;
   object-fit: contain;
-  margin-right: 6px;
+}
+
+.league-hero-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--text-h);
+  white-space: nowrap;
 }
 
 /* Spacer between the tabs and the selectors, pushing the selectors right. */
@@ -816,6 +1017,61 @@ button { font-family: inherit; }
 }
 
 /* ============================================================
+   Overview highlight tiles (Best Performer / On Fire / Must Pick /
+   Match of the Week) — the compact strip above the stages card.
+   Photo-backed dark tiles: they keep their own dark scrim in both
+   themes, so text inside is always white-on-image.
+   ============================================================ */
+
+.hl-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+  /* Inset the strip from the frame edges; the parent's flex gap handles the
+     space below to the stages card. */
+  padding: 16px 16px 0;
+}
+
+.hl-card {
+  position: relative;
+  height: 72px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #09090b;
+  border: 1px solid var(--border);
+  transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+}
+.hl-card:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--accent-2) 45%, var(--border));
+  box-shadow: 0 10px 28px -12px rgb(109 40 217 / 0.4);
+}
+
+/* Faint purple wash rising from the bottom edge, over the blurred backdrop. */
+.hl-glow {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(120% 90% at 50% 115%, rgb(124 58 237 / 0.28), transparent 60%);
+  pointer-events: none;
+}
+
+.hl-zoom { transition: transform 0.5s ease; }
+.hl-card:hover .hl-zoom { transform: scale(1.05); }
+
+@media (prefers-reduced-motion: reduce) {
+  .hl-card, .hl-zoom { transition: none; }
+}
+
+/* On phones the stages/bracket is the primary content, so drop the highlight
+   strip below it (flex order) and move the padding to the bottom edge. */
+@media (max-width: 768px) {
+  .hl-grid {
+    order: 1;
+    padding: 0 16px 16px;
+  }
+}
+
+/* ============================================================
    Mobile / responsive
    The app is designed desktop-first. Below ~768px we collapse the
    two-column esports frame to a single column, drop the supplementary
@@ -848,49 +1104,35 @@ button { font-family: inherit; }
   }
   .es-rail { display: none !important; }
 
-  /* League hero on mobile wraps into a two-liner:
-       line 1 — logo + year/league selects
-       line 2 — the section-tab menu (Overview / Matches / …) */
-  .league-hero-bar {
-    flex-wrap: wrap;
-    align-items: center;
-    row-gap: 4px;
-    padding: 10px 12px !important;
-    border-top: 0 !important;
+  /* League hero on mobile keeps the two-row stack:
+       row 1 — logo + name + year/stage selects
+       row 2 — the icon-only section-tab menu (Overview / Matches / …) */
+  .league-hero-top {
+    padding: 10px 12px;
   }
 
-  /* Line 1, left: the small crest (normally revealed only on scroll). */
+  /* Row 1, left: the crest + league name. */
   .league-hero-bar-logo {
-    order: 0;
     width: 30px !important;
     height: 30px !important;
     opacity: 1 !important;
     margin: 0 !important;
   }
 
-  /* Line 1, right: the year + stage selects, pushed to the far edge. */
-  .league-hero-selects {
-    order: 1;
-    margin-left: auto;
-  }
+  /* Row 1, right: the year + stage selects, pushed to the far edge. */
   .league-hero-selects .field-select { font-size: 13px; padding: 8px 28px 8px 11px; }
 
-  .league-hero-spacer { display: none; }
-
-  /* Line 2: icon-only tab menu, full width with a divider above it. The five
+  /* Row 2: icon-only tab menu, full width with a divider above it. The five
      tabs share the width evenly so nothing scrolls off, and the row runs flush
      to the card's side + bottom edges so the active underline sits right on the
      hero's bottom border. */
-  .league-hero-tabs {
-    order: 2;
-    /* Break out of the bar's 12px side padding so the row spans the full card
-       width (basis = content box + the 24px of horizontal padding). */
-    flex: 1 0 calc(100% + 24px);
-    min-width: 0;
-    justify-content: space-between;
-    margin: 6px -12px -10px;
+  .league-hero-tabs-row {
+    margin: 0 -6px;
     padding: 0 12px;
-    border-top: 1px solid var(--border);
+  }
+  .league-hero-tabs {
+    justify-content: space-between;
+    min-width: 0;
   }
   .league-hero-tabs .section-tab {
     flex: 0 0 auto;

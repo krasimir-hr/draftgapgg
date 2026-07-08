@@ -1,7 +1,7 @@
 import { useState, Fragment } from 'react';
 import type React from 'react';
 import type { StandingsEntry, EventHighlights, Match } from '../../types/models';
-import { FormChips, FormHistory } from './shared';
+import { FormHistory } from './shared';
 import type { OverviewData } from '../../lib/leagueData';
 import type { SubStage } from '../../lib/leagueView';
 import BracketTab from './BracketTab';
@@ -59,7 +59,7 @@ export default function OverviewTab({
 
   return (
     <div className="flex flex-col" style={{ gap: 20 }}>
-      <AccoladesRow highlights={highlights} />
+      <AccoladesRow highlights={highlights} teamShortNames={teamShortNames} />
 
       <div>
         {!stageNav && (
@@ -71,7 +71,7 @@ export default function OverviewTab({
         {stageNav && (
           <div
             className="flex items-center justify-center"
-            style={{ padding: '14px 18px', borderBottom: activeSS ? '1px solid var(--border)' : undefined }}
+            style={{ padding: '12px 18px 0' }}
           >
             {stageNav}
           </div>
@@ -116,51 +116,48 @@ export default function OverviewTab({
   );
 }
 
-/* Highlights row (Player of Month · Inform Team · Must Pick) */
+/* Highlights strip (Best Performer · On Fire · Must Pick · Match of the Week)
+   — compact image-backed tiles rendered above the stages/standings card. */
 
-const CARD_H = 175;
-const CARD_RADIUS = 10;
-const CARD_BORDER = '1px solid var(--border)';
+function AccoladesRow({ highlights, teamShortNames }: { highlights: EventHighlights | null; teamShortNames: Record<string, string> }) {
+  if (!highlights) return null;
 
-// Player of the Month / Inform Team / Must Pick cards hidden for now.
-const SHOW_ACCOLADES = false;
+  const cards: React.ReactNode[] = [];
+  if (highlights.player_of_month) cards.push(<PlayerOfMonthCard key="pom" p={highlights.player_of_month} />);
+  if (highlights.inform_team) cards.push(<InformTeamCard key="team" t={highlights.inform_team} />);
+  if (highlights.must_pick) cards.push(<MustPickCard key="pick" c={highlights.must_pick} />);
+  if (highlights.match_of_week) cards.push(<MatchOfWeekCard key="motw" m={highlights.match_of_week} sn={teamShortNames} />);
+  else if (highlights.banger_of_week) cards.push(<BangerOfWeekCard key="botw" m={highlights.banger_of_week} sn={teamShortNames} />);
+  if (cards.length === 0) return null;
 
-function AccoladesRow({ highlights }: { highlights: EventHighlights | null }) {
-  const hasAccolades = SHOW_ACCOLADES && !!(highlights?.player_of_month || highlights?.inform_team || highlights?.must_pick);
-  if (!hasAccolades) return null;
-
-  return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 12 }}>
-      {highlights?.player_of_month && <PlayerOfMonthCard p={highlights.player_of_month} />}
-      {highlights?.inform_team && <InformTeamCard t={highlights.inform_team} />}
-      {highlights?.must_pick && <MustPickCard c={highlights.must_pick} />}
-    </div>
-  );
+  return <div className="hl-grid">{cards}</div>;
 }
 
-function PlayerOfMonthCard({ p }: { p: NonNullable<EventHighlights['player_of_month']> }) {
+function HighlightTile({
+  kicker, title, sub, visual, backdrop,
+}: {
+  kicker: string;
+  title: React.ReactNode;
+  sub: React.ReactNode;
+  visual: React.ReactNode;
+  backdrop?: React.ReactNode;
+}) {
   return (
-    <div style={{ position: 'relative', height: CARD_H, background: '#000', border: CARD_BORDER, borderRadius: CARD_RADIUS, overflow: 'hidden' }}>
-      {p.team_logo && (
-        <img src={p.team_logo} alt="" aria-hidden style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -40%)', width: 400, height: 400, objectFit: 'contain', filter: 'blur(20px) brightness(0.65)' }} />
-      )}
-      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.2) 60%, transparent 100%)' }} />
-      {p.image && (
-        <img src={p.image} alt={p.name} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', objectPosition: '50% 20%' }} />
-      )}
-      <div style={{ position: 'absolute', top: 11, left: 13, right: 13, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ fontSize: 9, letterSpacing: '0.13em', fontWeight: 700, color: '#fff', textTransform: 'uppercase', textShadow: '0 1px 4px rgba(0,0,0,0.9)' }}>Player of the Month</span>
-      </div>
-      <div style={{ position: 'absolute', bottom: 13, left: 14, right: 14 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 5 }}>
-          {p.team_logo && <img src={p.team_logo} alt={p.team} style={{ width: 16, height: 16, objectFit: 'contain' }} />}
-          <span style={{ color: 'rgba(255,255,255,0.55)', fontSize: 11 }}>{p.team}</span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ fontSize: 22, fontWeight: 700, color: '#fff', letterSpacing: '-0.02em', lineHeight: 1, flex: '1 1 0', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</span>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, flexShrink: 0 }}>
-            <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11 }}>{p.avg_kills}/{p.avg_deaths}/{p.avg_assists}</span>
-            <span style={{ color: '#fff', fontSize: 12, fontWeight: 700 }}>{p.kda} KDA</span>
+    <div className="hl-card">
+      {backdrop}
+      <div className="hl-glow" aria-hidden />
+      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.6) 60%, rgba(0,0,0,0.5) 100%)' }} />
+      <div style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', gap: 12, height: '100%', padding: '0 14px' }}>
+        <div style={{ flexShrink: 0 }}>{visual}</div>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div style={{ fontSize: 8.5, letterSpacing: '0.13em', fontWeight: 700, color: '#c4b5fd', textTransform: 'uppercase', marginBottom: 3, textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>
+            {kicker}
+          </div>
+          <div style={{ fontSize: 14, fontWeight: 700, color: '#fff', letterSpacing: '-0.01em', lineHeight: 1.15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {title}
+          </div>
+          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 6 }}>
+            {sub}
           </div>
         </div>
       </div>
@@ -168,48 +165,158 @@ function PlayerOfMonthCard({ p }: { p: NonNullable<EventHighlights['player_of_mo
   );
 }
 
+function BlurLogoBackdrop({ src }: { src: string }) {
+  return (
+    <img
+      src={src} alt="" aria-hidden className="hl-zoom"
+      style={{ position: 'absolute', top: '50%', left: '55%', marginTop: -110, marginLeft: -110, width: 220, height: 220, objectFit: 'contain', filter: 'blur(22px) brightness(0.55)', opacity: 0.9 }}
+    />
+  );
+}
+
+/* Fixed dark-theme W/L colors: the tiles keep a dark image scrim in both themes. */
+function MiniForm({ form }: { form: ('W' | 'L')[] }) {
+  return (
+    <span style={{ display: 'inline-flex', gap: 3 }}>
+      {form.slice(-5).map((c, i) => (
+        <span key={i} style={{ fontSize: 9.5, fontWeight: 800, color: c === 'W' ? '#4ade80' : '#f87171' }}>{c}</span>
+      ))}
+    </span>
+  );
+}
+
+function PlayerOfMonthCard({ p }: { p: NonNullable<EventHighlights['player_of_month']> }) {
+  return (
+    <HighlightTile
+      kicker="Best Performer"
+      title={p.name}
+      sub={<span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}><strong style={{ color: '#d8ccfd', fontWeight: 700 }}>{p.kda} KDA</strong> · {p.avg_kills}/{p.avg_deaths}/{p.avg_assists} · {p.team}</span>}
+      backdrop={p.team_logo ? <BlurLogoBackdrop src={p.team_logo} /> : undefined}
+      visual={
+        p.image ? (
+          <div style={{ width: 44, height: 44, borderRadius: 10, overflow: 'hidden', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)' }}>
+            <img src={p.image} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: '50% 12%' }} />
+          </div>
+        ) : p.team_logo ? (
+          <img src={p.team_logo} alt={p.team} style={{ width: 38, height: 38, objectFit: 'contain', filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.6))' }} />
+        ) : (
+          <div style={{ width: 44, height: 44, borderRadius: 10, background: '#171717', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fafafa', fontSize: 15, fontWeight: 700 }}>{p.name.charAt(0)}</div>
+        )
+      }
+    />
+  );
+}
+
 function InformTeamCard({ t }: { t: NonNullable<EventHighlights['inform_team']> }) {
   return (
-    <div style={{ position: 'relative', height: CARD_H, background: '#000', border: CARD_BORDER, borderRadius: CARD_RADIUS, overflow: 'hidden' }}>
-      {t.logo && <img src={t.logo} alt="" aria-hidden style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -40%)', width: 400, height: 400, objectFit: 'contain', filter: 'blur(24px) brightness(0.5)', opacity: 0.85 }} />}
-      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.2) 60%, transparent 100%)' }} />
-      <div style={{ position: 'absolute', top: 11, left: 13, right: 13, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ fontSize: 9, letterSpacing: '0.13em', fontWeight: 700, color: '#fff', textTransform: 'uppercase', textShadow: '0 1px 4px rgba(0,0,0,0.9)' }}>Inform Team</span>
-      </div>
-      <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        {t.logo
-          ? <img src={t.logo} alt={t.team} style={{ width: 120, height: 120, objectFit: 'contain' }} />
-          : <div style={{ width: 80, height: 80, borderRadius: 16, background: '#171717', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fafafa', fontSize: 28, fontWeight: 700 }}>{t.team.charAt(0)}</div>}
-      </div>
-      <div style={{ position: 'absolute', bottom: 13, left: 14, right: 14 }}>
-        <div style={{ fontSize: 20, fontWeight: 700, color: '#fff', letterSpacing: '-0.02em', lineHeight: 1, marginBottom: 6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.team}</div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <FormChips form={t.form} />
-          <span style={{ color: 'rgba(255,255,255,0.55)', fontSize: 11, marginLeft: 'auto' }}>{t.wins}W–{t.played - t.wins}L</span>
-        </div>
-      </div>
-    </div>
+    <HighlightTile
+      kicker="On Fire"
+      title={t.team}
+      sub={<><span>{t.wins}W–{t.played - t.wins}L</span><MiniForm form={t.form} /></>}
+      backdrop={t.logo ? <BlurLogoBackdrop src={t.logo} /> : undefined}
+      visual={
+        t.logo
+          ? <img src={t.logo} alt={t.team} style={{ width: 38, height: 38, objectFit: 'contain', filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.6))' }} />
+          : <div style={{ width: 44, height: 44, borderRadius: 10, background: '#171717', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fafafa', fontSize: 15, fontWeight: 700 }}>{t.team.charAt(0)}</div>
+      }
+    />
   );
 }
 
 function MustPickCard({ c }: { c: NonNullable<EventHighlights['must_pick']> }) {
   return (
-    <div style={{ position: 'relative', height: CARD_H, overflow: 'hidden', background: '#0a0a0a', border: CARD_BORDER, borderRadius: CARD_RADIUS }}>
-      <img src={c.splash_url} alt="" aria-hidden style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top' }} />
-      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.2) 50%, transparent 100%)' }} />
-      <div style={{ position: 'absolute', top: 11, left: 13, right: 13, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ fontSize: 9, letterSpacing: '0.13em', fontWeight: 700, color: '#fff', textTransform: 'uppercase', textShadow: '0 1px 4px rgba(0,0,0,0.9)' }}>Must Pick</span>
-      </div>
-      <div style={{ position: 'absolute', bottom: 13, left: 14, right: 14 }}>
-        <div style={{ fontSize: 20, fontWeight: 700, color: '#fff', letterSpacing: '-0.02em', lineHeight: 1, marginBottom: 6 }}>{c.name}</div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {c.win_rate !== null && (
-            <span style={{ fontSize: 13, fontWeight: 700, color: c.win_rate >= 60 ? 'var(--green)' : 'var(--amber)' }}>{c.win_rate}% WR</span>
-          )}
-          <span style={{ color: 'rgba(255,255,255,0.55)', fontSize: 11, marginLeft: 'auto' }}>{c.wins}W–{c.picks - c.wins}L · {c.picks}p</span>
-        </div>
-      </div>
+    <HighlightTile
+      kicker="Must Pick"
+      title={c.name}
+      sub={
+        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          {c.win_rate !== null && <strong style={{ color: c.win_rate >= 60 ? '#4ade80' : '#fbbf24', fontWeight: 700 }}>{c.win_rate}% WR</strong>}
+          {c.win_rate !== null && ' · '}{c.wins}W–{c.picks - c.wins}L · {c.picks} picks
+        </span>
+      }
+      backdrop={
+        <img src={c.splash_url} alt="" aria-hidden className="hl-zoom" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 18%', filter: 'brightness(0.75)' }} />
+      }
+      visual={<img src={c.icon_url} alt={c.name} style={{ width: 44, height: 44, borderRadius: 10, border: '1px solid rgba(255,255,255,0.2)', display: 'block' }} />}
+    />
+  );
+}
+
+function formatMatchWhen(iso: string | null): string | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  return `${d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })} · ${d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}`;
+}
+
+function FaceOffVisual({ logo1, logo2, name1, name2 }: { logo1: string | null; logo2: string | null; name1: string; name2: string }) {
+  const logo = (src: string | null, name: string, offset: boolean) => (
+    src
+      ? <img src={src} alt={name} style={{ width: 30, height: 30, objectFit: 'contain', marginLeft: offset ? -8 : 0, filter: 'drop-shadow(0 3px 8px rgba(0,0,0,0.7))' }} />
+      : <div style={{ width: 30, height: 30, borderRadius: 8, background: '#171717', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fafafa', fontSize: 10, fontWeight: 700, marginLeft: offset ? -8 : 0 }}>{name.slice(0, 2)}</div>
+  );
+  return (
+    <div style={{ display: 'flex', alignItems: 'center' }}>
+      {logo(logo1, name1, false)}
+      {logo(logo2, name2, true)}
     </div>
+  );
+}
+
+/* Both team names shrink independently so the middle (vs / score) never truncates away. */
+function FaceOffTitle({ left, center, right }: { left: React.ReactNode; center: React.ReactNode; right: React.ReactNode }) {
+  const name = (node: React.ReactNode) => (
+    <span style={{ flex: '0 1 auto', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{node}</span>
+  );
+  return (
+    <span style={{ display: 'flex', alignItems: 'baseline', gap: 5, minWidth: 0 }}>
+      {name(left)}
+      <span style={{ flexShrink: 0 }}>{center}</span>
+      {name(right)}
+    </span>
+  );
+}
+
+function MatchOfWeekCard({ m, sn }: { m: NonNullable<EventHighlights['match_of_week']>; sn: Record<string, string> }) {
+  const when = formatMatchWhen(m.datetime_utc);
+  return (
+    <HighlightTile
+      kicker="Match of the Week"
+      title={
+        <FaceOffTitle
+          left={sn[m.team1] || m.team1}
+          center={<span style={{ color: 'rgba(255,255,255,0.4)', fontWeight: 600, fontSize: 11 }}>vs</span>}
+          right={sn[m.team2] || m.team2}
+        />
+      }
+      sub={
+        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          {m.team1_pos != null && m.team2_pos != null && `#${m.team1_pos} vs #${m.team2_pos} · `}
+          {when ?? 'Time TBD'}
+        </span>
+      }
+      backdrop={m.team1_logo ? <BlurLogoBackdrop src={m.team1_logo} /> : m.team2_logo ? <BlurLogoBackdrop src={m.team2_logo} /> : undefined}
+      visual={<FaceOffVisual logo1={m.team1_logo} logo2={m.team2_logo} name1={m.team1} name2={m.team2} />}
+    />
+  );
+}
+
+function BangerOfWeekCard({ m, sn }: { m: NonNullable<EventHighlights['banger_of_week']>; sn: Record<string, string> }) {
+  const when = formatMatchWhen(m.datetime_utc);
+  return (
+    <HighlightTile
+      kicker="Banger of the Week"
+      title={
+        <FaceOffTitle
+          left={<span style={{ color: m.winner === 1 ? '#fff' : 'rgba(255,255,255,0.55)' }}>{sn[m.team1] || m.team1}</span>}
+          center={<span style={{ color: '#d8ccfd', fontWeight: 800 }}>{m.team1_score}–{m.team2_score}</span>}
+          right={<span style={{ color: m.winner === 2 ? '#fff' : 'rgba(255,255,255,0.55)' }}>{sn[m.team2] || m.team2}</span>}
+        />
+      }
+      sub={<span>{when ?? 'Recently played'}</span>}
+      backdrop={m.team1_logo ? <BlurLogoBackdrop src={m.team1_logo} /> : m.team2_logo ? <BlurLogoBackdrop src={m.team2_logo} /> : undefined}
+      visual={<FaceOffVisual logo1={m.team1_logo} logo2={m.team2_logo} name1={m.team1} name2={m.team2} />}
+    />
   );
 }
 

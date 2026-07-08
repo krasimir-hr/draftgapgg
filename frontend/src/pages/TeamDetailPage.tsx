@@ -14,6 +14,7 @@ import { RoleIcon } from '../components/league/shared';
 import { ChampionIcon } from '../components/ChampionIcon';
 import EsportsLayout from '../components/EsportsLayout';
 import { SideRail } from '../components/Sidebar';
+import { Select } from '../components/ui/Select';
 
 export async function teamLoader({ params, request }: LoaderFunctionArgs): Promise<TeamProfile> {
   const url = new URL(request.url);
@@ -635,15 +636,25 @@ function TeamDetailView() {
 
           <div className="flex items-center gap-2">
             {available_years.length > 0 && (
-              <select className="field-select" value={selectedYear ?? ''} onChange={(e) => handleYearChange(e.target.value)}>
-                {available_years.map((y) => <option key={y} value={y}>{y}</option>)}
-              </select>
+              <Select
+                ariaLabel="Year"
+                value={selectedYear ?? null}
+                options={available_years.map((y) => ({ value: y, label: String(y) }))}
+                onChange={(v) => handleYearChange(String(v))}
+                align="right"
+              />
             )}
             {available_events.length > 0 && (
-              <select className="field-select" value={selectedEvent ?? ''} onChange={(e) => handleEventChange(e.target.value)}>
-                <option value="">All events</option>
-                {available_events.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
-              </select>
+              <Select
+                ariaLabel="Event"
+                value={selectedEvent != null ? String(selectedEvent) : ''}
+                options={[
+                  { value: '', label: 'All events' },
+                  ...available_events.map((e) => ({ value: String(e.id), label: e.name })),
+                ]}
+                onChange={(v) => handleEventChange(String(v))}
+                align="right"
+              />
             )}
           </div>
         </div>

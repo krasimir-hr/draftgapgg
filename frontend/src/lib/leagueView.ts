@@ -15,8 +15,6 @@ export const PATH_TO_STATIC: Record<string, StaticTab> = {
   matches: 'Matches', standings: 'Team Stats', players: 'Players', champions: 'Champions',
 };
 
-export const NO_STANDINGS = new Set(['Worlds', 'MSI', 'First Stand', 'EWC']);
-
 export interface SubStage {
   label: string;
   event: Event;
@@ -144,12 +142,9 @@ export function resolveLeagueView(league: League | null, events: Event[], slug: 
     ? []
     : [...new Set([activeEventId, ...subStages.map((ss) => ss.event.id)])];
 
-  const isInternational = NO_STANDINGS.has(league?.short_name ?? '');
   const navTabs: NavTab[] = ['Overview'];
   for (const ss of subStages) if (!ss.stageOnly) navTabs.push(ss.label);
-  navTabs.push('Matches');
-  if (!isInternational) navTabs.push('Team Stats');
-  navTabs.push('Players', 'Champions');
+  navTabs.push('Matches', 'Team Stats', 'Players', 'Champions');
 
   let activeTab: NavTab = 'Overview';
   if (tab) {

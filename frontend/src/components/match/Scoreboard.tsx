@@ -55,28 +55,85 @@ export default function Scoreboard({
   }, [game]);
 
   return (
-    <div
-      style={{
-        background: 'var(--surface)',
-        border: '1px solid var(--border)',
-        borderRadius: 16,
-        overflow: 'hidden',
-      }}
-    >
+    <div className="card overflow-hidden">
       <TeamBanners game={game} blueTeam={blueTeam} redTeam={redTeam} />
-      <div style={{ padding: '0 20px 8px' }}>
-        {ROLE_ORDER.map((role) => (
-          <LaneRow
-            key={role}
-            role={role}
-            blueRow={pickByRole(game.performances, game.team1, role)}
-            redRow={pickByRole(game.performances, game.team2, role)}
-            blueWon={game.winner === 1}
-            redWon={game.winner === 2}
-            maxDmg={maxDmg}
-            onOpenPlayer={onOpenPlayer}
-          />
-        ))}
+      <TeamBlock
+        side="blue"
+        team={blueTeam}
+        won={game.winner === 1}
+        teamName={game.team1}
+        perfs={game.performances}
+        maxDmg={maxDmg}
+        onOpenPlayer={onOpenPlayer}
+      />
+      <TeamBlock
+        side="red"
+        team={redTeam}
+        won={game.winner === 2}
+        teamName={game.team2}
+        perfs={game.performances}
+        maxDmg={maxDmg}
+        onOpenPlayer={onOpenPlayer}
+      />
+    </div>
+  );
+}
+
+/* One team's five players, stacked as full-width rows under a side header. The
+   two teams (blue then red) sit one under another rather than mirrored across
+   the width, so each player row has the whole column to breathe. */
+function TeamBlock({
+  side, team, won, teamName, perfs, maxDmg, onOpenPlayer,
+}: {
+  side: 'blue' | 'red';
+  team: TeamMeta;
+  won: boolean;
+  teamName: string;
+  perfs: PlayerPerformance[];
+  maxDmg: number;
+  onOpenPlayer: (name: string) => void;
+}) {
+  const blue = side === 'blue';
+  const accent = blue ? 'var(--blue)' : 'var(--red)';
+  const rows = ROLE_ORDER.map((role) => ({ role, row: pickByRole(perfs, teamName, role) }));
+
+  return (
+    <div style={{ borderBottom: '1px solid var(--border)' }}>
+      <div
+        className="flex items-center"
+        style={{ gap: 10, padding: '11px 20px', background: 'var(--surface-sub)', borderBottom: '1px solid var(--border)' }}
+      >
+        <TeamMark team={team} size={22} />
+        <span className="font-display truncate" style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-h)', letterSpacing: '-0.01em' }}>
+          {team.name}
+        </span>
+        <span className="font-bold uppercase" style={{ fontSize: 9.5, color: accent, letterSpacing: '0.14em' }}>
+          {blue ? 'Blue side' : 'Red side'}
+        </span>
+        {won && (
+          <span className="font-bold uppercase" style={{ fontSize: 9, color: 'var(--green)', letterSpacing: '0.14em', padding: '3px 7px', background: 'var(--green-muted)', borderRadius: 999 }}>
+            WIN
+          </span>
+        )}
+      </div>
+
+      <div style={{ padding: '0 16px' }}>
+        {rows.map(({ role, row }, i) =>
+          row ? (
+            <PlayerRow
+              key={role}
+              role={role}
+              row={row}
+              won={won}
+              accent={accent}
+              maxDmg={maxDmg}
+              onOpenPlayer={onOpenPlayer}
+              isLast={i === rows.length - 1}
+            />
+          ) : (
+            <div key={role} style={{ height: 60, borderBottom: i === rows.length - 1 ? 'none' : '1px solid var(--border)' }} />
+          ),
+        )}
       </div>
     </div>
   );
@@ -284,81 +341,61 @@ function ObjIcon({ kind, off, size = 14 }: { kind: ObjKind; off?: boolean; size?
   return null;
 }
 
-/* Lane row */
+/* Player row — one player across the full column width, left-aligned so blue
+   and red rows read as one consistent table (see TeamBlock). */
 
-function LaneRow({
-  role, blueRow, redRow, blueWon, redWon, maxDmg, onOpenPlayer,
+function PlayerRow({
+  role, row, won, accent, maxDmg, onOpenPlayer, isLast,
 }: {
   role: string;
-  blueRow: PlayerPerformance | null;
-  redRow: PlayerPerformance | null;
-  blueWon: boolean;
-  redWon: boolean;
-  maxDmg: number;
-  onOpenPlayer: (name: string) => void;
-}) {
-  return (
-    <div
-      className="grid"
-      style={{ gridTemplateColumns: 'minmax(0, 1fr) 72px minmax(0, 1fr)', alignItems: 'stretch', borderBottom: '1px solid var(--border)', padding: '14px 0' }}
-    >
-      <PlayerHalf side="blue" row={blueRow} won={blueWon} maxDmg={maxDmg} onOpenPlayer={onOpenPlayer} />
-      <RoleDivider role={role} />
-      <PlayerHalf side="red" row={redRow} won={redWon} maxDmg={maxDmg} onOpenPlayer={onOpenPlayer} />
-    </div>
-  );
-}
-
-function RoleDivider({ role }: { role: string }) {
-  const color = ROLE_COLOR[role] || 'var(--text-dim)';
-  const icon = ROLE_ICON[role];
-  return (
-    <div className="flex items-center justify-center">
-      <div
-        className="flex items-center justify-center"
-        style={{ width: 32, height: 32, borderRadius: 999, background: 'var(--surface)', border: `1.5px solid ${color}` }}
-        title={role}
-      >
-        {icon ? (
-          <span
-            aria-label={role}
-            style={{ display: 'block', width: 18, height: 18, backgroundColor: color, WebkitMaskImage: `url(${icon})`, maskImage: `url(${icon})`, WebkitMaskRepeat: 'no-repeat', maskRepeat: 'no-repeat', WebkitMaskPosition: 'center', maskPosition: 'center', WebkitMaskSize: 'contain', maskSize: 'contain' }}
-          />
-        ) : (
-          <span className="font-bold" style={{ fontSize: 9.5, color, letterSpacing: '0.08em' }}>
-            {ROLE_SHORT[role] || role.slice(0, 3).toUpperCase()}
-          </span>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function PlayerHalf({
-  side, row, won, maxDmg, onOpenPlayer,
-}: {
-  side: 'blue' | 'red';
-  row: PlayerPerformance | null;
+  row: PlayerPerformance;
   won: boolean;
+  accent: string;
   maxDmg: number;
   onOpenPlayer: (name: string) => void;
+  isLast: boolean;
 }) {
-  const blue = side === 'blue';
-  if (!row) return <div />;
-  const accent = blue ? 'var(--blue)' : 'var(--red)';
-
   return (
     <div
-      className="flex items-center"
-      style={{ gap: 12, flexDirection: blue ? 'row' : 'row-reverse', padding: blue ? '0 16px 0 12px' : '0 12px 0 16px', minWidth: 0, overflow: 'hidden' }}
+      className="grid items-center"
+      style={{
+        // The mid-row PR breakdown (KeyMetrics) is the flexible track, so the
+        // leftover width is filled with real content rather than blank space.
+        gridTemplateColumns: '28px 44px 120px 44px 84px 116px minmax(0, 1fr) auto auto',
+        alignItems: 'center',
+        gap: 16,
+        padding: '11px 4px',
+        borderBottom: isLast ? 'none' : '1px solid var(--border)',
+      }}
     >
-      <ChampBlock champion={row.champion} won={won} blue={blue} mvp={row.rating?.is_mvp ?? false} />
-      <NameBlock playerName={row.name} championName={row.champion?.name ?? ''} blue={blue} onClick={() => onOpenPlayer(row.name)} />
-      <RatingBadge rating={row.rating} role={row.role} blue={blue} />
-      <KDABlock kills={row.kills} deaths={row.deaths} assists={row.assists} blue={blue} />
-      <StatBlock cs={row.cs} gold={row.gold} dmg={row.damage_to_champions} vision={row.vision_score} maxDmg={maxDmg} accent={accent} blue={blue} />
-      <Loadout spellD={row.summoner_spell_d} spellF={row.summoner_spell_f} keystone={row.keystone_rune} runes={row.runes} blue={blue} />
-      <Inventory items={row.items} trinket={row.trinket} blue={blue} />
+      <RoleMark role={role} />
+      <ChampBlock champion={row.champion} won={won} />
+      <NameBlock playerName={row.name} championName={row.champion?.name ?? ''} blue fluid onClick={() => onOpenPlayer(row.name)} />
+      <RatingBadge rating={row.rating} role={row.role} blue />
+      <KDABlock kills={row.kills} deaths={row.deaths} assists={row.assists} blue />
+      <StatBlock cs={row.cs} gold={row.gold} dmg={row.damage_to_champions} vision={row.vision_score} maxDmg={maxDmg} accent={accent} blue fluid />
+      <KeyMetrics rating={row.rating} />
+      <Loadout spellD={row.summoner_spell_d} spellF={row.summoner_spell_f} keystone={row.keystone_rune} runes={row.runes} blue />
+      <Inventory items={row.items} trinket={row.trinket} blue />
+    </div>
+  );
+}
+
+function RoleMark({ role }: { role: string }) {
+  const icon = ROLE_ICON[role];
+  const color = 'var(--text-faint)';
+  return (
+    <div className="flex items-center justify-center" title={role}>
+      {icon ? (
+        <span
+          aria-label={role}
+          style={{ display: 'block', width: 16, height: 16, backgroundColor: color, WebkitMaskImage: `url(${icon})`, maskImage: `url(${icon})`, WebkitMaskRepeat: 'no-repeat', maskRepeat: 'no-repeat', WebkitMaskPosition: 'center', maskPosition: 'center', WebkitMaskSize: 'contain', maskSize: 'contain' }}
+        />
+      ) : (
+        <span className="font-bold" style={{ fontSize: 9, color, letterSpacing: '0.08em' }}>
+          {ROLE_SHORT[role] || role.slice(0, 3).toUpperCase()}
+        </span>
+      )}
     </div>
   );
 }
@@ -378,6 +415,51 @@ const METRIC_LABELS: Record<string, string> = {
   dmg_mitig: 'Damage mitigated',
   dpm: 'Damage / min',
 };
+
+// Compact labels for the inline per-row breakdown (hover shows full names).
+const METRIC_SHORT: Record<string, string> = {
+  kda: 'KDA',
+  kp: 'KP',
+  dmg_share: 'DMG%',
+  cs_min: 'CS/M',
+  gold_eff: 'GOLD',
+  survive: 'SURV',
+  vision_min: 'VIS',
+  objective: 'OBJ',
+  lane_diff15: 'LANE',
+  dmg_mitig: 'MIT',
+  dpm: 'DPM',
+};
+
+/* Inline PR breakdown: the role's primary metrics (the same ★ key stats the
+   hover card highlights) as mini score bars, filling the row's mid-width. */
+function KeyMetrics({ rating }: { rating: PerformanceRatingInfo | null }) {
+  const top = (rating?.metrics ?? [])
+    .filter((m) => m.weight >= 0.15)
+    .sort((a, b) => b.weight - a.weight)
+    .slice(0, 3);
+  if (top.length === 0) return <div />;
+
+  return (
+    <div className="flex items-center" style={{ gap: 16, minWidth: 0 }}>
+      {top.map((m) => (
+        <div key={m.key} className="flex flex-col" style={{ gap: 4, flex: '1 1 0', minWidth: 0 }}>
+          <div className="flex items-center justify-between" style={{ gap: 6 }}>
+            <span className="font-bold uppercase truncate" style={{ fontSize: 8.5, letterSpacing: '0.07em', color: 'var(--text-faint)' }}>
+              {METRIC_SHORT[m.key] ?? m.key}
+            </span>
+            <span className="tabular-nums font-semibold" style={{ fontSize: 10.5, color: prColor(m.score) }}>
+              {m.score.toFixed(0)}
+            </span>
+          </div>
+          <div style={{ height: 4, borderRadius: 999, background: 'var(--surface-sub)', overflow: 'hidden' }}>
+            <div style={{ width: `${Math.max(2, Math.min(100, m.score))}%`, height: '100%', background: prColor(m.score) }} />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 function RatingBadge({ rating, role, blue }: { rating: PlayerPerformance['rating']; role: string; blue: boolean }) {
   const pr = rating?.pr;
@@ -401,16 +483,16 @@ function RatingBadge({ rating, role, blue }: { rating: PlayerPerformance['rating
       onMouseEnter={show}
       onMouseLeave={hide}
       className="flex flex-col items-center shrink-0"
-      style={{ width: 50, minWidth: 50, [blue ? 'marginRight' : 'marginLeft']: 2, cursor: has ? 'help' : 'default' } as React.CSSProperties}
+      style={{ width: 42, minWidth: 42, [blue ? 'marginRight' : 'marginLeft']: 2, cursor: has ? 'help' : 'default' } as React.CSSProperties}
     >
       <div
         className="flex items-center justify-center font-bold tabular-nums"
         style={{
-          width: 40, height: 30, borderRadius: 8,
+          width: 36, height: 28, borderRadius: 7,
           background: has ? 'var(--surface-sub)' : 'transparent',
           border: `1px solid ${rating?.is_mvp ? 'var(--accent-border)' : 'var(--border)'}`,
           color: has ? prColor(pr!) : 'var(--text-faint)',
-          fontSize: 15, lineHeight: 1,
+          fontSize: 13.5, lineHeight: 1,
         }}
       >
         {has ? pr!.toFixed(0) : '—'}
@@ -419,7 +501,7 @@ function RatingBadge({ rating, role, blue }: { rating: PlayerPerformance['rating
         className="font-bold uppercase"
         style={{ fontSize: 8, letterSpacing: '0.1em', marginTop: 3, color: rating?.is_mvp ? 'var(--accent-2)' : 'var(--text-faint)' }}
       >
-        {rating?.is_mvp ? '★ MVP' : 'PR'}
+        {rating?.is_mvp ? 'MVP' : 'PR'}
       </span>
       {pos && rating && <RatingBreakdown rating={rating} role={role} pos={pos} />}
     </div>
@@ -535,40 +617,31 @@ function RatingBreakdown({ rating, role, pos }: { rating: PerformanceRatingInfo;
   );
 }
 
-function ChampBlock({ champion, won, blue, mvp }: { champion: Champion | null; won: boolean; blue: boolean; mvp: boolean }) {
+function ChampBlock({ champion, won }: { champion: Champion | null; won: boolean }) {
   return (
     <div className="relative shrink-0">
       {champion?.icon_url ? (
         <ChampionIcon
           src={champion.icon_url}
           alt={champion.name}
-          size={52}
-          style={{ opacity: won ? 1 : 0.72, boxShadow: mvp ? '0 0 0 2px var(--accent)' : undefined }}
+          size={44}
+          style={{ opacity: won ? 1 : 0.72 }}
         />
       ) : (
-        <div style={{ width: 52, height: 52, borderRadius: 10, background: 'var(--surface-sub)' }} />
-      )}
-      {mvp && (
-        <span
-          className="absolute"
-          style={{ top: -6, [blue ? 'left' : 'right']: -6, fontSize: 13, lineHeight: 1, filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.4))' }}
-          title="Game MVP"
-        >
-          ★
-        </span>
+        <div style={{ width: 44, height: 44, borderRadius: 10, background: 'var(--surface-sub)' }} />
       )}
     </div>
   );
 }
 
-function NameBlock({ playerName, championName, blue, onClick }: { playerName: string; championName: string; blue: boolean; onClick: () => void }) {
+function NameBlock({ playerName, championName, blue, onClick, fluid = false }: { playerName: string; championName: string; blue: boolean; onClick: () => void; fluid?: boolean }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      style={{ width: 76, minWidth: 76, maxWidth: 76, overflow: 'hidden', textAlign: blue ? 'left' : 'right', cursor: 'pointer', background: 'transparent', border: 0, padding: 0 }}
+      style={{ width: fluid ? '100%' : 62, minWidth: fluid ? 0 : 62, maxWidth: fluid ? 'none' : 62, overflow: 'hidden', textAlign: blue ? 'left' : 'right', cursor: 'pointer', background: 'transparent', border: 0, padding: 0 }}
     >
-      <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-h)', letterSpacing: '-0.005em', lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+      <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text-h)', letterSpacing: '-0.01em', lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
         {playerName}
       </div>
       <div className="text-(--text-dim) tabular-nums" style={{ fontSize: 11, marginTop: 3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -583,8 +656,8 @@ function KDABlock({ kills, deaths, assists, blue }: { kills: number; deaths: num
   const r = Number(ratio);
   const ratioColor = r >= 4 ? 'var(--green)' : r < 1.5 ? 'var(--red)' : 'var(--text-dim)';
   return (
-    <div className="flex flex-col" style={{ width: 92, minWidth: 92, maxWidth: 92, alignItems: blue ? 'flex-start' : 'flex-end' }}>
-      <div className="flex items-baseline font-bold tabular-nums" style={{ gap: 4, fontFamily: 'var(--font-sans)', fontSize: 16, color: 'var(--text-h)', lineHeight: 1, letterSpacing: '-0.01em' }}>
+    <div className="flex flex-col" style={{ width: 72, minWidth: 72, maxWidth: 72, alignItems: blue ? 'flex-start' : 'flex-end' }}>
+      <div className="flex items-baseline font-bold tabular-nums" style={{ gap: 3, fontFamily: 'var(--font-sans)', fontSize: 14, color: 'var(--text-h)', lineHeight: 1, letterSpacing: '-0.01em' }}>
         <span>{kills}</span>
         <span style={{ color: 'var(--text-faint)', fontWeight: 400 }}>/</span>
         <span style={{ color: 'var(--red)', fontWeight: 700 }}>{deaths}</span>
@@ -599,7 +672,7 @@ function KDABlock({ kills, deaths, assists, blue }: { kills: number; deaths: num
 }
 
 function StatBlock({
-  cs, gold, dmg, vision, maxDmg, accent, blue,
+  cs, gold, dmg, vision, maxDmg, accent, blue, fluid = false,
 }: {
   cs: number;
   gold: number;
@@ -608,19 +681,20 @@ function StatBlock({
   maxDmg: number;
   accent: string;
   blue: boolean;
+  fluid?: boolean;
 }) {
   const dmgPct = Math.max(0.04, dmg / Math.max(1, maxDmg));
   return (
-    <div className="flex flex-col" style={{ minWidth: 132, gap: 4, alignItems: blue ? 'flex-start' : 'flex-end' }}>
-      <div className="flex items-center tabular-nums font-semibold" style={{ gap: 10, fontSize: 12, color: 'var(--text-h)', flexDirection: blue ? 'row' : 'row-reverse' }}>
-        <span className="inline-flex items-center" style={{ gap: 4 }}><ObjIcon kind="cs" size={12} />{cs}</span>
+    <div className="flex flex-col" style={{ width: fluid ? '100%' : undefined, minWidth: 84, gap: 4, alignItems: blue ? 'flex-start' : 'flex-end' }}>
+      <div className="flex items-center tabular-nums font-semibold" style={{ gap: 7, fontSize: 11.5, color: 'var(--text-h)', flexDirection: blue ? 'row' : 'row-reverse' }}>
+        <span className="inline-flex items-center" style={{ gap: 3 }}><ObjIcon kind="cs" size={11} />{cs}</span>
         <span style={{ color: 'var(--text-faint)' }}>·</span>
-        <span className="inline-flex items-center" style={{ gap: 4 }}><ObjIcon kind="gold" size={12} />{(gold / 1000).toFixed(1)}k</span>
+        <span className="inline-flex items-center" style={{ gap: 3 }}><ObjIcon kind="gold" size={11} />{(gold / 1000).toFixed(1)}k</span>
       </div>
-      <div className="flex" style={{ width: 116, height: 5, borderRadius: 999, background: 'var(--surface-sub)', overflow: 'hidden', alignSelf: blue ? 'flex-start' : 'flex-end', flexDirection: blue ? 'row' : 'row-reverse' }}>
+      <div className="flex" style={{ width: fluid ? '100%' : 84, height: 5, borderRadius: 999, background: 'var(--surface-sub)', overflow: 'hidden', alignSelf: blue ? 'flex-start' : 'flex-end', flexDirection: blue ? 'row' : 'row-reverse' }}>
         <div style={{ width: `${dmgPct * 100}%`, height: '100%', background: accent, opacity: 0.85 }} />
       </div>
-      <div className="flex items-center tabular-nums" style={{ fontSize: 10, color: 'var(--text-dim)', gap: 6, flexDirection: blue ? 'row' : 'row-reverse' }}>
+      <div className="flex items-center tabular-nums" style={{ fontSize: 9.5, color: 'var(--text-dim)', gap: 5, flexDirection: blue ? 'row' : 'row-reverse' }}>
         <span><span style={{ color: 'var(--text-faint)' }}>DMG</span> {(dmg / 1000).toFixed(1)}k</span>
         <span style={{ color: 'var(--text-faint)' }}>·</span>
         <span><span style={{ color: 'var(--text-faint)' }}>VIS</span> {vision}</span>
@@ -638,16 +712,16 @@ function Loadout({ spellD, spellF, keystone, runes, blue }: { spellD: SummonerSp
         <SpellSlot spell={spellF} />
       </div>
       <div className="grid" style={{ gridTemplateRows: 'auto auto', gap: 2 }}>
-        <RuneSlot rune={keystone} size={22} kind="keystone" />
-        <RuneSlot rune={secondary} size={18} kind="secondary" />
+        <RuneSlot rune={keystone} size={20} kind="keystone" />
+        <RuneSlot rune={secondary} size={16} kind="secondary" />
       </div>
     </div>
   );
 }
 
 function SpellSlot({ spell }: { spell: SummonerSpell | null }) {
-  if (!spell?.icon_url) return <div style={{ width: 18, height: 18, borderRadius: 3, background: 'var(--surface-sub)', opacity: 0.4 }} />;
-  return <img src={spell.icon_url} alt={spell.name} title={spell.name} style={{ width: 18, height: 18, borderRadius: 3, display: 'block' }} />;
+  if (!spell?.icon_url) return <div style={{ width: 16, height: 16, borderRadius: 3, background: 'var(--surface-sub)', opacity: 0.4 }} />;
+  return <img src={spell.icon_url} alt={spell.name} title={spell.name} style={{ width: 16, height: 16, borderRadius: 3, display: 'block' }} />;
 }
 
 function RuneSlot({ rune, size, kind }: { rune: Rune | null; size: number; kind: 'keystone' | 'secondary' }) {
@@ -658,18 +732,18 @@ function RuneSlot({ rune, size, kind }: { rune: Rune | null; size: number; kind:
 
 function Inventory({ items, trinket, blue }: { items: Item[]; trinket: Item | null; blue: boolean }) {
   return (
-    <div className="flex items-center shrink-0" style={{ gap: 5, flexDirection: blue ? 'row' : 'row-reverse' }}>
-      <div className="grid" style={{ gridTemplateColumns: 'repeat(3, 22px)', gridAutoRows: '22px', gap: 2 }}>
+    <div className="flex items-center shrink-0" style={{ gap: 4, flexDirection: blue ? 'row' : 'row-reverse' }}>
+      <div className="grid" style={{ gridTemplateColumns: 'repeat(3, 18px)', gridAutoRows: '18px', gap: 2 }}>
         {Array.from({ length: 6 }, (_, i) => {
           const it = items[i];
-          if (!it?.icon_url) return <div key={i} style={{ width: 22, height: 22, borderRadius: 3, background: 'var(--surface-sub)', opacity: 0.4 }} />;
-          return <img key={i} src={it.icon_url} alt={it.name} title={it.name} style={{ width: 22, height: 22, borderRadius: 3, objectFit: 'cover', display: 'block' }} />;
+          if (!it?.icon_url) return <div key={i} style={{ width: 18, height: 18, borderRadius: 3, background: 'var(--surface-sub)', opacity: 0.4 }} />;
+          return <img key={i} src={it.icon_url} alt={it.name} title={it.name} style={{ width: 18, height: 18, borderRadius: 3, objectFit: 'cover', display: 'block' }} />;
         })}
       </div>
       {trinket?.icon_url ? (
-        <img src={trinket.icon_url} alt={trinket.name} title={trinket.name} style={{ width: 22, height: 22, borderRadius: 999, objectFit: 'cover', display: 'block', boxShadow: 'inset 0 0 0 1px var(--border-strong)' }} />
+        <img src={trinket.icon_url} alt={trinket.name} title={trinket.name} style={{ width: 18, height: 18, borderRadius: 999, objectFit: 'cover', display: 'block', boxShadow: 'inset 0 0 0 1px var(--border-strong)' }} />
       ) : (
-        <div style={{ width: 22, height: 22, borderRadius: 999, background: 'var(--surface-sub)', opacity: 0.4 }} />
+        <div style={{ width: 18, height: 18, borderRadius: 999, background: 'var(--surface-sub)', opacity: 0.4 }} />
       )}
     </div>
   );

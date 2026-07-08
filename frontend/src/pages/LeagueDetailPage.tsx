@@ -7,12 +7,10 @@ import EsportsLayout from '../components/EsportsLayout';
 import { MatchRails } from '../components/Sidebar';
 import MatchesTab from '../components/league/MatchesTab';
 import StandingsTab from '../components/league/StandingsTab';
-import TeamStatsRail from '../components/league/TeamStatsRail';
-import PlayerStatsRail from '../components/league/PlayerStatsRail';
-import ChampsStatsRail from '../components/league/ChampsStatsRail';
 import PlayersTab from '../components/league/PlayersTab';
 import ChampsTab from '../components/league/ChampsTab';
 import BracketTab from '../components/league/BracketTab';
+import { Select } from '../components/ui/Select';
 import { useDrawer } from '../contexts/DrawerContext';
 import { slugify, getStageName, buildLeagueSlug, parseLeagueSlug } from '../utils/slugs';
 import {
@@ -196,11 +194,10 @@ export default function LeagueDetailPage() {
 
   const leagueLabel = league.short_name ?? league.name;
 
+  // Only the Overview tab carries a right sidebar (upcoming/recent matches);
+  // every other tab renders full-width with no rail.
   const rightRail =
-    activeEventId == null ? undefined
-    : activeTab === 'Team Stats' ? <TeamStatsRail list={standings ?? []} teamShortNames={teamShortNames} />
-    : activeTab === 'Players' ? <PlayerStatsRail players={players ?? []} ratings={ratings ?? []} teamLogos={teamLogos} />
-    : activeTab === 'Champions' ? <ChampsStatsRail champions={champions ?? []} />
+    activeEventId == null || activeTab !== 'Overview' ? undefined
     : (
       <MatchRails
         eventIds={overviewEventIds}
@@ -217,46 +214,59 @@ export default function LeagueDetailPage() {
     <EsportsLayout
       right={rightRail}
       header={
-        <div className="league-hero-bar flex items-center" style={{ padding: '0 8px' }}>
-          {league.logo && (
-            <img
-              src={league.logo}
-              alt={leagueLabel}
-              decoding="async"
-              className="league-hero-bar-logo logo-themed"
-            />
-          )}
-          <div className="league-hero-tabs flex">
-            {navTabs.map((t) => {
-              const icon = TAB_ICONS[t];
-              return (
-                <button
-                  key={t}
-                  type="button"
-                  onClick={() => handleTabSelect(t)}
-                  className={`section-tab${t === activeTab ? ' active' : ''}${icon ? ' section-tab--icon' : ''}`}
-                  aria-label={t}
-                >
-                  {icon && <span className="section-tab-icon" aria-hidden="true">{icon}</span>}
-                  <span className="section-tab-text">{t}</span>
-                </button>
-              );
-            })}
+        <div className="league-hero-bar">
+          <div className="league-hero-top flex items-center">
+            <div className="league-hero-brand flex items-center">
+              {league.logo && (
+                <img
+                  src={league.logo}
+                  alt={leagueLabel}
+                  decoding="async"
+                  className="league-hero-bar-logo logo-themed"
+                />
+              )}
+              <span className="league-hero-name">{leagueLabel}</span>
+            </div>
+            <span className="league-hero-spacer" aria-hidden="true" />
+            <div className="league-hero-selects flex items-center gap-2">
+              {years.length > 0 && (
+                <Select
+                  ariaLabel="Year"
+                  value={effectiveYear ?? null}
+                  options={years.map((y) => ({ value: y, label: String(y) }))}
+                  onChange={handleYearSelect}
+                  align="right"
+                />
+              )}
+              {parentStages.length > 1 && (
+                <Select
+                  ariaLabel="Event"
+                  value={activeEventId ?? null}
+                  options={parentStages.map((e) => ({ value: e.id, label: getStageName(e.name, stagesForYear) }))}
+                  onChange={handleEventSelect}
+                  align="right"
+                />
+              )}
+            </div>
           </div>
-          <span className="league-hero-spacer" aria-hidden="true" />
-          <div className="league-hero-selects flex items-center gap-2">
-            {years.length > 0 && (
-              <select className="field-select" value={effectiveYear ?? ''} onChange={(e) => handleYearSelect(Number(e.target.value))}>
-                {years.map((y) => <option key={y} value={y}>{y}</option>)}
-              </select>
-            )}
-            {parentStages.length > 1 && (
-              <select className="field-select" value={activeEventId ?? ''} onChange={(e) => handleEventSelect(Number(e.target.value))}>
-                {parentStages.map((e) => (
-                  <option key={e.id} value={e.id}>{getStageName(e.name, stagesForYear)}</option>
-                ))}
-              </select>
-            )}
+          <div className="league-hero-tabs-row">
+            <div className="league-hero-tabs flex">
+              {navTabs.map((t) => {
+                const icon = TAB_ICONS[t];
+                return (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => handleTabSelect(t)}
+                    className={`section-tab${t === activeTab ? ' active' : ''}${icon ? ' section-tab--icon' : ''}`}
+                    aria-label={t}
+                  >
+                    {icon && <span className="section-tab-icon" aria-hidden="true">{icon}</span>}
+                    <span className="section-tab-text">{t}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
       }
