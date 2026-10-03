@@ -15,6 +15,7 @@ import MatchDetailPage, { matchLoader, MatchLoadError } from './pages/MatchDetai
 import PlayerDetailPage, { playerLoader } from './pages/PlayerDetailPage';
 import TeamDetailPage, { teamLoader } from './pages/TeamDetailPage';
 import FantasyTeamPage from './pages/FantasyTeamPage';
+import WorldsPredictionsPage from './pages/WorldsPredictionsPage';
 import { DrawerProvider } from './contexts/DrawerContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import DrawerHost from './components/drawers/DrawerHost';
@@ -103,6 +104,7 @@ const router = createBrowserRouter([
       { path: '/players/:name', element: <PlayerDetailPage />, loader: playerLoader, errorElement: <RouteError fallback="Player not found" /> },
       { path: '/teams/:name', element: <TeamDetailPage />, loader: teamLoader, errorElement: <RouteError fallback="Team not found" /> },
       { path: '/fantasy', element: <FantasyTeamPage /> },
+      { path: '/worlds-2026/predictions', element: <WorldsPredictionsPage /> },
     ],
   },
 ]);

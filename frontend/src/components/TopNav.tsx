@@ -33,6 +33,7 @@ const PAGES: Omit<SearchResult, 'logo'>[] = [
   { key: 'p-events', label: 'Events', category: 'Page', to: '/events' },
   { key: 'p-champions', label: 'Champions', category: 'Page', to: '/champions' },
   { key: 'p-fantasy', label: 'Fantasy', category: 'Page', to: '/fantasy' },
+  { key: 'p-worlds-predictions', label: 'Worlds 2026 Predictions', category: 'Page', to: '/worlds-2026/predictions' },
 ];
 
 const SearchIcon = () => (
@@ -151,6 +152,19 @@ function LeagueButtons({ leagues }: { leagues: TopNavLeague[] }) {
 
   return (
     <div className="top-nav-leagues es-scroll">
+      <Link
+        to="/worlds-2026/predictions"
+        className={`league-btn${pathname === '/worlds-2026/predictions' ? ' active' : ''}`}
+        title="Worlds 2026 Predictions"
+        aria-label="Worlds 2026 Predictions"
+        aria-current={pathname === '/worlds-2026/predictions' ? 'page' : undefined}
+      >
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+          <path d="M8 3h8v6a4 4 0 0 1-8 0V3ZM8 5H4v3a4 4 0 0 0 4 4m8-7h4v3a4 4 0 0 1-4 4M12 13v5m-4 3v-3h8v3H8Z" />
+        </svg>
+        <span className="league-btn-label">Predictions</span>
+      </Link>
+      {leagues.length > 0 && <span className="top-nav-divider" aria-hidden="true" />}
       {leagues.map((lg, i) => (
         <Fragment key={lg.slug}>
           {i > 0 && leagues[i - 1].group !== lg.group && (
