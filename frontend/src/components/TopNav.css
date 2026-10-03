@@ -379,6 +379,73 @@
   flex-shrink: 0;
 }
 
+/* Coordinated header palettes. Tokens stay local to the navigation, including
+   its search dropdown and mobile dock. */
+.top-nav-container { background: #f3f5f8; padding-bottom: 14px; }
+.top-nav {
+  --nav-bg: #ffffff;
+  --nav-fg: #202c42;
+  --nav-fg-dim: #566278;
+  --nav-fg-faint: #566278;
+  --nav-line: #dfe5ee;
+  --nav-line-strong: #a6b1c3;
+  --nav-field-bg: #f3f5f8;
+  --nav-field-bg-focus: #ffffff;
+  --nav-hover: #f6f7fb;
+  --nav-active: #eeebfb;
+  --surface: #ffffff;
+  --surface-sub: #f6f7fb;
+  --surface-hover: #eeebfb;
+  --border: #dfe5ee;
+  --text-h: #202c42;
+  --text-dim: #566278;
+  --accent: #5140b9;
+  --accent-border: #8375d9;
+  --ring-focus: 0 0 0 3px rgb(131 117 217 / 18%);
+  color: var(--nav-fg);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+.dark .top-nav-container { background: #111722; }
+.dark .top-nav {
+  --nav-bg: #1a2230;
+  --nav-fg: #eef2fa;
+  --nav-fg-dim: #b1bdd0;
+  --nav-fg-faint: #a2aec2;
+  --nav-line: #344258;
+  --nav-line-strong: #566984;
+  --nav-field-bg: #111722;
+  --nav-field-bg-focus: #212c3d;
+  --nav-hover: #263247;
+  --nav-active: #302c4a;
+  --surface: #1a2230;
+  --surface-sub: #263247;
+  --surface-hover: #302c4a;
+  --border: #344258;
+  --text-h: #eef2fa;
+  --text-dim: #b1bdd0;
+  --accent: #c0b4ff;
+  --accent-border: #a99af4;
+  --ring-focus: 0 0 0 3px rgb(169 154 244 / 22%);
+}
+.top-nav-main { gap: 20px; }
+.top-nav-search-field { width: clamp(220px, 28vw, 340px); height: 40px; border-radius: 10px; }
+.top-nav-search-field input { font-size: 14px; }
+.top-nav-search-field:focus-within { background: var(--nav-field-bg-focus); }
+.top-nav-search-results { min-width: 340px; padding: 8px; border-radius: 12px; }
+.top-nav-search-item { min-height: 44px; }
+.top-nav-search-cat { font-size: 11px; letter-spacing: 0.02em; }
+.top-nav .theme-toggle { height: 40px; padding: 3px; border-radius: 10px; }
+.top-nav .theme-toggle-opt { width: 32px; height: 32px; border-radius: 7px; }
+.top-nav .theme-toggle-opt.active { background: var(--nav-active); color: var(--accent); box-shadow: none; }
+.top-nav-leagues-slot .league-btn { border-radius: 7px 7px 0 0; }
+.top-nav-leagues-slot .league-btn:hover { background: var(--nav-hover); }
+.top-nav-leagues-slot .league-btn.active { background: var(--nav-active); color: var(--accent); }
+.top-nav-leagues-slot .league-btn.active .league-btn-label { color: var(--accent); }
+.top-nav-leagues-slot .league-btn-label { font-size: 14px; }
+.top-nav a:focus-visible,
+.top-nav button:focus-visible { outline: 2px solid var(--accent); outline-offset: -3px; }
+
 /* ------------------------------------------------------------------
    Mobile: two flat bars. The top one keeps the wordmark + search +
    theme toggle; the league icon-buttons move into a full-width bottom
@@ -443,4 +510,17 @@
     height: 42px;
   }
   .league-btn img { width: 23px; height: 23px; }
+
+  .top-nav-logo img { height: 18px; }
+  .top-nav-search-field { width: 100%; height: 38px; padding: 0 10px; }
+  .top-nav-search-results {
+    position: fixed;
+    top: 64px;
+    left: 12px;
+    right: 12px;
+    width: auto;
+    min-width: 0;
+    max-width: none;
+  }
+  .bottom-nav .league-btn.active { color: var(--accent); border-color: var(--accent-border); }
 }
