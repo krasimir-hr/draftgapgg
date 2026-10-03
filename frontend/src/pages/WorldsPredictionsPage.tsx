@@ -1,54 +1,40 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useLoaderData, useRevalidator } from 'react-router-dom';
 import EsportsLayout from '../components/EsportsLayout';
+import { canPickMatch, type WorldsData } from '../lib/worldsPredictions';
+import { STAGES, STAGE_INFO, KNOCKOUT_SCHEDULE, WORLDS_CHECKED_ON, WORLDS_SOURCES, type Stage } from '../data/worlds2026';
 import './WorldsPredictionsPage.css';
 
-const STAGES = ['Play-In', 'Swiss Stage', 'Knockout'] as const;
-type Stage = typeof STAGES[number];
-type Team = { id: string; name: string; shortName: string };
-type PredictionMatch = {
-  id: string;
-  stage: Stage;
-  round: string;
-  schedule: string;
-  bestOf: 1 | 3 | 5;
-  teams: [Team, Team];
-};
-
-const TEAMS = {
-  t1: { id: 't1', name: 'T1', shortName: 'T1' },
-  gen: { id: 'gen', name: 'Gen.G', shortName: 'GEN' },
-  g2: { id: 'g2', name: 'G2 Esports', shortName: 'G2' },
-  blg: { id: 'blg', name: 'Bilibili Gaming', shortName: 'BLG' },
-  fnc: { id: 'fnc', name: 'Fnatic', shortName: 'FNC' },
-  tl: { id: 'tl', name: 'Team Liquid', shortName: 'TL' },
-  gam: { id: 'gam', name: 'GAM Esports', shortName: 'GAM' },
-  psg: { id: 'psg', name: 'PSG Talon', shortName: 'PSG' },
-} satisfies Record<string, Team>;
-
-// Illustrative fixtures only; these are not the official Worlds schedule or field.
-const MATCHES: PredictionMatch[] = [
-  { id: 'play-1', stage: 'Play-In', round: 'Opening round', schedule: 'Oct 10 · 12:00 UTC', bestOf: 3, teams: [TEAMS.gam, TEAMS.psg] },
-  { id: 'play-2', stage: 'Play-In', round: 'Opening round', schedule: 'Oct 10 · 15:00 UTC', bestOf: 3, teams: [TEAMS.fnc, TEAMS.tl] },
-  { id: 'swiss-1', stage: 'Swiss Stage', round: 'Round 1', schedule: 'Oct 15 · 12:00 UTC', bestOf: 1, teams: [TEAMS.t1, TEAMS.gen] },
-  { id: 'swiss-2', stage: 'Swiss Stage', round: 'Round 1', schedule: 'Oct 15 · 13:00 UTC', bestOf: 1, teams: [TEAMS.g2, TEAMS.blg] },
-  { id: 'swiss-3', stage: 'Swiss Stage', round: 'Round 1', schedule: 'Oct 15 · 14:00 UTC', bestOf: 1, teams: [TEAMS.fnc, TEAMS.gam] },
-  { id: 'swiss-4', stage: 'Swiss Stage', round: 'Round 1', schedule: 'Oct 15 · 15:00 UTC', bestOf: 1, teams: [TEAMS.tl, TEAMS.psg] },
-  { id: 'knockout-1', stage: 'Knockout', round: 'Quarterfinal · Example', schedule: 'Oct 29 · 12:00 UTC', bestOf: 5, teams: [TEAMS.t1, TEAMS.blg] },
-  { id: 'knockout-2', stage: 'Knockout', round: 'Quarterfinal · Example', schedule: 'Oct 30 · 12:00 UTC', bestOf: 5, teams: [TEAMS.gen, TEAMS.g2] },
-];
+function matchTime(value: string | null) {
+  if (!value || !Number.isFinite(Date.parse(value))) return 'Time to be announced';
+  return `${new Date(value).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'UTC' })} UTC`;
+}
 
 export default function WorldsPredictionsPage() {
-  const [stage, setStage] = useState<Stage>('Swiss Stage');
-  const [picks, setPicks] = useState<Record<string, string>>({});
-  const matches = MATCHES.filter((match) => match.stage === stage);
-  const picked = Object.keys(picks).length;
-  const stagePicked = matches.filter((match) => picks[match.id]).length;
+  const { events, matches: allMatches, teams } = useLoaderData() as WorldsData;
+  const { revalidate, state } = useRevalidator();
+  const [stage, setStage] = useState('Swiss Stage');
+  const [picks, setPicks] = useState<Record<number, string>>({});
+  const [now, setNow] = useState(Date.now);
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+  const stages: string[] = [...STAGES, ...(allMatches.some((match) => match.predictionStage === 'Other matches') ? ['Other matches'] : [])];
+  const matches = allMatches.filter((match) => match.predictionStage === stage);
+  const eligible = allMatches.filter((match) => canPickMatch(match, now));
+  const picked = eligible.filter((match) => picks[match.id] === match.team1 || picks[match.id] === match.team2).length;
+  const stageInfo = STAGE_INFO[stage as Stage];
+  const regions = [...new Set(teams.map((team) => team.region))];
+  const teamByName = new Map(teams.map((team) => [team.name, team]));
 
-  function selectWinner(matchId: string, teamId: string) {
+  function selectWinner(matchId: number, team: string, selectedAt: number) {
+    const match = allMatches.find((item) => item.id === matchId);
+    if (!match || !canPickMatch(match, selectedAt)) return;
     setPicks((current) => {
       const next = { ...current };
-      if (next[matchId] === teamId) delete next[matchId];
-      else next[matchId] = teamId;
+      if (next[matchId] === team) delete next[matchId];
+      else next[matchId] = team;
       return next;
     });
   }
@@ -60,76 +46,91 @@ export default function WorldsPredictionsPage() {
           <div>
             <div className="flex items-center gap-3 mb-3">
               <span className="eyebrow">World Championship 2026</span>
-              <span className="wp-preview">Preview</span>
+              <span className="wp-preview">{allMatches.length} matches</span>
             </div>
             <h1 className="h-display">Worlds 2026 Predictions</h1>
-            <p className="wp-intro">Every match. Your call. Pick the team you think will win.</p>
+            <p className="wp-intro">15 October – 14 November 2026 · United States</p>
           </div>
           <div className="wp-progress">
-            <span className="wp-progress-count">{picked}<span> / {MATCHES.length}</span></span>
-            <span className="wp-muted">Predictions made</span>
-            <progress aria-label="Predictions made" value={picked} max={MATCHES.length} />
+            <span className="wp-progress-count">{picked}<span> / {eligible.length}</span></span>
+            <span className="wp-muted">Upcoming matches picked</span>
+            {eligible.length > 0 && <progress aria-label="Upcoming matches picked" value={picked} max={eligible.length} />}
           </div>
         </header>
 
-        <p className="wp-notice">Demo fixtures — teams, dates and matchups are illustrative. Picks stay on this page and reset when you leave or refresh.</p>
-
-        <div className="wp-stages" role="group" aria-label="Tournament stage">
-          {STAGES.map((item) => (
-            <button key={item} type="button" aria-pressed={stage === item} onClick={() => setStage(item)}>
-              {item}
-              <span>{MATCHES.filter((match) => match.stage === item).length}</span>
-            </button>
-          ))}
+        <div className="wp-notice wp-data-status">
+          <span>Teams and fixtures from DraftGap · Times shown in UTC.</span>
+          <button type="button" className="wp-reset" disabled={state === 'loading'} onClick={() => void revalidate()}>{state === 'loading' ? 'Refreshing…' : 'Refresh data'}</button>
         </div>
 
+        {teams.length > 0 && (
+          <section className="wp-qualified" aria-labelledby="wp-qualified-heading">
+            <div className="wp-section-header"><div><h2 id="wp-qualified-heading">Tournament teams</h2><p>{teams.length} teams listed in the Worlds 2026 event rosters.</p></div></div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {regions.map((region) => (
+                <article className="wp-region" key={region} aria-label={`${region} teams`}>
+                  <h3>{region}</h3>
+                  <ul>{teams.filter((team) => team.region === region).map((team) => (
+                    <li key={team.name}>{team.logo && <img src={team.logo} alt="" width={20} height={20} loading="lazy" />}{team.name}</li>
+                  ))}</ul>
+                </article>
+              ))}
+            </div>
+          </section>
+        )}
+
+        <div className="wp-stages" role="group" aria-label="Tournament stage">
+          {stages.map((item) => <button key={item} type="button" aria-pressed={stage === item} onClick={() => setStage(item)}>{item}<span>{allMatches.filter((match) => match.predictionStage === item).length}</span></button>)}
+        </div>
         <section aria-labelledby="wp-stage-heading">
           <div className="wp-section-header">
-            <div>
-              <h2 id="wp-stage-heading">{stage}</h2>
-              <p>{stagePicked} of {matches.length} winners picked · Select a team to make your prediction.</p>
-            </div>
-            <button className="wp-reset" type="button" disabled={picked === 0} onClick={() => setPicks({})}>Reset all picks</button>
+            <div><h2 id="wp-stage-heading">{stage}</h2>{stageInfo && <p>{stageInfo.dates} 2026 · {stageInfo.venue}</p>}</div>
+            {allMatches.length > 0 && <button className="wp-reset" type="button" disabled={Object.keys(picks).length === 0} onClick={() => setPicks({})}>Reset all picks</button>}
           </div>
-
+          {stageInfo && <p className="wp-stage-format">{stageInfo.format}</p>}
+          {stage === 'Knockout' && <div className="wp-round-schedule">{KNOCKOUT_SCHEDULE.map((round) => <div key={round.round}><strong>{round.round}</strong><span>{round.dates}</span><span>{round.venue}</span></div>)}</div>}
+          {matches.length === 0 && (
+            <div className="wp-awaiting" role="status">
+              <h3>{events.length ? 'No matches listed yet' : 'Worlds 2026 is not listed yet'}</h3>
+              <p>{events.length ? `The DraftGap API has no ${stage.toLowerCase()} fixtures yet. Refresh after the schedule is added.` : 'The API returned no Worlds 2026 event. Predictions will be available when its fixtures are added.'}</p>
+            </div>
+          )}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {matches.map((match) => {
-              const winner = match.teams.find((team) => team.id === picks[match.id]);
+              const names = [match.team1, match.team2];
+              const winner = names.includes(picks[match.id]) ? picks[match.id] : undefined;
+              const canPick = canPickMatch(match, now);
+              const finished = match.winner === 1 || match.winner === 2;
+              const status = finished ? `${names[match.winner! - 1]} wins · ${match.team1_score}–${match.team2_score}` : canPick ? (winner ? `Your pick: ${winner}` : 'No prediction yet') : 'Picks unavailable · Match started or details pending';
               return (
-                <article className="wp-match" key={match.id} aria-label={`${match.teams[0].name} vs ${match.teams[1].name}`}>
-                  <div className="wp-match-meta">
-                    <span>{match.schedule}</span>
-                    <span className="wp-format">BO{match.bestOf}</span>
-                  </div>
-                  <p className="wp-round">{match.round}</p>
+                <article className="wp-match" key={match.id} aria-label={`${match.team1 || 'TBD'} vs ${match.team2 || 'TBD'}`}>
+                  <div className="wp-match-meta"><span>{matchTime(match.datetime_utc)}</span><span className="wp-format">{match.best_of ? `BO${match.best_of}` : 'Format TBD'}</span></div>
+                  <p className="wp-round">{match.tab || stage}</p>
                   <div className="wp-teams" role="group" aria-label="Pick the winner">
-                    {match.teams.map((team, index) => (
-                      <div className="wp-team-slot" key={team.id}>
-                        {index === 1 && <span className="wp-vs" aria-hidden="true">VS</span>}
-                        <button
-                          type="button"
-                          className="wp-team"
-                          aria-pressed={winner?.id === team.id}
-                          aria-label={`Pick ${team.name} to beat ${match.teams[1 - index].name}`}
-                          onClick={() => selectWinner(match.id, team.id)}
-                        >
-                          <span className="wp-team-mark" aria-hidden="true">{team.shortName}</span>
-                          <span className="wp-team-name">{team.name}</span>
-                          <span className="wp-team-action">{winner?.id === team.id ? '✓ Selected' : 'Pick winner'}</span>
-                        </button>
-                      </div>
-                    ))}
+                    {names.map((name, index) => {
+                      const meta = teamByName.get(name);
+                      const logo = meta?.logo || (index === 0 ? match.team1_logo : match.team2_logo);
+                      const shortName = meta?.shortName || (index === 0 ? match.team1_short : match.team2_short) || name.slice(0, 3) || 'TBD';
+                      return (
+                        <div className="wp-team-slot" key={index}>
+                          {index === 1 && <span className="wp-vs" aria-hidden="true">VS</span>}
+                          <button type="button" className="wp-team" disabled={!canPick} aria-pressed={winner === name} aria-label={`Pick ${name || 'TBD'} to beat ${names[1 - index] || 'TBD'}`} onClick={() => selectWinner(match.id, name, Date.now())}>
+                            <span className="wp-team-mark" aria-hidden="true">{logo ? <img src={logo} alt="" width={48} height={48} loading="lazy" /> : shortName}</span>
+                            <span className="wp-team-name">{name || 'TBD'}</span>
+                            <span className="wp-team-action">{winner === name ? '✓ Selected' : canPick ? 'Pick winner' : 'Locked'}</span>
+                          </button>
+                        </div>
+                      );
+                    })}
                   </div>
-                  <div className={`wp-match-footer${winner ? ' wp-match-footer--picked' : ''}`} role="status">
-                    {winner ? `Your pick: ${winner.name}` : 'No prediction yet'}
-                    {winner && <span>Click again to clear</span>}
-                  </div>
+                  <div className={`wp-match-footer${winner ? ' wp-match-footer--picked' : ''}`} role="status">{status}{winner && canPick && <span>Click again to clear</span>}</div>
                 </article>
               );
             })}
           </div>
         </section>
-        <p className="wp-bottom-note">Choose freely. You can change your picks at any time in this preview.</p>
+        <p className="wp-bottom-note">Picks stay on this page and reset when you leave or refresh. No predictions are submitted.</p>
+        <p className="wp-bottom-note">Stage dates & venues: <a href={WORLDS_SOURCES.schedule} target="_blank" rel="noreferrer">Riot Games</a> · Checked {WORLDS_CHECKED_ON}.</p>
       </div>
     </EsportsLayout>
   );

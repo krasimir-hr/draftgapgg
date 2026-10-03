@@ -88,8 +88,8 @@ export const getTeamProfile = (
 export const getRosters = (page = 1) =>
   api.get<PaginatedResponse<TeamRoster>>('/api/rosters/', { params: { page } });
 
-export const getEventRosters = (eventId: number) =>
-  api.get<PaginatedResponse<TeamRoster>>('/api/rosters/', { params: { event: eventId, page_size: 100 } });
+export const getEventRosters = (eventId: number, page = 1) =>
+  api.get<PaginatedResponse<TeamRoster>>('/api/rosters/', { params: { event: eventId, page_size: 100, page } });
 
 export const getRoster = (id: number) =>
   api.get<TeamRosterDetail>(`/api/rosters/${id}/`);
