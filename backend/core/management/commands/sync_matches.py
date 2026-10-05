@@ -1,8 +1,8 @@
 import time
 from datetime import date, timezone
 from django.conf import settings
+from django.db import transaction
 from django.core.management.base import BaseCommand
-from django.db.models import Count
 from django.utils.dateparse import parse_datetime
 from django.utils.timezone import now, make_aware
 from mwrogue.esports_client import EsportsClient
@@ -81,8 +81,7 @@ class Command(BaseCommand):
             # 2. EventStages that have their own leaguepedia_page (e.g. Playoffs pages).
             event_qs = Event.objects.exclude(leaguepedia_page__isnull=True)
             if not options["force"]:
-                today = date.today()
-                event_qs = event_qs.filter(is_fully_synced=False).exclude(start_date__gt=today)
+                event_qs = event_qs.filter(is_fully_synced=False)
 
             stage_pages = list(
                 EventStage.objects.exclude(leaguepedia_page__isnull=True)
@@ -126,27 +125,7 @@ class Command(BaseCommand):
 
             time.sleep(2)
 
-        if options["all"]:
-            self._purge_empty_past_events()
-
         self.stdout.write(self.style.SUCCESS("\nDone!"))
-
-    def _purge_empty_past_events(self):
-        """Delete past events that ended up with zero matches after a full sync."""
-        today = date.today()
-        empty = (
-            Event.objects
-            .filter(end_date__lt=today)
-            .annotate(n=Count('matches'))
-            .filter(n=0)
-        )
-        count = empty.count()
-        if count:
-            names = list(empty.values_list('name', flat=True))
-            empty.delete()
-            self.stdout.write(self.style.SUCCESS(
-                f"\nPurged {count} empty past event(s): {names}"
-            ))
 
     def find_champion(self, name):
         name = CHAMPION_ALIASES.get(name, name)
@@ -205,6 +184,7 @@ class Command(BaseCommand):
 
     # Games
 
+    @transaction.atomic
     def sync_games(self, site, event, overview_page):
         self.stdout.write("\n--- Games ---")
         data = site.cargo_client.query(
@@ -281,6 +261,7 @@ class Command(BaseCommand):
 
     # Player Performances
 
+    @transaction.atomic
     def sync_player_performances(self, site, overview_page):
         self.stdout.write("\n--- Player Performances ---")
         data = site.cargo_client.query(

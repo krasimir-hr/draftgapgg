@@ -24,6 +24,8 @@ export function predictionStage(name: string, type?: string): string {
   if (type === 'play_in' || /play[ -]?ins?/i.test(name)) return 'Play-In';
   if (type === 'swiss' || /swiss/i.test(name)) return 'Swiss Stage';
   if (type === 'playoff' || /knockout|playoffs?|quarterfinal|semifinal|final/i.test(name)) return 'Knockout';
+  // Leaguepedia's Worlds Main Event uses Round 1–5 for Swiss fixtures.
+  if (/main event\s+round\s+[1-5]\b/i.test(name)) return 'Swiss Stage';
   return 'Other matches';
 }
 

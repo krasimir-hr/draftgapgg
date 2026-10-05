@@ -163,19 +163,15 @@ class Command(BaseCommand):
 
         self.stdout.write(f'  After Pass 1: {len(best_image)} player(s) matched')
 
-        # Pass 2: action=parse for ALL players
-        # Uses leaguepedia_page for exact page lookup — handles disambiguation like
-        # "Zeka (Kim Geon-woo)" correctly. Purge forces fresh Lua rendering.
-        self.stdout.write(f'Pass 2 — page-parse for all {len(players)} player(s)...')
-        total = len(players)
-        for idx, player in enumerate(players, 1):
+        # Parse unmatched profiles on an initial import; --force also checks
+        # matched profiles for newer portraits. Reading never purges wiki pages.
+        profiles = players if force else [p for p in players if p.leaguepedia_page not in best_image]
+        self.stdout.write(f'Pass 2 — page-parse for {len(profiles)} player(s)...')
+        total = len(profiles)
+        for idx, player in enumerate(profiles, 1):
             if idx % 20 == 0:
                 self.stdout.write(f'  [{idx}/{total}]')
             lp = player.leaguepedia_page
-            try:
-                site.client.api('purge', titles=lp)
-            except Exception:
-                pass
             try:
                 result = site.client.api('parse', page=lp, prop='images')
             except Exception:

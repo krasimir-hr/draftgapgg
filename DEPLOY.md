@@ -31,6 +31,33 @@ and Django falls back to SQLite. To use the managed Postgres instead, fill in th
 Relevant defaults when a var is absent: `ALLOWED_HOSTS=localhost,127.0.0.1`,
 `CORS_ALLOWED_ORIGINS=http://localhost:5173`, `DEBUG=False`. Set `DEBUG=True` locally.
 
+### Populate the local esports database
+
+An empty database does not include leagues, rosters, or match history. Set
+`LEAGUEPEDIA_USERNAME` and `LEAGUEPEDIA_PASSWORD` in your ignored `backend/.env`
+using your Leaguepedia bot credentials, then run these commands from `backend`:
+
+```bash
+python manage.py sync_ddragon
+python manage.py sync_events --year 2026
+python manage.py sync_matches --all
+python manage.py compute_ratings --all
+python manage.py sync_league_logos
+python manage.py sync_org_logos
+python manage.py sync_player_images --active
+```
+
+Run the imports sequentially when using SQLite to avoid competing database
+writes. The event import includes future tournaments and their published
+fixtures; unannounced teams remain TBD. Re-running the commands updates existing
+records. Completed events are skipped by `sync_matches` unless `--force` is used.
+Omit `--year` to import primary events from 2025 onward.
+
+The database, downloaded images, and credentials stay local and are not committed.
+Repeat the import on a deployment to populate its separate database. If opening
+the frontend at `http://127.0.0.1:5173`, include that origin in
+`CORS_ALLOWED_ORIGINS` alongside `http://localhost:5173`.
+
 ---
 
 ## 2. Full stack locally via Docker (prod-like smoke test)
