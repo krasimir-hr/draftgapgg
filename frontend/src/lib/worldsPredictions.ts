@@ -1,9 +1,11 @@
 import { getEvents, getMatches, getEventRosters } from '../api/core';
+import type { LoaderFunctionArgs } from 'react-router-dom';
+import { createWorldsDemo } from '../data/worldsDemo';
 import type { Event, Match, PaginatedResponse, TeamRoster } from '../types/models';
 
 export type WorldsTeam = { name: string; shortName: string; logo: string | null; region: string };
 export type WorldsMatch = Match & { predictionStage: string };
-export interface WorldsData { events: Event[]; matches: WorldsMatch[]; teams: WorldsTeam[] }
+export interface WorldsData { events: Event[]; matches: WorldsMatch[]; teams: WorldsTeam[]; demo?: boolean }
 
 async function allPages<T>(fetchPage: (page: number) => Promise<{ data: PaginatedResponse<T> }>): Promise<T[]> {
   const items: T[] = [];
@@ -38,7 +40,8 @@ export function rosterTeams(rosters: TeamRoster[]): WorldsTeam[] {
   })).values()].sort((a, b) => a.name.localeCompare(b.name));
 }
 
-export async function worldsPredictionsLoader(): Promise<WorldsData> {
+export async function worldsPredictionsLoader({ request }: LoaderFunctionArgs): Promise<WorldsData> {
+  if (new URL(request.url).searchParams.get('demo') === '1') return createWorldsDemo();
   const events = (await allPages((page) => getEvents({ year: 2026, page_size: 100, page }))).filter(isWorlds2026);
   if (!events.length) return { events: [], matches: [], teams: [] };
   const [rosters, matchGroups] = await Promise.all([

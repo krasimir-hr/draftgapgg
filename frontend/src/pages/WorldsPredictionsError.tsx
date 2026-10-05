@@ -1,4 +1,4 @@
-import { useRevalidator } from 'react-router-dom';
+import { Link, useRevalidator } from 'react-router-dom';
 import './WorldsPredictionsPage.css';
 
 export default function WorldsPredictionsError() {
@@ -11,6 +11,7 @@ export default function WorldsPredictionsError() {
         <button type="button" className="wp-button" disabled={state === 'loading'} onClick={() => void revalidate()}>
           {state === 'loading' ? 'Retrying…' : 'Try again'}
         </button>
+        <Link className="wp-button" to="?demo=1">Try demo matches</Link>
       </div>
     </div>
   );

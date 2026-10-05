@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useLoaderData, useRevalidator } from 'react-router-dom';
+import { Link, useLoaderData, useRevalidator } from 'react-router-dom';
 import { canPickMatch, type WorldsData } from '../lib/worldsPredictions';
 import { STAGES, STAGE_INFO, KNOCKOUT_SCHEDULE, WORLDS_SOURCES, type Stage } from '../data/worlds2026';
 import './WorldsPredictionsPage.css';
@@ -10,7 +10,12 @@ function matchTime(value: string | null) {
 }
 
 export default function WorldsPredictionsPage() {
-  const { events, matches: allMatches, teams } = useLoaderData() as WorldsData;
+  const data = useLoaderData() as WorldsData;
+  return <Predictions key={data.demo ? 'demo' : 'live'} data={data} />;
+}
+
+function Predictions({ data }: { data: WorldsData }) {
+  const { events, matches: allMatches, teams, demo } = data;
   const { revalidate, state } = useRevalidator();
   const [stage, setStage] = useState('Swiss Stage');
   const [picks, setPicks] = useState<Record<number, string>>({});
@@ -47,11 +52,19 @@ export default function WorldsPredictionsPage() {
             <h1>Worlds <span>2026</span></h1>
             <p className="wp-intro">Your picks. The world’s biggest stage.</p>
           </div>
-          <button type="button" className="wp-button" disabled={state === 'loading'} onClick={() => void revalidate()}>
+          <div className="wp-header-actions">
+          {!demo && <Link className="wp-button" to="?demo=1">Try demo matches</Link>}
+          <button type="button" className="wp-button" disabled={state === 'loading'} onClick={() => { if (demo) setPicks({}); void revalidate(); }}>
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5M5.7 7a7 7 0 0 1 11.5-2L20 8M4 16l2.8 3A7 7 0 0 0 18.3 17" /></svg>
-            {state === 'loading' ? 'Refreshing…' : 'Refresh schedule'}
+            {state === 'loading' ? 'Refreshing…' : demo ? 'Reset demo' : 'Refresh schedule'}
           </button>
+          </div>
         </header>
+
+        {demo && <section className="wp-demo-banner" aria-label="Demo mode">
+          <div><strong>Demo mode · Sample matches</strong><p>These teams, matchups, dates and results are hypothetical. Try making picks across all three stages. Nothing is saved.</p></div>
+          <Link className="wp-button" to="/worlds-2026/predictions">Back to real schedule</Link>
+        </section>}
 
         <div className="wp-overview" aria-label="Tournament overview">
           <div><span className="wp-label">Tournament dates</span><strong>15 Oct — 14 Nov</strong><span>2026 · United States</span></div>
@@ -126,7 +139,7 @@ export default function WorldsPredictionsPage() {
 
             {teams.length > 0 && (
               <details className="wp-panel wp-rosters">
-                <summary>Tournament teams <span>{teams.length} teams</span></summary>
+                <summary>{demo ? 'Demo teams' : 'Tournament teams'} <span>{teams.length} teams</span></summary>
                 <div className="wp-region-grid">{regions.map((region) => (
                   <div className="wp-region" key={region}>
                     <h3>{region}</h3>
