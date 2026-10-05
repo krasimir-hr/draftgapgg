@@ -169,6 +169,8 @@ class Match(models.Model):
     bracket_col   = models.PositiveSmallIntegerField(null=True, blank=True)
     bracket_order = models.PositiveSmallIntegerField(null=True, blank=True)
     is_final      = models.BooleanField(default=False)
+    team1_origin = models.CharField(max_length=80, blank=True, default='')
+    team2_origin = models.CharField(max_length=80, blank=True, default='')
     loser_outcome = models.CharField(max_length=12, choices=[('auto', 'Automatic'), ('eliminated', 'Eliminated'), ('lower', 'Lower bracket'), ('none', 'Hide label')], default='auto')
     bracket_hidden = models.BooleanField(default=False)
 

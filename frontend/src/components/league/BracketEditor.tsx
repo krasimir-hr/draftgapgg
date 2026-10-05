@@ -30,6 +30,7 @@ export default function BracketEditor({ eventId, rounds, matches, shorts, scope,
   const arrowId = useId().replaceAll(':', '');
   const [lines, setLines] = useState<{ key: string; path: string; kind: ConnectionKind; source: number }[]>([]);
   const [connecting, setConnecting] = useState<{ id: number; kind: ConnectionKind } | null>(null);
+  const [origins, setOrigins] = useState<Record<number, [string, string]>>({});
   const [loserOutcomes, setLoserOutcomes] = useState<Record<number, NonNullable<Match['loser_outcome']>>>({});
   const [loserMatches, setLoserMatches] = useState<Record<number, number | null>>({});
   const [nextMatches, setNextMatches] = useState<Record<number, number | null>>({});
@@ -41,6 +42,7 @@ export default function BracketEditor({ eventId, rounds, matches, shorts, scope,
 
   const begin = () => {
     const ordered = orderPlayoffRounds(rounds);
+    setOrigins(Object.fromEntries(matches.map(m => [m.id, [m.team1_origin ?? '', m.team2_origin ?? '']])));
     setLoserOutcomes(Object.fromEntries(matches.map(m => [m.id, m.loser_outcome ?? 'auto'])));
     setUnplaced(matches.filter(m => m.bracket_hidden).map(m => m.id));
     setDraft(ordered.map(r => ({ label: r.label, ...Object.fromEntries(lanes.map(lane => [lane, r.matches.filter(e => e.lane === lane).map(e => e.match.id)])) } as DraftRound)));
@@ -127,13 +129,13 @@ export default function BracketEditor({ eventId, rounds, matches, shorts, scope,
     const m = byId.get(id);
     const date = m?.datetime_utc ? new Date(m.datetime_utc) : null;
     const schedule = date ? `${date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} · ${date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}` : 'Date pending';
-    return <small className="po-editor-match-info"><span>{schedule}</span><strong>{m?.winner != null ? `${m.team1_score} – ${m.team2_score} · Final` : 'Scheduled'}</strong></small>;
+    return <small className="po-editor-match-info"><span>{schedule}</span><strong>{m?.winner != null ? `${m.team1_score} – ${m.team2_score} · Final` : 'Scheduled'}</strong>{origins[id]?.map((origin, i) => origin && <span className="po-editor-origin" key={i}>↳ {shorts[(i === 0 ? m?.team1 : m?.team2) ?? ''] || (i === 0 ? m?.team1 : m?.team2) || 'TBD'} · {origin}</span>)}</small>;
   };
   const errorMessage = (error: unknown) => axios.isAxiosError(error) ? error.response?.status === 401 || error.response?.status === 403 ? 'Your admin session expired. Sign in again to save.' : error.response?.data?.error || 'Could not save the layout. Your changes are still here; try again.' : 'Could not save the layout.';
   const save = async () => {
     if (draft.some(r => !r.label.trim())) { setMessage('Give every round or stage a name before saving.'); return; }
     setBusy(true); setMessage('');
-    const placements: BracketPlacement[] = draft.flatMap((r, col) => lanes.flatMap(lane => r[lane].map((id, index) => ({ id, bracket_col: col + 1, bracket_order: index + 1 + (lane === 'final' ? r.upper.length : 0), is_lower_bracket: lane === 'lower', is_final: lane === 'final', next_match: nextMatches[id] ?? null, loser_next_match: loserMatches[id] ?? null, loser_outcome: loserOutcomes[id] ?? 'auto' }))));
+    const placements: BracketPlacement[] = draft.flatMap((r, col) => lanes.flatMap(lane => r[lane].map((id, index) => ({ id, bracket_col: col + 1, bracket_order: index + 1 + (lane === 'final' ? r.upper.length : 0), is_lower_bracket: lane === 'lower', is_final: lane === 'final', next_match: nextMatches[id] ?? null, loser_next_match: loserMatches[id] ?? null, loser_outcome: loserOutcomes[id] ?? 'auto', team1_origin: (origins[id]?.[0] ?? '').trim(), team2_origin: (origins[id]?.[1] ?? '').trim() }))));
     try {
       const response = await saveBracketLayout(eventId, placements, unplaced, { scope, rounds: draft.map(r => r.label.trim()) });
       onSaved(response.data.matches, draft.map(r => r.label.trim())); setEditing(false); setMessage('Bracket saved');
@@ -189,6 +191,13 @@ export default function BracketEditor({ eventId, rounds, matches, shorts, scope,
         <div className="po-move-controls"><span>{selected ? name(selected) : 'Select a series to move it or connect its winner.'}</span>
           {selected != null && <><Select ariaLabel="Move selected series to" value={target} onChange={value => setTarget(String(value))} options={draft.flatMap((r, i) => lanes.map(lane => ({ value: `${i}:${lane}`, label: `${r.label} · ${labels[lane]}` })))}/><button type="button" onClick={() => { const [col, lane] = target.split(':'); move(selected, Number(col), lane as Lane); }}>Move</button><Select ariaLabel="Winner advances to" value={String(nextMatches[selected] ?? '')} onChange={value => { setNextMatches(prev => ({ ...prev, [selected]: value ? Number(value) : null })); setMessage('Unsaved changes'); }} options={[{ value: '', label: 'No winner connection' }, ...draft.slice(selectedCol + 1).flatMap(r => lanes.flatMap(lane => r[lane].map(id => ({ value: String(id), label: `${r.label} · ${name(id)}` }))))]}/><Select ariaLabel="Loser advances to" value={String(loserMatches[selected] ?? '')} onChange={value => { setLoserMatches(prev => ({ ...prev, [selected]: value ? Number(value) : null })); setMessage('Unsaved changes'); }} options={[{ value: '', label: 'No loser connection' }, ...draft.flatMap((r, col) => r.lower.filter(id => canConnect(positions.get(selected), { col, lane: 'lower' }, 'loser', selected === id)).map(id => ({ value: String(id), label: `${r.label} · ${name(id)}` })))]}/><Select ariaLabel="Loser label" value={loserOutcomes[selected] ?? 'auto'} onChange={value => { setLoserOutcomes(prev => ({ ...prev, [selected]: String(value) as NonNullable<Match['loser_outcome']> })); setMessage('Unsaved changes'); }} options={[{ value: 'auto', label: 'Label: Automatic' }, { value: 'eliminated', label: 'Label: Eliminated' }, { value: 'lower', label: 'Label: To lower bracket' }, { value: 'none', label: 'Label: Hidden' }]}/></>}
         </div>
+        {selected != null && <section className="po-entry-controls" aria-label="Team entry sources">
+          <div><h4>Where do these teams enter from?</h4><p>Label a seed, a bye, or a previous stage. Leave blank to hide the label.</p></div>
+          {[byId.get(selected)?.team1, byId.get(selected)?.team2].map((team, index) => <label key={index}><span>{shorts[team ?? ''] || team || `Team ${index + 1}`} <small>Entry source</small></span><input aria-label={`Team ${index + 1} entry source`} value={origins[selected]?.[index] ?? ''} maxLength={80} placeholder={index === 0 ? 'Regular season · 1st · Round 2 bye' : 'Winner of Round 1'} onChange={e => {
+            const value = e.target.value;
+            setOrigins(prev => { const pair: [string, string] = [...(prev[selected] ?? ['', ''])]; pair[index] = value; return { ...prev, [selected]: pair }; }); setMessage('Unsaved changes');
+          }}/><small className="po-entry-preview">{origins[selected]?.[index] ? `↳ ${origins[selected][index]}` : 'No entry label'}</small></label>)}
+        </section>}
       </fieldset>
     </>}
   </div>;

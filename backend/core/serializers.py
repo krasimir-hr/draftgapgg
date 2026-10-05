@@ -136,6 +136,8 @@ class MatchListSerializer(serializers.ModelSerializer):
             "is_final",
             "bracket_hidden",
             "loser_outcome",
+            "team1_origin",
+            "team2_origin",
             "league_logo",
             "league_short_name",
         ]

@@ -249,3 +249,23 @@ class BracketLayoutTests(TestCase):
         self.assertEqual(self.client.post(self.url, data, format='json').status_code, 400)
         self.a.refresh_from_db()
         self.assertEqual(self.a.loser_outcome, 'auto')
+
+    def test_team_entry_sources_persist_without_old_clients_erasing_them(self):
+        self.client.force_authenticate(self.staff)
+        data = self.layout([(self.a, 2, 1, False, False, None)])
+        data['matches'][0].update(team1_origin='Regular season · 1st', team2_origin='Winner of Round 1')
+        response = self.client.post(self.url, data, format='json')
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertEqual(response.data['matches'][0]['team1_origin'], 'Regular season · 1st')
+        old_client = self.layout([(self.a, 2, 1, False, False, None)])
+        self.assertEqual(self.client.post(self.url, old_client, format='json').status_code, 200)
+        self.a.refresh_from_db()
+        self.assertEqual(self.a.team2_origin, 'Winner of Round 1')
+        data['matches'][0]['team1_origin'] = 'x' * 81
+        self.assertEqual(self.client.post(self.url, data, format='json').status_code, 400)
+        self.a.refresh_from_db()
+        self.assertEqual(self.a.team1_origin, 'Regular season · 1st')
+        data['matches'][0].update(team1_origin='', team2_origin='')
+        self.assertEqual(self.client.post(self.url, data, format='json').status_code, 200)
+        self.a.refresh_from_db()
+        self.assertEqual((self.a.team1_origin, self.a.team2_origin), ('', ''))

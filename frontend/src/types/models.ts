@@ -293,6 +293,8 @@ export interface Match {
   team2_score: number;
   next_match: number | null;
   loser_next_match?: number | null;
+  team1_origin?: string;
+  team2_origin?: string;
   loser_outcome?: 'auto' | 'eliminated' | 'lower' | 'none';
   bracket_col: number | null;
   bracket_order: number | null;
