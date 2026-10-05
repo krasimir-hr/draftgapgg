@@ -101,7 +101,7 @@ export interface BracketPlacement {
 }
 export const getBracketAccess = () => api.get<{ can_edit: boolean }>('/api/matches/bracket-access/');
 export const adminLogin = (username: string, password: string) => api.post<{ access: string }>('/api/auth/login/', { username, password });
-export const saveBracketLayout = (event: number, matches: BracketPlacement[]) => api.post<{ matches: Match[] }>('/api/matches/bracket-layout/', { event, matches });
+export const saveBracketLayout = (event: number, matches: BracketPlacement[], removed: number[] = []) => api.post<{ matches: Match[] }>('/api/matches/bracket-layout/', { event, matches, removed });
 export const getMatches = (params: Record<string, string | number> = {}) =>
   api.get<PaginatedResponse<Match>>('/api/matches/', { params });
 

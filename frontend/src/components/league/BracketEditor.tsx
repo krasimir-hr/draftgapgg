@@ -21,6 +21,7 @@ export default function BracketEditor({ eventId, rounds, matches, onSaved }: {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [draft, setDraft] = useState<DraftRound[]>([]);
+  const [unplaced, setUnplaced] = useState<number[]>([]);
   const [selected, setSelected] = useState<number | null>(null);
   const [dragging, setDragging] = useState<number | null>(null);
   const [target, setTarget] = useState('0:upper');
@@ -33,7 +34,8 @@ export default function BracketEditor({ eventId, rounds, matches, onSaved }: {
 
   const begin = () => {
     const ordered = orderPlayoffRounds(rounds);
-    setDraft(ordered.map(r => ({ label: r.label, ...Object.fromEntries(lanes.map(lane => [lane, r.matches.filter(e => e.lane === lane).map(e => e.match.id)])) } as DraftRound)));
+    setUnplaced(matches.filter(m => m.bracket_hidden).map(m => m.id));
+    setDraft((ordered.length ? ordered : [{ key: 'empty', label: 'Round 1', matches: [] }]).map(r => ({ label: r.label, ...Object.fromEntries(lanes.map(lane => [lane, r.matches.filter(e => e.lane === lane).map(e => e.match.id)])) } as DraftRound)));
     setNextMatches(Object.fromEntries(ordered.flatMap(r => r.matches.filter(e => e.lane !== 'placement').map(e => [e.match.id, e.winnerNext?.matchId ?? null]))));
     setSelected(null); setMessage(''); setEditing(true);
   };
@@ -43,20 +45,34 @@ export default function BracketEditor({ eventId, rounds, matches, onSaved }: {
     const index = before != null ? list.indexOf(before) : -1;
     list.splice(index < 0 ? list.length : index, 0, id);
     setDraft(copy);
+    setUnplaced(prev => prev.filter(n => n !== id));
     // Moving a series can invalidate a link. Clear it rather than create a backwards path.
     const columns = new Map(copy.flatMap((r, i) => lanes.flatMap(l => r[l].map(n => [n, i] as const))));
     setNextMatches(prev => Object.fromEntries(Object.entries(prev).map(([key, next]) => [key, next != null && (columns.get(next) ?? -1) > (columns.get(Number(key)) ?? -1) ? next : null])));
     setSelected(id); setDragging(null); setMessage('Unsaved changes');
   };
+  const remove = (id: number) => {
+    setDraft(prev => prev.map(r => ({ ...r, upper: r.upper.filter(n => n !== id), lower: r.lower.filter(n => n !== id), final: r.final.filter(n => n !== id) })));
+    setUnplaced(prev => [...prev.filter(n => n !== id), id]);
+    setNextMatches(prev => Object.fromEntries(Object.entries(prev).map(([key, next]) => [key, Number(key) === id || next === id ? null : next])));
+    if (selected === id) setSelected(null);
+    setDragging(null); setMessage('Unsaved changes');
+  };
   const selectedCol = draft.findIndex(r => lanes.some(lane => selected != null && r[lane].includes(selected)));
   const byId = new Map(matches.map(m => [m.id, m]));
   const name = (id: number) => { const m = byId.get(id); return `${m?.team1 || 'TBD'} vs ${m?.team2 || 'TBD'}`; };
+  const info = (id: number) => {
+    const m = byId.get(id);
+    const date = m?.datetime_utc ? new Date(m.datetime_utc) : null;
+    const schedule = date ? `${date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} · ${date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}` : 'Date pending';
+    return <small className="po-editor-match-info"><span>{schedule}</span><strong>{m?.winner != null ? `${m.team1_score} – ${m.team2_score} · Final` : 'Scheduled'}</strong></small>;
+  };
   const errorMessage = (error: unknown) => axios.isAxiosError(error) ? error.response?.status === 401 || error.response?.status === 403 ? 'Your admin session expired. Sign in again to save.' : error.response?.data?.error || 'Could not save the layout. Your changes are still here; try again.' : 'Could not save the layout.';
   const save = async () => {
     setBusy(true); setMessage('');
     const placements: BracketPlacement[] = draft.flatMap((r, col) => lanes.flatMap(lane => r[lane].map((id, index) => ({ id, bracket_col: col + 1, bracket_order: index + 1 + (lane === 'final' ? r.upper.length : 0), is_lower_bracket: lane === 'lower', is_final: lane === 'final', next_match: nextMatches[id] ?? null }))));
     try {
-      const response = await saveBracketLayout(eventId, placements);
+      const response = await saveBracketLayout(eventId, placements, unplaced);
       onSaved(response.data.matches); setEditing(false); setMessage('Bracket saved');
     } catch (error) {
       setMessage(errorMessage(error));
@@ -92,9 +108,13 @@ export default function BracketEditor({ eventId, rounds, matches, onSaved }: {
       <fieldset disabled={busy} className="po-admin-fields">
         <div className="po-editor-scroll"><div className="po-editor-columns" style={{ gridTemplateColumns: `repeat(${draft.length}, minmax(184px, 1fr))`, minWidth: draft.length * 184 + (draft.length - 1) * 16 }}>
           {draft.map((r, col) => <section key={col}><h4>{r.label}</h4>{lanes.map(lane => <div key={lane} className={`po-drop-zone${dragging != null ? ' is-ready' : ''}`} onDragOver={e => { if (dragging != null) e.preventDefault(); }} onDrop={e => { e.preventDefault(); if (dragging != null) move(dragging, col, lane); }}>
-            <h5>{labels[lane]}</h5>{r[lane].map(id => <button type="button" key={id} draggable={!busy} aria-pressed={selected === id} onClick={() => setSelected(id)} onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', String(id)); setDragging(id); }} onDragEnd={() => setDragging(null)} onDragOver={e => { if (dragging != null) e.preventDefault(); }} onDrop={e => { e.preventDefault(); e.stopPropagation(); if (dragging != null && dragging !== id) move(dragging, col, lane, id); }}><span aria-hidden="true">⠿</span>{name(id)}</button>)}<span className="po-drop-placeholder">Drop a series here</span>
+            <h5>{labels[lane]}</h5>{r[lane].map(id => <div key={id} className="po-editor-match" draggable={!busy} onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', String(id)); setDragging(id); }} onDragEnd={() => setDragging(null)} onDragOver={e => { if (dragging != null) e.preventDefault(); }} onDrop={e => { e.preventDefault(); e.stopPropagation(); if (dragging != null && dragging !== id) move(dragging, col, lane, id); }}>
+              <button type="button" className="po-editor-select" aria-pressed={selected === id} onClick={() => setSelected(id)}><span aria-hidden="true">⠿</span><span>{name(id)}{info(id)}</span></button>
+              <button type="button" className="po-editor-remove" aria-label={`Remove ${name(id)} from bracket`} title="Remove from bracket" onClick={() => remove(id)}>×</button>
+            </div>)}<span className="po-drop-placeholder">Drop a series here</span>
           </div>)}</section>)}
         </div></div>
+        {unplaced.length > 0 && <section className="po-unplaced"><h4>Unplaced matches <span>{unplaced.length}</span></h4><p>These matches keep their results. Drag one into a round, or choose Restore.</p><div>{unplaced.map(id => <div key={id} className="po-unplaced-match" draggable={!busy} onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', String(id)); setDragging(id); }} onDragEnd={() => setDragging(null)}><span>{name(id)}{info(id)}</span><button type="button" aria-label={`Restore ${name(id)} to bracket`} onClick={() => move(id, 0, 'upper')}>Restore</button></div>)}</div></section>}
         <div className="po-move-controls"><span>{selected ? name(selected) : 'Select a series to move it or connect its winner.'}</span>
           {selected != null && <><Select ariaLabel="Move selected series to" value={target} onChange={value => setTarget(String(value))} options={draft.flatMap((r, i) => lanes.map(lane => ({ value: `${i}:${lane}`, label: `${r.label} · ${labels[lane]}` })))}/><button type="button" onClick={() => { const [col, lane] = target.split(':'); move(selected, Number(col), lane as Lane); }}>Move</button><Select ariaLabel="Winner advances to" value={String(nextMatches[selected] ?? '')} onChange={value => { setNextMatches(prev => ({ ...prev, [selected]: value ? Number(value) : null })); setMessage('Unsaved changes'); }} options={[{ value: '', label: 'No winner connection' }, ...draft.slice(selectedCol + 1).flatMap(r => lanes.flatMap(lane => r[lane].map(id => ({ value: String(id), label: `${r.label} · ${name(id)}` }))))]}/></>}
         </div>

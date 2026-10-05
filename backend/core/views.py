@@ -884,13 +884,19 @@ class MatchViewSet(ReadOnlyModelViewSet):
 
         class Layout(serializers.Serializer):
             event = serializers.IntegerField(min_value=1)
-            matches = Placement(many=True, allow_empty=False, max_length=500)
+            matches = Placement(many=True, allow_empty=True, max_length=500)
+            removed = serializers.ListField(child=serializers.IntegerField(min_value=1), max_length=500, default=list)
 
         payload = Layout(data=request.data)
         payload.is_valid(raise_exception=True)
         data = payload.validated_data
         entries = data['matches']
         ids = [entry['id'] for entry in entries]
+        removed = data['removed']
+        if not ids and not removed:
+            return Response({'error': 'Include at least one match.'}, status=400)
+        if len(set(removed)) != len(removed) or set(ids) & set(removed):
+            return Response({'error': 'Removed matches cannot also occupy a position.'}, status=400)
         if len(set(ids)) != len(ids):
             return Response({'error': 'Each match must appear exactly once.'}, status=400)
         try:
@@ -898,9 +904,9 @@ class MatchViewSet(ReadOnlyModelViewSet):
                 # Lock the whole event so concurrent editors cannot interleave swaps.
                 event_matches = list(Match.objects.select_for_update().filter(event_id=data['event']))
                 by_id = {match.pk: match for match in event_matches}
-                if any(pk not in by_id for pk in ids):
+                if any(pk not in by_id for pk in ids + removed):
                     return Response({'error': 'Every match must belong to this event.'}, status=400)
-                slots = {(m.stage_id, m.is_lower_bracket, m.bracket_col, m.bracket_order) for m in event_matches if m.pk not in ids and m.bracket_col is not None and m.bracket_order is not None}
+                slots = {(m.stage_id, m.is_lower_bracket, m.bracket_col, m.bracket_order) for m in event_matches if m.pk not in ids + removed and not m.bracket_hidden and m.bracket_col is not None and m.bracket_order is not None}
                 for entry in entries:
                     match = by_id[entry['id']]
                     slot = (match.stage_id, entry['is_lower_bracket'], entry['bracket_col'], entry['bracket_order'])
@@ -915,16 +921,19 @@ class MatchViewSet(ReadOnlyModelViewSet):
                         if next_entry['bracket_col'] <= entry['bracket_col']:
                             return Response({'error': 'Winner paths must lead to a later round.'}, status=400)
                 # Release positions first, then apply the entire layout in one transaction.
-                Match.objects.filter(pk__in=ids).update(bracket_order=None)
+                Match.objects.filter(pk__in=ids + removed).update(bracket_order=None)
+                Match.objects.filter(pk__in=removed).update(bracket_hidden=True, bracket_col=None, bracket_order=None, next_match=None)
+                Match.objects.filter(event_id=data['event'], next_match_id__in=removed).update(next_match=None)
                 for entry in entries:
                     match = by_id[entry['id']]
                     for field, value in entry.items():
                         if field != 'id':
                             setattr(match, 'next_match_id' if field == 'next_match' else field, value)
-                    match.save(update_fields=['bracket_col', 'bracket_order', 'is_lower_bracket', 'is_final', 'next_match'])
+                    match.bracket_hidden = False
+                    match.save(update_fields=['bracket_col', 'bracket_order', 'is_lower_bracket', 'is_final', 'next_match', 'bracket_hidden'])
         except IntegrityError:
             return Response({'error': 'A position is occupied by another match. Reload the bracket and try again.'}, status=400)
-        updated = self.get_queryset().filter(pk__in=ids)
+        updated = self.get_queryset().filter(pk__in=ids + removed)
         return Response({'matches': MatchListSerializer(updated, many=True, context={'request': request}).data})
 
     @action(detail=True, methods=['patch'], url_path='bracket', permission_classes=[IsAdminUser])

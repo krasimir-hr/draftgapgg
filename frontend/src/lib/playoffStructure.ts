@@ -29,7 +29,8 @@ const finalMatch = (m: Match) => m.is_final || /^(?:grand\s+)?finals?$/i.test(m.
 const placementMatch = (m: Match) => /\b(?:third[ -]?place|3rd[ -]?place|bronze|placement)\b/i.test(m.tab ?? '');
 const chronological = (a: Match, b: Match) => (a.datetime_utc || '9999').localeCompare(b.datetime_utc || '9999') || a.id - b.id;
 
-export function buildPlayoffs(matches: Match[]) {
+export function buildPlayoffs(allMatches: Match[]) {
+  const matches = allMatches.filter(m => !m.bracket_hidden);
   const chronologicalMatches = [...matches].sort(chronological);
   const losses = new Map<string, number>();
   const lossesBefore = new Map<number, [number, number]>();

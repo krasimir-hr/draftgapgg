@@ -147,3 +147,40 @@ class BracketLayoutTests(TestCase):
         self.assertTrue(self.a.is_lower_bracket)
         self.assertEqual(self.a.next_match_id, self.b.pk)
         self.assertTrue(self.b.is_final)
+
+
+    def test_removal_preserves_match_data_and_restore_unhides_it(self):
+        self.client.force_authenticate(self.staff)
+        self.a.winner = 1
+        self.a.next_match = self.b
+        self.a.save()
+        data = self.layout([(self.a, 1, 1, False, False, None)])
+        data['removed'] = [self.b.pk]
+        self.assertEqual(self.client.post(self.url, data, format='json').status_code, 200)
+        self.a.refresh_from_db(); self.b.refresh_from_db()
+        self.assertTrue(self.b.bracket_hidden)
+        self.assertIsNone(self.b.bracket_col)
+        self.assertIsNone(self.a.next_match_id)
+        self.assertEqual((self.a.winner, self.b.team1, self.b.team2), (1, 'C', 'D'))
+        self.assertEqual(self.client.get(f'/api/matches/{self.b.pk}/').status_code, 200)
+        data = self.layout([(self.a, 1, 1, False, False, self.b.pk), (self.b, 2, 1, False, True, None)])
+        self.assertEqual(self.client.post(self.url, data, format='json').status_code, 200)
+        self.b.refresh_from_db()
+        self.assertFalse(self.b.bracket_hidden)
+
+    def test_every_match_can_be_removed_without_deleting_results(self):
+        self.client.force_authenticate(self.staff)
+        data = {'event': self.event.pk, 'matches': [], 'removed': [self.a.pk, self.b.pk]}
+        self.assertEqual(self.client.post(self.url, data, format='json').status_code, 200)
+        self.a.refresh_from_db(); self.b.refresh_from_db()
+        self.assertTrue(self.a.bracket_hidden and self.b.bracket_hidden)
+        self.assertEqual(len(self.client.get('/api/matches/').data['results']), 2)
+
+    def test_removal_rejects_foreign_and_overlapping_ids(self):
+        self.client.force_authenticate(self.staff)
+        data = self.layout([(self.a, 1, 1, False, False, None)])
+        for removed in [[self.a.pk], [999999]]:
+            data['removed'] = removed
+            self.assertEqual(self.client.post(self.url, data, format='json').status_code, 400)
+        self.a.refresh_from_db()
+        self.assertFalse(self.a.bracket_hidden)

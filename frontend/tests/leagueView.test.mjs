@@ -153,3 +153,15 @@ test('saved admin positions override inferred lanes, feeder sorting and cleared 
   assert.equal(model.rounds[0].matches.find(e => e.match.id === 1).winnerNext, undefined);
   assert.equal(model.rounds[1].matches[0].lane, 'final');
 });
+
+
+test('removed matches disappear from every bracket path, champion and team calculations', () => {
+  const hidden = lckPlayoffs.map(m => ({ ...m, bracket_hidden: true }));
+  const model = buildPlayoffs(hidden);
+  assert.deepEqual(model.rounds, []);
+  assert.deepEqual(model.teams, []);
+  assert.equal(model.champion, null);
+  const partial = buildPlayoffs(lckPlayoffs.map(m => ({ ...m, bracket_hidden: m.id === 884 })));
+  assert.equal(partial.champion, null);
+  assert.ok(partial.rounds.flatMap(r => r.matches).every(e => e.match.id !== 884 && e.winnerNext?.matchId !== 884));
+});

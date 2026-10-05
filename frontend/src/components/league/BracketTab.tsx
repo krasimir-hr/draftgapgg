@@ -97,7 +97,7 @@ export default function BracketTab({ eventId, stageId, tabFilter, tabPrefix, tea
       dispatch({ type: 'matches', matches: state.matches.map(m => saved.get(m.id) ?? m) });
       void revalidator.revalidate();
     }}/>
-    <PlayoffOverview rounds={rounds} doubleElimination={doubleElimination} logos={logos} shorts={shorts} selectedTeam={selectedTeam} onMatchSelect={onMatchSelect}/>
+    {rounds.length > 0 ? <PlayoffOverview rounds={rounds} doubleElimination={doubleElimination} logos={logos} shorts={shorts} selectedTeam={selectedTeam} onMatchSelect={onMatchSelect}/> : <p className="po-empty">No matches are placed in this bracket. An admin can restore them from the unplaced list.</p>}
     {selectedTeam && <div className="po-journey-title"><TeamMark short={shorts[selectedTeam] || selectedTeam} logo={logos[selectedTeam]} size={32}/><div><h3>{selectedTeam}’s run</h3><p>Every series, from the opening match onward.</p></div><button type="button" onClick={() => setSelectedTeam('')} aria-label="Clear team filter">Clear ×</button></div>}
     {selectedTeam && <div className="po-rounds">
       {visibleRounds.map(round => <section key={round.key} className="po-round-section" aria-label={`${round.label} matches`}>

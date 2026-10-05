@@ -164,6 +164,7 @@ class Match(models.Model):
     bracket_col   = models.PositiveSmallIntegerField(null=True, blank=True)
     bracket_order = models.PositiveSmallIntegerField(null=True, blank=True)
     is_final      = models.BooleanField(default=False)
+    bracket_hidden = models.BooleanField(default=False)
 
     class Meta:
         verbose_name_plural = "matches"

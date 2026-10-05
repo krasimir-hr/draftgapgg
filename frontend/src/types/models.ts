@@ -294,6 +294,7 @@ export interface Match {
   next_match: number | null;
   bracket_col: number | null;
   bracket_order: number | null;
+  bracket_hidden?: boolean;
   is_lower_bracket: boolean;
   is_final: boolean;
   league_logo: string | null;
