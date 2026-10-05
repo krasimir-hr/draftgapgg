@@ -153,6 +153,9 @@ class Match(models.Model):
         'self', on_delete=models.SET_NULL, null=True, blank=True,
         related_name='previous_matches',
     )
+    loser_next_match = models.ForeignKey(
+        'self', on_delete=models.SET_NULL, null=True, blank=True, related_name='loser_previous_matches',
+    )
     # Which bracket leg this match belongs to when the stage has_lower_bracket.
     is_lower_bracket = models.BooleanField(default=False)
 

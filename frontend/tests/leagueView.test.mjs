@@ -165,3 +165,27 @@ test('removed matches disappear from every bracket path, champion and team calcu
   assert.equal(partial.champion, null);
   assert.ok(partial.rounds.flatMap(r => r.matches).every(e => e.match.id !== 884 && e.winnerNext?.matchId !== 884));
 });
+
+
+const { canConnect } = await import(moduleUrl('../src/lib/bracketConnections.ts'));
+test('connection handles permit forward winners and same-round upper-to-lower drops only', () => {
+  const upper = { col: 0, lane: 'upper' }, lower = { col: 0, lane: 'lower' }, later = { col: 1, lane: 'lower' };
+  assert.equal(canConnect(upper, lower, 'loser'), true);
+  assert.equal(canConnect(upper, lower, 'winner'), false);
+  assert.equal(canConnect(lower, upper, 'loser'), false);
+  assert.equal(canConnect(lower, lower, 'loser'), false);
+  assert.equal(canConnect(upper, later, 'winner'), true);
+  assert.equal(canConnect(lower, later, 'loser'), true);
+  assert.equal(canConnect(upper, later, 'loser', true), false);
+  assert.equal(canConnect(upper, undefined, 'winner'), false);
+});
+
+test('explicit loser links work for pending fixtures and manual clears suppress inference', () => {
+  const model = buildPlayoffs([
+    { ...fixture(1, 'Round 1', null, 'TBD', 'TBD', null), bracket_col: 1, loser_next_match: 2 },
+    { ...fixture(2, 'Round 1', null, 'TBD', 'TBD', null), bracket_col: 1, is_lower_bracket: true },
+  ]);
+  assert.deepEqual(model.rounds[0].matches[0].loserNext, { matchId: 2, round: 'Round 1', lane: 'lower' });
+  const cleared = buildPlayoffs(lckPlayoffs.map(m => ({ ...m, bracket_col: Number(m.tab.match(/\d/)?.[0] || 5), loser_next_match: null })));
+  assert.ok(cleared.rounds.flatMap(r => r.matches).every(e => e.loserNext === undefined));
+});

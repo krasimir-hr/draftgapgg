@@ -292,6 +292,7 @@ export interface Match {
   team1_score: number;
   team2_score: number;
   next_match: number | null;
+  loser_next_match?: number | null;
   bracket_col: number | null;
   bracket_order: number | null;
   bracket_hidden?: boolean;

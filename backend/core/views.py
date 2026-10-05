@@ -881,6 +881,7 @@ class MatchViewSet(ReadOnlyModelViewSet):
             is_lower_bracket = serializers.BooleanField()
             is_final = serializers.BooleanField()
             next_match = serializers.IntegerField(min_value=1, allow_null=True)
+            loser_next_match = serializers.IntegerField(min_value=1, allow_null=True, default=None)
 
         class Layout(serializers.Serializer):
             event = serializers.IntegerField(min_value=1)
@@ -920,17 +921,30 @@ class MatchViewSet(ReadOnlyModelViewSet):
                         next_entry = next(e for e in entries if e['id'] == next_id)
                         if next_entry['bracket_col'] <= entry['bracket_col']:
                             return Response({'error': 'Winner paths must lead to a later round.'}, status=400)
+                    loser_id = entry['loser_next_match']
+                    if loser_id is not None:
+                        if loser_id not in ids or loser_id == match.pk or by_id[loser_id].stage_id != match.stage_id:
+                            return Response({'error': 'The loser destination must be in the same playoff stage.'}, status=400)
+                        loser_entry = next(e for e in entries if e['id'] == loser_id)
+                        if not loser_entry['is_lower_bracket'] or loser_entry['is_final']:
+                            return Response({'error': 'Losers must advance to a lower-bracket match.'}, status=400)
+                        same_round_drop = loser_entry['bracket_col'] == entry['bracket_col'] and not entry['is_lower_bracket'] and not entry['is_final']
+                        if loser_entry['bracket_col'] <= entry['bracket_col'] and not same_round_drop:
+                            return Response({'error': 'Loser paths cannot point backwards.'}, status=400)
+                        if loser_id == entry['next_match']:
+                            return Response({'error': 'Winner and loser destinations must be different.'}, status=400)
                 # Release positions first, then apply the entire layout in one transaction.
                 Match.objects.filter(pk__in=ids + removed).update(bracket_order=None)
-                Match.objects.filter(pk__in=removed).update(bracket_hidden=True, bracket_col=None, bracket_order=None, next_match=None)
+                Match.objects.filter(pk__in=removed).update(bracket_hidden=True, bracket_col=None, bracket_order=None, next_match=None, loser_next_match=None)
                 Match.objects.filter(event_id=data['event'], next_match_id__in=removed).update(next_match=None)
+                Match.objects.filter(event_id=data['event'], loser_next_match_id__in=removed).update(loser_next_match=None)
                 for entry in entries:
                     match = by_id[entry['id']]
                     for field, value in entry.items():
                         if field != 'id':
-                            setattr(match, 'next_match_id' if field == 'next_match' else field, value)
+                            setattr(match, f'{field}_id' if field in ('next_match', 'loser_next_match') else field, value)
                     match.bracket_hidden = False
-                    match.save(update_fields=['bracket_col', 'bracket_order', 'is_lower_bracket', 'is_final', 'next_match', 'bracket_hidden'])
+                    match.save(update_fields=['bracket_col', 'bracket_order', 'is_lower_bracket', 'is_final', 'next_match', 'loser_next_match', 'bracket_hidden'])
         except IntegrityError:
             return Response({'error': 'A position is occupied by another match. Reload the bracket and try again.'}, status=400)
         updated = self.get_queryset().filter(pk__in=ids + removed)

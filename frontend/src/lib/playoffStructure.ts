@@ -65,12 +65,14 @@ export function buildPlayoffs(allMatches: Match[]) {
     const destination = (next: PlayoffMatch | undefined) => next ? { matchId: next.match.id, round: roundOf.get(next.match.id)!, lane: next.lane } : undefined;
     const wired = entries.find(next => next.match.id === e.match.next_match);
     if (wired) e.winnerNext = destination(wired);
+    const loserWired = entries.find(next => next.match.id === e.match.loser_next_match);
+    if (loserWired) e.loserNext = destination(loserWired);
     if (e.match.winner == null || !e.match.datetime_utc) continue;
     const winner = e.match.winner === 1 ? e.match.team1 : e.match.team2;
     const loser = e.match.winner === 1 ? e.match.team2 : e.match.team1;
     const nextFor = (team: string) => realTeam(team) ? entries.slice(i + 1).find(next => !!next.match.datetime_utc && (next.match.team1 === team || next.match.team2 === team)) : undefined;
     if (e.match.bracket_col == null) e.winnerNext ??= destination(nextFor(winner));
-    e.loserNext = destination(nextFor(loser));
+    if (e.match.bracket_col == null) e.loserNext ??= destination(nextFor(loser));
   }
   const finals = entries.filter(e => e.lane === 'final');
   const decidedFinal = finals.length === 1 && finals[0].match.winner != null ? finals[0].match : null;

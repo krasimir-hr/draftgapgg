@@ -184,3 +184,26 @@ class BracketLayoutTests(TestCase):
             self.assertEqual(self.client.post(self.url, data, format='json').status_code, 400)
         self.a.refresh_from_db()
         self.assertFalse(self.a.bracket_hidden)
+
+
+    def test_same_round_loser_connection_saves_and_removal_clears_it(self):
+        self.client.force_authenticate(self.staff)
+        data = self.layout([(self.a, 1, 1, False, False, None), (self.b, 1, 1, True, False, None)])
+        data['matches'][0]['loser_next_match'] = self.b.pk
+        self.assertEqual(self.client.post(self.url, data, format='json').status_code, 200)
+        self.a.refresh_from_db()
+        self.assertEqual(self.a.loser_next_match_id, self.b.pk)
+        data = {'event': self.event.pk, 'matches': [], 'removed': [self.b.pk]}
+        self.assertEqual(self.client.post(self.url, data, format='json').status_code, 200)
+        self.a.refresh_from_db()
+        self.assertIsNone(self.a.loser_next_match_id)
+
+    def test_invalid_loser_connections_do_not_change_saved_layout(self):
+        self.client.force_authenticate(self.staff)
+        for col, lower, final, loser_id in [(1, False, False, self.b.pk), (1, True, True, self.b.pk), (1, True, False, self.a.pk), (1, True, False, 999999)]:
+            data = self.layout([(self.a, 2, 1, False, False, None), (self.b, col, 1, lower, final, None)])
+            data['matches'][0]['loser_next_match'] = loser_id
+            self.assertEqual(self.client.post(self.url, data, format='json').status_code, 400)
+            self.a.refresh_from_db()
+            self.assertIsNone(self.a.loser_next_match_id)
+            self.assertEqual(self.a.bracket_col, 1)

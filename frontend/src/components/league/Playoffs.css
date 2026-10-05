@@ -110,9 +110,9 @@
 .po-mini--final { border-color: var(--accent-border); }
 .po-mini--final .po-mini-meta { background: var(--accent-muted); color: var(--accent); }
 .po-map-lines { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
-.po-map-lines path { fill: none; stroke: var(--accent-border); stroke-width: 1.5; stroke-linejoin: round; }
-.po-map-lines path.is-lower { stroke-dasharray: 4 3; }
-.po-map-lines path.is-muted { opacity: .2; }
+.po-map-lines > path { fill: none; stroke: var(--accent-border); stroke-width: 1.5; stroke-linejoin: round; }
+.po-map-lines > path.is-lower { stroke-dasharray: 4 3; }
+.po-map-lines > path.is-muted { opacity: .2; }
 .po-pan-hint { display: none; }
 @media (max-width: 1100px) {
   .po-pan-hint { display: block; font-size: 10px; color: var(--text-dim); margin-bottom: 12px; }
@@ -167,3 +167,19 @@
 .po-unplaced > div { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
 .po-unplaced-match { display: flex; align-items: center; justify-content: space-between; gap: 8px; background: var(--surface-sub); border: 1px dashed var(--border-strong); border-radius: 8px; padding: 10px; cursor: grab; }
 .po-unplaced-match > span { color: var(--text-h); font-size: 11px; }
+
+.po-editor-columns { position: relative; gap: 24px; }
+.po-editor-columns > section { position: relative; min-width: 0; }
+.po-editor-match { z-index: 1; }
+.po-drop-zone .po-editor-select { padding-right: 29px; }
+.po-drop-zone { padding-right: 15px; }
+.po-connection-ports { position: absolute; right: -11px; top: 34px; display: grid; gap: 5px; }
+.po-admin .po-drop-zone .po-connection-port { display: block; width: 29px; height: 22px; padding: 0; margin: 0; border: 1px solid var(--accent-border); background: var(--surface); border-radius: 5px; color: var(--accent); font-size: 10px; line-height: 20px; cursor: crosshair; }
+.po-admin .po-drop-zone .po-connection-port.loser { border-style: dashed; border-color: var(--border-strong); color: var(--text-dim); }
+.po-admin .po-drop-zone .po-connection-port[aria-pressed="true"] { background: var(--accent-muted); outline: 2px solid var(--accent); }
+.po-editor-match.is-connect-target .po-editor-select { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-muted); }
+.po-editor-lines { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+.po-editor-lines > path { fill: none; stroke: var(--accent); stroke-width: 1.4; stroke-linejoin: round; opacity: .3; }
+.po-editor-lines > path.loser { stroke: var(--text-dim); stroke-dasharray: 4 3; }
+.po-editor-lines > path.is-selected { opacity: 1; stroke-width: 2; }
+.po-connect-status { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 12px 0; padding: 10px; background: var(--accent-muted); border: 1px solid var(--accent-border); border-radius: 7px; color: var(--text-h); font-size: 11px; }

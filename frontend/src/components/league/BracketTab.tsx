@@ -92,7 +92,7 @@ export default function BracketTab({ eventId, stageId, tabFilter, tabPrefix, tea
     {champion && <div className="po-champion"><TeamMark short={shorts[champion] || champion} logo={logos[champion]} size={36}/><div><span>Champions</span><strong>{champion}</strong></div><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M7 3h10v5a5 5 0 0 1-10 0V3Zm0 2H3v2a5 5 0 0 0 5 5m9-7h4v2a5 5 0 0 1-5 5m-4 1v7m-4 0h8"/></svg></div>}
       <Select ariaLabel="Follow a team" value={selectedTeam} options={[{ value: '', label: 'All teams' }, ...teams.map(team => ({ value: team, label: team }))]} onChange={team => setSelectedTeam(String(team))} align="right" />
     </div>
-    <BracketEditor eventId={eventId} rounds={rounds} matches={matches} onSaved={updated => {
+    <BracketEditor eventId={eventId} rounds={rounds} matches={matches} shorts={shorts} onSaved={updated => {
       const saved = new Map(updated.map(m => [m.id, m]));
       dispatch({ type: 'matches', matches: state.matches.map(m => saved.get(m.id) ?? m) });
       void revalidator.revalidate();

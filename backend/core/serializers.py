@@ -129,6 +129,7 @@ class MatchListSerializer(serializers.ModelSerializer):
             "team1_score",
             "team2_score",
             "next_match",
+            "loser_next_match",
             "bracket_col",
             "bracket_order",
             "is_lower_bracket",

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { orderPlayoffRounds, type PlayoffMatch, type PlayoffRound } from '../../lib/playoffStructure';
 import { TeamMark } from './shared';
 
@@ -10,9 +10,10 @@ interface Props {
   selectedTeam: string;
   onMatchSelect: (id: number) => void;
 }
-interface Connection { id: number; path: string; lower: boolean; faded: boolean }
+interface Connection { id: string; path: string; lower: boolean; faded: boolean }
 
 export default function PlayoffOverview({ rounds, doubleElimination, logos, shorts, selectedTeam, onMatchSelect }: Props) {
+  const arrowId = useId().replaceAll(':', '');
   const board = useRef<HTMLDivElement>(null);
   const displayRounds = useMemo(() => orderPlayoffRounds(rounds), [rounds]);
   const [connections, setConnections] = useState<Connection[]>([]);
@@ -27,17 +28,19 @@ export default function PlayoffOverview({ rounds, doubleElimination, logos, shor
     const measure = () => {
       const origin = root.getBoundingClientRect();
       const links: Connection[] = [];
-      for (const round of rounds) for (const entry of round.matches) {
-        const next = entry.winnerNext;
-        if (!next || (next.lane !== entry.lane && next.lane !== 'final')) continue;
+      for (const round of rounds) for (const entry of round.matches) for (const kind of ['winner', 'loser'] as const) {
+        const next = kind === 'winner' ? entry.winnerNext : entry.loserNext;
+        if (!next) continue;
         const from = root.querySelector<HTMLElement>(`[data-series="${entry.match.id}"]`)?.getBoundingClientRect();
         const to = root.querySelector<HTMLElement>(`[data-series="${next.matchId}"]`)?.getBoundingClientRect();
-        if (!from || !to || to.left <= from.right) continue;
-        const x1 = from.right - origin.left, y1 = from.top + from.height / 2 - origin.top;
-        const x2 = to.left - origin.left, y2 = to.top + to.height / 2 - origin.top;
-        const bend = x1 + Math.min(16, (x2 - x1) / 2);
-        const winner = entry.match.winner === 1 ? entry.match.team1 : entry.match.winner === 2 ? entry.match.team2 : null;
-        links.push({ id: entry.match.id, path: `M ${x1} ${y1} H ${bend} V ${y2} H ${x2}`, lower: entry.lane === 'lower', faded: !!selectedTeam && winner !== selectedTeam });
+        if (!from || !to) continue;
+        const sameColumn = to.left < from.right;
+        if (sameColumn && !(kind === 'loser' && to.top > from.bottom && next.lane === 'lower')) continue;
+        const x1 = from.right - origin.left, y1 = from.top + from.height * (kind === 'winner' ? .4 : .7) - origin.top;
+        const x2 = (sameColumn ? to.right : to.left) - origin.left, y2 = to.top + to.height / 2 - origin.top;
+        const bend = sameColumn ? Math.max(x1, x2) + 10 : x1 + Math.min(kind === 'winner' ? 13 : 23, (x2 - x1) / 2);
+        const team = kind === 'winner' ? entry.match.winner === 1 ? entry.match.team1 : entry.match.team2 : entry.match.winner === 1 ? entry.match.team2 : entry.match.team1;
+        links.push({ id: `${entry.match.id}:${kind}`, path: `M ${x1} ${y1} H ${bend} V ${y2} H ${x2}`, lower: kind === 'loser', faded: !!selectedTeam && team !== selectedTeam });
       }
       setConnections(links);
     };
@@ -65,7 +68,7 @@ export default function PlayoffOverview({ rounds, doubleElimination, logos, shor
     <p className="po-pan-hint">Scroll sideways to follow the bracket →</p>
     <div className="po-map-scroll" tabIndex={0} role="region" aria-label="Full playoff bracket">
       <div ref={board} className="po-map-board" style={{ '--round-count': rounds.length, '--upper-height': `${upperCount * 132 + (upperCount - 1) * 16}px`, '--lower-height': `${lowerCount * 132 + (lowerCount - 1) * 16}px` } as CSSProperties}>
-        <svg className="po-map-lines" aria-hidden="true">{connections.map(c => <path key={c.id} d={c.path} className={`${c.lower ? 'is-lower' : ''}${c.faded ? ' is-muted' : ''}`}/>)}</svg>
+        <svg className="po-map-lines" aria-hidden="true"><defs><marker id={`${arrowId}-path`} viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="var(--accent-border)"/></marker></defs>{connections.map(c => <path key={c.id} d={c.path} markerEnd={`url(#${arrowId}-path)`} className={`${c.lower ? 'is-lower' : ''}${c.faded ? ' is-muted' : ''}`}/>)}</svg>
         {displayRounds.map((round, i) => {
           const upper = round.matches.filter(e => e.lane === 'upper');
           const lower = round.matches.filter(e => e.lane === 'lower');

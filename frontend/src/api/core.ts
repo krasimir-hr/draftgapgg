@@ -97,7 +97,7 @@ export const getRoster = (id: number) =>
 // Matches
 export interface BracketPlacement {
   id: number; bracket_col: number; bracket_order: number;
-  is_lower_bracket: boolean; is_final: boolean; next_match: number | null;
+  is_lower_bracket: boolean; is_final: boolean; next_match: number | null; loser_next_match?: number | null;
 }
 export const getBracketAccess = () => api.get<{ can_edit: boolean }>('/api/matches/bracket-access/');
 export const adminLogin = (username: string, password: string) => api.post<{ access: string }>('/api/auth/login/', { username, password });
