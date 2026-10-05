@@ -233,3 +233,19 @@ class BracketLayoutTests(TestCase):
         self.assertEqual(self.client.post(self.url, data, format='json').status_code, 400)
         self.event.refresh_from_db()
         self.assertEqual(self.event.bracket_layout['empty'], ['Round 1', 'Final'])
+
+
+    def test_loser_label_override_is_saved_validated_and_can_return_to_auto(self):
+        self.client.force_authenticate(self.staff)
+        data = self.layout([(self.a, 1, 1, False, False, None)])
+        for label in ['eliminated', 'lower', 'none', 'auto']:
+            data['matches'][0]['loser_outcome'] = label
+            response = self.client.post(self.url, data, format='json')
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.data['matches'][0]['loser_outcome'], label)
+            self.a.refresh_from_db()
+            self.assertEqual(self.a.loser_outcome, label)
+        data['matches'][0]['loser_outcome'] = 'invalid'
+        self.assertEqual(self.client.post(self.url, data, format='json').status_code, 400)
+        self.a.refresh_from_db()
+        self.assertEqual(self.a.loser_outcome, 'auto')

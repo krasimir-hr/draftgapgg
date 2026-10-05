@@ -201,3 +201,23 @@ test('saved round names and empty columns remain available after every match is 
   assert.equal(restored.rounds[1].matches[0].match.id, 1);
   assert.equal(restored.rounds.length, 4);
 });
+
+
+test('loser labels distinguish lower-bracket progression from actual elimination', () => {
+  const entries = buildPlayoffs(lckPlayoffs).rounds.flatMap(r => r.matches);
+  assert.equal(entries.find(e => e.match.id === 892).loserOutcome, 'lower');
+  for (const id of [887, 890, 891, 893, 884]) assert.equal(entries.find(e => e.match.id === id).loserOutcome, 'eliminated');
+  const stale = buildPlayoffs(lckPlayoffs.map(m => ({ ...m, loser_next_match: m.id === 884 ? 893 : null })));
+  assert.equal(stale.rounds.flatMap(r => r.matches).find(e => e.match.id === 884).loserOutcome, 'eliminated');
+  const hidden = buildPlayoffs(lckPlayoffs.map(m => ({ ...m, bracket_hidden: m.id === 893 })));
+  assert.equal(hidden.rounds.flatMap(r => r.matches).find(e => e.match.id === 892).loserOutcome, 'lower');
+});
+
+test('admin loser labels override inference and pending fixtures never invent elimination', () => {
+  const fixtures = [fixture(1, 'Finals', null, 'A', 'B', null)];
+  assert.equal(buildPlayoffs(fixtures).rounds[0].matches[0].loserOutcome, undefined);
+  for (const status of ['eliminated', 'lower', 'none']) {
+    const model = buildPlayoffs(fixtures.map(m => ({ ...m, loser_outcome: status })));
+    assert.equal(model.rounds[0].matches[0].loserOutcome, status === 'none' ? undefined : status);
+  }
+});

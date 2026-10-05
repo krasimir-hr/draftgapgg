@@ -890,6 +890,7 @@ class MatchViewSet(ReadOnlyModelViewSet):
             is_final = serializers.BooleanField()
             next_match = serializers.IntegerField(min_value=1, allow_null=True)
             loser_next_match = serializers.IntegerField(min_value=1, allow_null=True, default=None)
+            loser_outcome = serializers.ChoiceField(choices=['auto', 'eliminated', 'lower', 'none'], required=False)
 
         class Layout(serializers.Serializer):
             event = serializers.IntegerField(min_value=1)
@@ -962,7 +963,7 @@ class MatchViewSet(ReadOnlyModelViewSet):
                         if field != 'id':
                             setattr(match, f'{field}_id' if field in ('next_match', 'loser_next_match') else field, value)
                     match.bracket_hidden = False
-                    match.save(update_fields=['bracket_col', 'bracket_order', 'is_lower_bracket', 'is_final', 'next_match', 'loser_next_match', 'bracket_hidden'])
+                    match.save(update_fields=['bracket_col', 'bracket_order', 'is_lower_bracket', 'is_final', 'next_match', 'loser_next_match', 'bracket_hidden', 'loser_outcome'])
         except IntegrityError:
             return Response({'error': 'A position is occupied by another match. Reload the bracket and try again.'}, status=400)
         updated = self.get_queryset().filter(pk__in=ids + removed)

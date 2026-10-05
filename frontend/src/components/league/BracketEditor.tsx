@@ -30,6 +30,7 @@ export default function BracketEditor({ eventId, rounds, matches, shorts, scope,
   const arrowId = useId().replaceAll(':', '');
   const [lines, setLines] = useState<{ key: string; path: string; kind: ConnectionKind; source: number }[]>([]);
   const [connecting, setConnecting] = useState<{ id: number; kind: ConnectionKind } | null>(null);
+  const [loserOutcomes, setLoserOutcomes] = useState<Record<number, NonNullable<Match['loser_outcome']>>>({});
   const [loserMatches, setLoserMatches] = useState<Record<number, number | null>>({});
   const [nextMatches, setNextMatches] = useState<Record<number, number | null>>({});
   useEffect(() => {
@@ -40,6 +41,7 @@ export default function BracketEditor({ eventId, rounds, matches, shorts, scope,
 
   const begin = () => {
     const ordered = orderPlayoffRounds(rounds);
+    setLoserOutcomes(Object.fromEntries(matches.map(m => [m.id, m.loser_outcome ?? 'auto'])));
     setUnplaced(matches.filter(m => m.bracket_hidden).map(m => m.id));
     setDraft((ordered.length ? ordered : [{ key: 'empty', label: 'Round 1', matches: [] }]).map(r => ({ label: r.label, ...Object.fromEntries(lanes.map(lane => [lane, r.matches.filter(e => e.lane === lane).map(e => e.match.id)])) } as DraftRound)));
     setNextMatches(Object.fromEntries(ordered.flatMap(r => r.matches.filter(e => e.lane !== 'placement').map(e => [e.match.id, e.winnerNext?.matchId ?? null]))));
@@ -122,7 +124,7 @@ export default function BracketEditor({ eventId, rounds, matches, shorts, scope,
   const save = async () => {
     if (draft.some(r => !r.label.trim())) { setMessage('Give every round or stage a name before saving.'); return; }
     setBusy(true); setMessage('');
-    const placements: BracketPlacement[] = draft.flatMap((r, col) => lanes.flatMap(lane => r[lane].map((id, index) => ({ id, bracket_col: col + 1, bracket_order: index + 1 + (lane === 'final' ? r.upper.length : 0), is_lower_bracket: lane === 'lower', is_final: lane === 'final', next_match: nextMatches[id] ?? null, loser_next_match: loserMatches[id] ?? null }))));
+    const placements: BracketPlacement[] = draft.flatMap((r, col) => lanes.flatMap(lane => r[lane].map((id, index) => ({ id, bracket_col: col + 1, bracket_order: index + 1 + (lane === 'final' ? r.upper.length : 0), is_lower_bracket: lane === 'lower', is_final: lane === 'final', next_match: nextMatches[id] ?? null, loser_next_match: loserMatches[id] ?? null, loser_outcome: loserOutcomes[id] ?? 'auto' }))));
     try {
       const response = await saveBracketLayout(eventId, placements, unplaced, { scope, rounds: draft.map(r => r.label.trim()) });
       onSaved(response.data.matches, draft.map(r => r.label.trim())); setEditing(false); setMessage('Bracket saved');
@@ -175,7 +177,7 @@ export default function BracketEditor({ eventId, rounds, matches, shorts, scope,
         </div></div>
         {unplaced.length > 0 && <section className="po-unplaced"><h4>Unplaced matches <span>{unplaced.length}</span></h4><p>These matches keep their results. Drag one into a round, or choose Restore.</p><div>{unplaced.map(id => <div key={id} className="po-unplaced-match" draggable={!busy} onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', String(id)); setDragging(id); }} onDragEnd={() => setDragging(null)}><span>{name(id)}{info(id)}</span><button type="button" aria-label={`Restore ${name(id)} to bracket`} onClick={() => move(id, 0, 'upper')}>Restore</button></div>)}</div></section>}
         <div className="po-move-controls"><span>{selected ? name(selected) : 'Select a series to move it or connect its winner.'}</span>
-          {selected != null && <><Select ariaLabel="Move selected series to" value={target} onChange={value => setTarget(String(value))} options={draft.flatMap((r, i) => lanes.map(lane => ({ value: `${i}:${lane}`, label: `${r.label} · ${labels[lane]}` })))}/><button type="button" onClick={() => { const [col, lane] = target.split(':'); move(selected, Number(col), lane as Lane); }}>Move</button><Select ariaLabel="Winner advances to" value={String(nextMatches[selected] ?? '')} onChange={value => { setNextMatches(prev => ({ ...prev, [selected]: value ? Number(value) : null })); setMessage('Unsaved changes'); }} options={[{ value: '', label: 'No winner connection' }, ...draft.slice(selectedCol + 1).flatMap(r => lanes.flatMap(lane => r[lane].map(id => ({ value: String(id), label: `${r.label} · ${name(id)}` }))))]}/><Select ariaLabel="Loser advances to" value={String(loserMatches[selected] ?? '')} onChange={value => { setLoserMatches(prev => ({ ...prev, [selected]: value ? Number(value) : null })); setMessage('Unsaved changes'); }} options={[{ value: '', label: 'No loser connection' }, ...draft.flatMap((r, col) => r.lower.filter(id => canConnect(positions.get(selected), { col, lane: 'lower' }, 'loser', selected === id)).map(id => ({ value: String(id), label: `${r.label} · ${name(id)}` })))]}/></>}
+          {selected != null && <><Select ariaLabel="Move selected series to" value={target} onChange={value => setTarget(String(value))} options={draft.flatMap((r, i) => lanes.map(lane => ({ value: `${i}:${lane}`, label: `${r.label} · ${labels[lane]}` })))}/><button type="button" onClick={() => { const [col, lane] = target.split(':'); move(selected, Number(col), lane as Lane); }}>Move</button><Select ariaLabel="Winner advances to" value={String(nextMatches[selected] ?? '')} onChange={value => { setNextMatches(prev => ({ ...prev, [selected]: value ? Number(value) : null })); setMessage('Unsaved changes'); }} options={[{ value: '', label: 'No winner connection' }, ...draft.slice(selectedCol + 1).flatMap(r => lanes.flatMap(lane => r[lane].map(id => ({ value: String(id), label: `${r.label} · ${name(id)}` }))))]}/><Select ariaLabel="Loser advances to" value={String(loserMatches[selected] ?? '')} onChange={value => { setLoserMatches(prev => ({ ...prev, [selected]: value ? Number(value) : null })); setMessage('Unsaved changes'); }} options={[{ value: '', label: 'No loser connection' }, ...draft.flatMap((r, col) => r.lower.filter(id => canConnect(positions.get(selected), { col, lane: 'lower' }, 'loser', selected === id)).map(id => ({ value: String(id), label: `${r.label} · ${name(id)}` })))]}/><Select ariaLabel="Loser label" value={loserOutcomes[selected] ?? 'auto'} onChange={value => { setLoserOutcomes(prev => ({ ...prev, [selected]: String(value) as NonNullable<Match['loser_outcome']> })); setMessage('Unsaved changes'); }} options={[{ value: 'auto', label: 'Label: Automatic' }, { value: 'eliminated', label: 'Label: Eliminated' }, { value: 'lower', label: 'Label: To lower bracket' }, { value: 'none', label: 'Label: Hidden' }]}/></>}
         </div>
       </fieldset>
     </>}

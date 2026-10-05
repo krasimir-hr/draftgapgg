@@ -5,6 +5,7 @@ export type PlayoffLane = 'upper' | 'lower' | 'final' | 'placement';
 export interface PlayoffMatch {
   match: Match;
   lane: PlayoffLane;
+  loserOutcome?: 'eliminated' | 'lower' | 'continues';
   winnerNext?: { matchId: number; round: string; lane: PlayoffLane };
   loserNext?: { matchId: number; round: string; lane: PlayoffLane };
 }
@@ -34,8 +35,8 @@ export function buildPlayoffs(allMatches: Match[], roundLabels: string[] = []) {
   const chronologicalMatches = [...matches].sort(chronological);
   const losses = new Map<string, number>();
   const lossesBefore = new Map<number, [number, number]>();
-  let doubleElimination = matches.some(m => m.is_lower_bracket);
-  for (const m of chronologicalMatches) {
+  let doubleElimination = allMatches.some(m => m.is_lower_bracket);
+  for (const m of [...allMatches].sort(chronological)) {
     const before: [number, number] = [losses.get(m.team1) ?? 0, losses.get(m.team2) ?? 0];
     lossesBefore.set(m.id, before);
     // A recorded loser playing again outside a final confirms a second path.
@@ -74,6 +75,24 @@ export function buildPlayoffs(allMatches: Match[], roundLabels: string[] = []) {
     const nextFor = (team: string) => realTeam(team) ? entries.slice(i + 1).find(next => !!next.match.datetime_utc && (next.match.team1 === team || next.match.team2 === team)) : undefined;
     if (e.match.bracket_col == null) e.winnerNext ??= destination(nextFor(winner));
     if (e.match.bracket_col == null) e.loserNext ??= destination(nextFor(loser));
+  }
+  for (const entry of entries) {
+    const m = entry.match;
+    if (m.loser_outcome && m.loser_outcome !== 'auto') {
+      entry.loserOutcome = m.loser_outcome === 'none' ? undefined : m.loser_outcome;
+      continue;
+    }
+    const linked = allMatches.find(next => next.id === m.loser_next_match);
+    const linkedIsLater = !m.datetime_utc || !linked?.datetime_utc || linked.datetime_utc > m.datetime_utc;
+    if (entry.loserNext && ((m.loser_next_match != null && linkedIsLater) || m.winner == null)) { entry.loserOutcome = entry.loserNext.lane === 'lower' ? 'lower' : 'continues'; continue; }
+    if (m.winner == null) continue;
+    const loser = m.winner === 1 ? m.team2 : m.team1;
+    if (!realTeam(loser)) continue;
+    // Include hidden fixtures: removing a card does not change the team's actual run.
+    const future = m.datetime_utc ? [...allMatches].sort(chronological).find(next => next.datetime_utc && next.datetime_utc > m.datetime_utc! && (next.team1 === loser || next.team2 === loser)) : undefined;
+    if (future) { entry.loserOutcome = future.is_lower_bracket || (future.bracket_col == null && doubleElimination && !finalMatch(future) && !placementMatch(future)) ? 'lower' : 'continues'; continue; }
+    const losses = m.datetime_utc ? allMatches.filter(previous => previous.datetime_utc && previous.datetime_utc <= m.datetime_utc! && previous.winner != null && !placementMatch(previous) && (previous.winner === 1 ? previous.team2 : previous.team1) === loser).length : 0;
+    if (entry.lane === 'lower' || entry.lane === 'final' || (entry.lane === 'upper' && !doubleElimination) || losses >= 2) entry.loserOutcome = 'eliminated';
   }
   const finals = entries.filter(e => e.lane === 'final');
   const decidedFinal = finals.length === 1 && finals[0].match.winner != null ? finals[0].match : null;

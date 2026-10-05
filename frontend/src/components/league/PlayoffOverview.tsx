@@ -63,7 +63,7 @@ export default function PlayoffOverview({ rounds, doubleElimination, logos, shor
       {[m.team1, m.team2].map((team, i) => <div key={i} className={`po-mini-team${m.winner === i + 1 ? ' is-winner' : ''}`} title={team || 'TBD'}>
         <TeamMark short={shorts[team] || team || 'TBD'} logo={logos[team]} size={24}/><span>{shorts[team] || team || 'TBD'}</span>{m.winner === i + 1 && <small aria-label="Winner">✓</small>}<strong>{done ? i === 0 ? m.team1_score : m.team2_score : '–'}</strong>
       </div>)}
-      {entry.loserNext && <div className="po-mini-drop" title={`${loser} continues in ${entry.loserNext.round}, lower bracket`}>↳ {shorts[loser] || loser} to lower bracket</div>}
+      {entry.loserOutcome && <div className={`po-mini-drop${entry.loserOutcome === 'eliminated' ? ' is-eliminated' : ''}`}>{entry.loserOutcome === 'lower' ? '↳ ' : ''}{done ? shorts[loser] || loser : 'Loser'} {entry.loserOutcome === 'eliminated' ? 'eliminated' : entry.loserOutcome === 'lower' ? 'to lower bracket' : 'continues'}</div>}
     </button>;
   };
   return <div className="po-overview-map">
