@@ -208,7 +208,7 @@ function DateGroupSection({
         )}
       </div>
 
-      <div>
+      <div className="card overflow-hidden">
         {group.matches.map((m) => (
           <MatchListItem
             key={m.id}

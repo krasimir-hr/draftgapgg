@@ -64,8 +64,8 @@ export const getChampionStats = (limit = 6) =>
   api.get<ChampionStats>('/api/champion-stats/', { params: { limit } });
 
 // Organizations
-export const getOrganizations = (page = 1) =>
-  api.get<PaginatedResponse<Organization>>('/api/organizations/', { params: { page } });
+export const getOrganizations = (page = 1, pageSize = 50) =>
+  api.get<PaginatedResponse<Organization>>('/api/organizations/', { params: { page, page_size: pageSize } });
 
 // Players
 export const getPlayers = (page = 1) =>

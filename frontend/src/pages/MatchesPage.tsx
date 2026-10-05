@@ -1,10 +1,11 @@
 import { useMemo } from 'react';
 import { useNavigate, useLoaderData, useSearchParams, type LoaderFunctionArgs } from 'react-router-dom';
-import { getMatches } from '../api/core';
+import { getMatches, getOrganizations } from '../api/core';
 import type { Match } from '../types/models';
 import Pagination from '../components/Pagination';
 import EsportsLayout from '../components/EsportsLayout';
 import PageHeader from '../components/PageHeader';
+import { TeamMark } from '../components/league/shared';
 import { useDrawer } from '../contexts/DrawerContext';
 
 interface Props {
@@ -21,11 +22,18 @@ export interface MatchesLoaderData {
 export function matchesLoader(status?: 'finished' | 'upcoming') {
   return async ({ request }: LoaderFunctionArgs): Promise<MatchesLoaderData> => {
     const page = Number(new URL(request.url).searchParams.get('page')) || 1;
-    const res = await getMatches({
-      page,
-      ...(status === 'finished' ? { has_result: 'true' } : status === 'upcoming' ? { has_result: 'false' } : {}),
+    const [res, orgs] = await Promise.all([
+      getMatches({ page, ...(status === 'finished' ? { has_result: 'true' } : status === 'upcoming' ? { has_result: 'false' } : {}) }),
+      getOrganizations(1, 500).then(r => r.data.results).catch(() => []),
+    ]);
+    const byName = new Map(orgs.map(org => [org.name.toLowerCase(), org]));
+    const matches = res.data.results.map(m => {
+      const left = byName.get(m.team1.toLowerCase());
+      const right = byName.get(m.team2.toLowerCase());
+      return { ...m, team1_logo: m.team1_logo || left?.logo, team2_logo: m.team2_logo || right?.logo,
+        team1_short: m.team1_short || left?.short_name, team2_short: m.team2_short || right?.short_name };
     });
-    return { matches: res.data.results, count: res.data.count, page };
+    return { matches, count: res.data.count, page };
   };
 }
 
@@ -112,16 +120,18 @@ function MatchRow({ m, isLast }: { m: Match; isLast: boolean }) {
       </div>
 
       {/* Matchup */}
-      <div className="flex items-center gap-3 min-w-0">
+      <div className="dg-feed-pair grid items-center gap-3 min-w-0">
         <div
-          className="flex items-center gap-2 flex-1 min-w-0"
+          className="flex items-center gap-3 min-w-0 justify-end"
           style={{ opacity: played && !t1Win ? 0.8 : 1 }}
         >
           <span
             className={`text-sm truncate ${t1Win ? 'font-bold text-(--text-h)' : 'font-medium text-(--text-h)'}`}
+            title={m.team1}
           >
-            {m.team1}
+            <span className="dg-team-full">{m.team1}</span><span className="dg-team-short">{m.team1_short || m.team1}</span>
           </span>
+          <TeamMark short={m.team1_short || m.team1} logo={m.team1_logo} size={32} />
         </div>
 
         {played ? (
@@ -164,13 +174,15 @@ function MatchRow({ m, isLast }: { m: Match; isLast: boolean }) {
         )}
 
         <div
-          className="flex items-center gap-2 flex-1 min-w-0 justify-end"
+          className="flex items-center gap-3 min-w-0"
           style={{ opacity: played && !t2Win ? 0.8 : 1 }}
         >
+          <TeamMark short={m.team2_short || m.team2} logo={m.team2_logo} size={32} />
           <span
             className={`text-sm truncate ${t2Win ? 'font-bold text-(--text-h)' : 'font-medium text-(--text-h)'}`}
+            title={m.team2}
           >
-            {m.team2}
+            <span className="dg-team-full">{m.team2}</span><span className="dg-team-short">{m.team2_short || m.team2}</span>
           </span>
         </div>
       </div>
@@ -204,19 +216,14 @@ function DateGroupSection({ group }: { group: DateGroup }) {
         <h2
           className="font-display"
           style={{
-            fontSize: 22,
+            fontSize: 17,
             fontWeight: 600,
             color: isToday ? 'var(--accent-2)' : 'var(--text-h)',
             letterSpacing: '-0.02em',
           }}
         >
-          {group.label}
+          {group.date.getTime() < 8640000000000000 ? (isToday ? 'Today' : group.date.toLocaleDateString('en-GB', {weekday:'short',day:'numeric',month:'long'})) : 'Unscheduled'}
         </h2>
-        <span className="text-xs text-(--text-dim) tabular-nums">
-          {group.date.getTime() < 8640000000000000
-            ? group.date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
-            : ''}
-        </span>
         <span className="text-xs text-(--text-dim) ml-auto">
           {group.matches.length} {group.matches.length === 1 ? 'match' : 'matches'}
         </span>
@@ -238,7 +245,13 @@ export default function MatchesPage({ status }: Props) {
   const scope: Scope = scopeFromStatus(status);
   const totalPages = Math.ceil(count / 50);
 
-  const groups = useMemo(() => groupByDate(matches), [matches]);
+  const groups = useMemo(() => {
+    const grouped = groupByDate(matches);
+    if (scope !== 'recent') return grouped;
+    grouped.sort((a,b) => a.label === 'Unscheduled' || b.label === 'Unscheduled' ? Number(a.label === 'Unscheduled') - Number(b.label === 'Unscheduled') : b.date.getTime() - a.date.getTime());
+    for (const group of grouped) group.matches.sort((a,b) => (b.datetime_utc || '').localeCompare(a.datetime_utc || ''));
+    return grouped;
+  }, [matches, scope]);
 
   function setScope(s: Scope) {
     const next = SCOPE_TO_STATUS[s];
@@ -260,14 +273,14 @@ export default function MatchesPage({ status }: Props) {
 
       {/* Filter bar */}
       <div
-        className="card card-soft-shadow mb-6 flex flex-wrap items-center gap-3"
-        style={{ padding: '10px 14px' }}
+        className="dg-match-feed-filters mb-6 flex flex-wrap items-center gap-3"
+        style={{ padding: 0 }}
       >
         <div className="chip-group">
           {([
             { k: 'all', label: 'All' },
             { k: 'upcoming', label: 'Upcoming' },
-            { k: 'recent', label: 'Recent' },
+            { k: 'recent', label: 'Results' },
           ] as const).map((s) => (
             <button
               key={s.k}
@@ -279,9 +292,6 @@ export default function MatchesPage({ status }: Props) {
               {s.label}
             </button>
           ))}
-        </div>
-        <div className="ml-auto text-xs text-(--text-dim) tabular-nums">
-          {count} {count === 1 ? 'match' : 'matches'}
         </div>
       </div>
 

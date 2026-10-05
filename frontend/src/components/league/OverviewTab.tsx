@@ -22,6 +22,7 @@ export default function OverviewTab({
   data, teamShortNames, eventId, teamLogos = {}, onMatchSelect, subStages = [], bm, onViewMatches,
 }: Props) {
   const { standings, upcoming, recent } = data;
+  const [matchScope, setMatchScope] = useState<'upcoming' | 'results'>(upcoming.length ? 'upcoming' : 'results');
   const stageOnlySubStages = subStages.filter((ss) => ss.stageOnly);
   // Default to the current/latest stage: the last (most recent) stage that
   // already has a played match, falling back to the last stage overall.
@@ -61,16 +62,17 @@ export default function OverviewTab({
 
   return (
     <div className="dg-league-overview">
-      <div className="dg-overview-matches">
-        <MatchSummary title="Upcoming" matches={upcoming} teamLogos={teamLogos} teamShortNames={teamShortNames} onMatchSelect={onMatchSelect} onViewAll={onViewMatches} />
-        <MatchSummary title="Results" matches={recent} teamLogos={teamLogos} teamShortNames={teamShortNames} onMatchSelect={onMatchSelect} onViewAll={onViewMatches} />
-      </div>
+      <section className="dg-overview-matches" aria-label="Match centre">
+        <div className="dg-match-centre-heading"><div><span className="dg-section-index">01 / MATCH CENTRE</span><h2>{matchScope === 'results' ? 'Latest results' : 'Next matches'}</h2></div>
+          <div className="dg-match-centre-actions"><div className="dg-scope-switch"><button type="button" aria-pressed={matchScope === 'results'} onClick={() => setMatchScope('results')}>Results</button><button type="button" aria-pressed={matchScope === 'upcoming'} onClick={() => setMatchScope('upcoming')}>Upcoming</button></div>{onViewMatches && <button className="dg-all-matches" type="button" onClick={onViewMatches}>View all ↗</button>}</div>
+        </div>
+        <div className="dg-featured-matches">{(matchScope === 'results' ? recent : upcoming).slice(0,3).map(m => <MatchPreview key={m.id} match={m} teamLogos={teamLogos} teamShortNames={teamShortNames} onMatchSelect={onMatchSelect} />)}</div>
+        {(matchScope === 'results' ? recent : upcoming).length === 0 && <p className="dg-match-empty">{matchScope === 'results' ? 'No results yet.' : 'No upcoming fixtures scheduled.'}</p>}
+      </section>
 
       <div className="dg-overview-standings">
         {!stageNav && (
-          <h2 className="section-label pl-1" style={{ marginBottom: 10 }}>
-            Standings
-          </h2>
+          <div className="dg-standings-heading"><div><span className="dg-section-index">02 / COMPETITION</span><h2>Standings</h2></div><span>{standings.length} teams · Series record</span></div>
         )}
         <div className="card card-soft-shadow overflow-hidden" style={{ borderRadius: 12 }}>
         {stageNav && (
@@ -121,24 +123,16 @@ export default function OverviewTab({
   );
 }
 
-function MatchSummary({ title, matches, teamLogos, teamShortNames, onMatchSelect, onViewAll }: {
-  title: string; matches: Match[]; teamLogos: Record<string, string | null>;
-  teamShortNames: Record<string, string>; onMatchSelect?: (id: number) => void; onViewAll?: () => void;
+function MatchPreview({ match: m, teamLogos, teamShortNames, onMatchSelect }: {
+  match: Match; teamLogos: Record<string,string | null>; teamShortNames: Record<string,string>; onMatchSelect?: (id:number) => void;
 }) {
-  return <section className="dg-match-summary">
-    <div className="dg-panel-heading"><h2>{title}</h2>{onViewAll && <button type="button" onClick={onViewAll}>All matches ↗</button>}</div>
-    {matches.length === 0 ? <p className="dg-quiet-empty">{title === 'Upcoming' ? 'No upcoming matches scheduled.' : 'No results yet.'}</p> : matches.slice(0, 4).map(m => {
-      const date = m.datetime_utc ? new Date(m.datetime_utc) : null;
-      return <button className="dg-summary-match" key={m.id} type="button" onClick={() => onMatchSelect?.(m.id)}>
-        <span className="dg-summary-date">{date ? date.toLocaleDateString('en-GB', { day:'numeric', month:'short' }) : 'TBD'}<small>{m.winner == null && date ? date.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : `BO${m.best_of}`}</small></span>
-        <span className="dg-summary-teams">{[m.team1,m.team2].map((name,i) => <span key={i}>
-          <TeamMark short={teamShortNames[name] || name} logo={teamLogos[name]} size={24} />
-          <span className={m.winner === i+1 ? 'dg-winner' : ''}>{teamShortNames[name] || name}</span>
-          <strong>{m.winner == null ? '–' : i === 0 ? m.team1_score : m.team2_score}</strong>
-        </span>)}</span>
-      </button>;
-    })}
-  </section>;
+  const date = m.datetime_utc ? new Date(m.datetime_utc) : null;
+  const played = m.winner != null;
+  return <button className="dg-match-preview" type="button" onClick={() => onMatchSelect?.(m.id)} aria-label={`${m.team1} ${played ? m.team1_score : 'vs'} ${m.team2} ${played ? m.team2_score : ''}`}>
+    <span className="dg-preview-meta"><span>{date ? date.toLocaleDateString('en-GB', {day:'numeric',month:'short'}) : 'TBD'}<span className="dg-meta-divider">/</span>{m.tab || `BO${m.best_of}`}</span><span className="dg-match-status">{played ? 'FINAL' : `BO${m.best_of}`}</span></span>
+    <span className="dg-preview-matchup">{[m.team1,m.team2].map((name,i) => <span className={`dg-preview-team${m.winner === i+1 ? ' is-winner' : ''}`} key={i}><TeamMark short={teamShortNames[name] || name} logo={teamLogos[name]} size={44}/><strong>{teamShortNames[name] || name}</strong></span>)}<span className="dg-preview-score">{played ? <><strong>{m.team1_score}</strong><span>:</span><strong>{m.team2_score}</strong></> : <small>{date ? date.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : 'TBD'}</small>}</span></span>
+    <span className="dg-preview-footer"><span>Best of {m.best_of}</span><span>Match details ↗</span></span>
+  </button>;
 }
 
 /* Standings card (top 10) */
@@ -172,7 +166,7 @@ function StandingsTable({
             {standings.map((s, i) => (
               <tr
                 key={s.team}
-                className="transition-colors hover:bg-(--surface-sub)"
+                className={`dg-standing-row${i === 0 ? ' is-first' : ''}`}
                 style={{ borderTop: i > 0 ? '1px solid var(--border)' : 'none' }}
               >
                 <td

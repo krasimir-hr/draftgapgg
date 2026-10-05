@@ -61,7 +61,7 @@ function Predictions({ data }: { data: WorldsData }) {
         </header>
 
         {demo && <section className="wp-demo-banner" aria-label="Demo mode">
-          <div><strong>Demo mode · Sample matches</strong><p>These teams, matchups, dates and results are hypothetical. Try making picks across all three stages. Nothing is saved.</p></div>
+          <div><strong>Demo mode · Sample matches</strong><p>Hypothetical teams, matchups and results for testing. Picks aren’t saved.</p></div>
           <Link className="wp-button" to="/worlds-2026/predictions">Back to real schedule</Link>
         </section>}
 
@@ -113,7 +113,7 @@ function Predictions({ data }: { data: WorldsData }) {
                             <div className="wp-team-slot" key={index}>
                               {index === 1 && <span className="wp-vs" aria-hidden="true">vs</span>}
                               <button type="button" className="wp-team" disabled={!canPick} aria-pressed={winner === name} aria-label={`Pick ${name || 'TBD'} to beat ${names[1 - index] || 'TBD'}`} onClick={() => selectWinner(match.id, name, Date.now())}>
-                                <span className="wp-team-mark" aria-hidden="true">{logo ? <img src={logo} alt="" width={32} height={32} loading="lazy" /> : shortName}</span>
+                                <span className="wp-team-mark" aria-hidden="true">{logo ? <img src={logo} alt="" width={32} height={32} loading="lazy" /> : /^TBD$/i.test(name) ? '?' : shortName}</span>
                                 <span className="wp-team-name">{name || 'TBD'}</span>
                                 <span className="wp-choice" aria-hidden="true" hidden={!canPick}>{winner === name ? '✓' : ''}</span>
                               </button>

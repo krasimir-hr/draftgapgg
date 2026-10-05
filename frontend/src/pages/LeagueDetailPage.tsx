@@ -165,6 +165,7 @@ export default function LeagueDetailPage() {
                 </span>
               )}
               <div>
+                <p className="dg-league-kicker">League of Legends <span>/</span> {effectiveYear}</p>
                 <h1 className="league-hero-name">{leagueLabel}</h1>
                 <p className="league-hero-subtitle">{league.name}</p>
               </div>

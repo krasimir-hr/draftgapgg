@@ -106,6 +106,7 @@ export function TeamMark({
   color?: string | null;
   size?: number;
 }) {
+  if (/^TBD$/i.test(short)) return <div className="dg-team-pending shrink-0 flex items-center justify-center" aria-hidden="true" style={{width:size,height:size}}>?</div>;
   if (logo) {
     return (
       <div

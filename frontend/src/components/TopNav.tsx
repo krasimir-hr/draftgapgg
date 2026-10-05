@@ -96,89 +96,57 @@ function SearchPanel({ leagues, onClose }: { leagues: TopNavLeague[]; onClose: (
   );
 }
 
+function NavGlyph({ kind }: { kind: 'matches' | 'leagues' | 'predictions' }) {
+  return <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+    {kind === 'matches' ? <><rect x="3" y="4" width="14" height="13" rx="2"/><path d="M7 2v4m6-4v4M3 9h14m-10 4h2m3 0h2"/></> : kind === 'leagues' ? <><path d="M6 3h8v5a4 4 0 0 1-8 0V3Zm4 9v5m-4 0h8M6 5H3v2a4 4 0 0 0 4 4m7-6h3v2a4 4 0 0 1-4 4"/></> : <><path d="m11 2-7 9h6l-1 7 7-10h-6l1-6Z"/></>}
+  </svg>;
+}
+
 export default function TopNav({ logo, logoAlt = 'DraftGap', leagues }: TopNavProps) {
   const { pathname } = useLocation();
-  const [panel, setPanel] = useState<'search' | 'leagues' | null>(null);
-  const ref = useRef<HTMLElement>(null);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const searchTrigger = useRef<HTMLButtonElement>(null);
-  const leaguesTrigger = useRef<HTMLButtonElement>(null);
-  const leagueActive = pathname.startsWith('/leagues');
-  const predictionsActive = pathname.startsWith('/worlds-2026/predictions');
-
-  function closePanel() {
-    setPanel(null);
-    (panel === 'search' ? searchTrigger : leaguesTrigger).current?.focus();
-  }
-
+  const searchRef = useRef<HTMLDivElement>(null);
+  const section = pathname.startsWith('/worlds') ? 'Predictions' : pathname.startsWith('/matches') ? 'Matches' : pathname.startsWith('/players') ? 'Players' : pathname.startsWith('/teams') ? 'Teams' : pathname.startsWith('/champions') ? 'Champions' : 'Competition';
+  function closeSearch() { setSearchOpen(false); searchTrigger.current?.focus(); }
+  function navigateAway() { setMobileOpen(false); setSearchOpen(false); }
   useEffect(() => {
-    if (!panel) return;
-    const outside = (event: PointerEvent) => {
-      if (ref.current && !ref.current.contains(event.target as Node)) setPanel(null);
-    };
-    const escape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setPanel(null);
-        (panel === 'search' ? searchTrigger : leaguesTrigger).current?.focus();
-      }
-    };
-    document.addEventListener('pointerdown', outside);
+    const escape = (event: KeyboardEvent) => { if (event.key === 'Escape') { setSearchOpen(false); setMobileOpen(false); searchTrigger.current?.focus(); } };
+    const outside = (event: PointerEvent) => { if (searchRef.current && !searchRef.current.contains(event.target as Node)) setSearchOpen(false); };
     document.addEventListener('keydown', escape);
-    return () => { document.removeEventListener('pointerdown', outside); document.removeEventListener('keydown', escape); };
-  }, [panel]);
-
-  return (
-    <header className="dg-header" ref={ref}>
-      <div className="dg-header-inner">
-        <Link to="/" className="dg-brand" aria-label="DraftGap home" onClick={() => setPanel(null)}>
-          <span className="dg-brand-mark" aria-hidden="true">
-            <svg viewBox="0 0 32 32" width="24" height="24" fill="none"><path d="M5 8h15l-5 7H3L5 8Zm12 9h12l-2 7H12l5-7Z" fill="currentColor" /></svg>
-          </span>
-          <span className="dg-brand-text"><img src={logo} alt={logoAlt} width={156} height={20} /><span>League of Legends esports</span></span>
-        </Link>
-
-        <nav className="dg-primary-nav" aria-label="Primary navigation">
-          <div className="dg-leagues">
-            <button
-              ref={leaguesTrigger}
-              type="button"
-              className={`dg-nav-link${leagueActive || panel === 'leagues' ? ' is-active' : ''}`}
-              aria-expanded={panel === 'leagues'}
-              aria-controls="dg-league-panel"
-              onClick={() => setPanel(panel === 'leagues' ? null : 'leagues')}
-            >Leagues <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><path d="m4 6 4 4 4-4" /></svg></button>
-            {panel === 'leagues' && (
-              <section id="dg-league-panel" className="dg-league-panel" aria-label="Browse leagues">
-                <div className="dg-panel-heading"><strong>Find your league</strong><Link to="/leagues" onClick={closePanel}>View all ↗</Link></div>
-                {(['regional', 'international'] as const).map((group) => (
-                  leagues.some((league) => league.group === group) && <div key={group}>
-                    <p className="dg-panel-label">{group === 'regional' ? 'Regional leagues' : 'International events'}</p>
-                    <div className="dg-league-grid">{leagues.filter((league) => league.group === group).map((league) => (
-                      <Link key={league.slug} to={`/leagues/${league.slug}`} className="dg-league-item" onClick={closePanel}>
-                        {league.logo ? <img src={league.logo} alt="" className={WHITE_LOGOS.has(league.slug) ? 'dg-white-logo' : undefined} /> : <span className="dg-league-monogram" aria-hidden="true">{league.label.slice(0, 3)}</span>}
-                        {league.label}
-                      </Link>
-                    ))}</div>
-                  </div>
-                ))}
-                {!leagues.length && <p className="dg-no-results">League listings are currently unavailable. You can still explore the tournament pages.</p>}
-              </section>
-            )}
-          </div>
-          <Link to="/matches" className={`dg-nav-link${pathname.startsWith('/matches') ? ' is-active' : ''}`} aria-current={pathname.startsWith('/matches') ? 'page' : undefined} onClick={() => setPanel(null)}>Matches</Link>
-          <Link to="/worlds-2026/predictions" className={`dg-nav-link dg-predictions-link${predictionsActive ? ' is-active' : ''}`} aria-current={predictionsActive ? 'page' : undefined} onClick={() => setPanel(null)}>
-            Predictions <span className="dg-season">2026</span>
-          </Link>
-        </nav>
-
-        <div className="dg-header-actions">
-          <button ref={searchTrigger} type="button" className={`dg-search-trigger${panel === 'search' ? ' is-open' : ''}`} aria-label="Open search" aria-expanded={panel === 'search'} aria-controls="dg-search-panel" onClick={() => setPanel(panel === 'search' ? null : 'search')}>
-            <SearchIcon /><span>Search</span>
-          </button>
-          <span className="dg-action-divider" aria-hidden="true" />
-          <ThemeToggle />
+    document.addEventListener('pointerdown', outside);
+    return () => { document.removeEventListener('keydown', escape); document.removeEventListener('pointerdown', outside); };
+  }, []);
+  return <>
+    {mobileOpen && <button className="dg-nav-backdrop" aria-label="Close navigation" onClick={() => setMobileOpen(false)} />}
+    <header className={`dg-header${mobileOpen ? ' is-mobile-open' : ''}`}>
+      <Link to="/" className="dg-brand" aria-label="DraftGap home" onClick={navigateAway}>
+        <span className="dg-brand-mark" aria-hidden="true"><svg viewBox="0 0 32 32" width="24" height="24"><path d="M5 8h15l-5 7H3L5 8Zm12 9h12l-2 7H12l5-7Z" fill="currentColor"/></svg></span>
+        <img src={logo} alt={logoAlt} width={134} height={20} />
+      </Link>
+      <nav className="dg-primary-nav" aria-label="Primary navigation">
+        <p className="dg-nav-label">Explore</p>
+        {([
+          {to:'/matches',label:'Matches',kind:'matches'},
+          {to:'/leagues',label:'Leagues',kind:'leagues'},
+          {to:'/worlds-2026/predictions',label:'Predictions',kind:'predictions'},
+        ] as const).map(item => <Link key={item.to} to={item.to} onClick={navigateAway} className={`dg-nav-link${pathname.startsWith(item.to) ? ' is-active' : ''}`} aria-current={pathname.startsWith(item.to) ? 'page' : undefined}>
+          <NavGlyph kind={item.kind}/>{item.label}{item.kind === 'predictions' && <small>2026</small>}
+        </Link>)}
+        <div className="dg-league-list">
+          <p className="dg-nav-label">Competitions</p>
+          {leagues.map(league => <Link key={league.slug} to={`/leagues/${league.slug}`} onClick={navigateAway} className={`dg-league-link${pathname.startsWith(`/leagues/${league.slug}`) ? ' is-active' : ''}`} aria-current={pathname.startsWith(`/leagues/${league.slug}`) ? 'page' : undefined}>
+            <span>{league.logo ? <img src={league.logo} alt="" className={WHITE_LOGOS.has(league.slug) ? '' : 'dg-invert-logo'} /> : league.label.slice(0,2)}</span>{league.label}<span className="dg-league-arrow" aria-hidden="true">↗</span>
+          </Link>)}
         </div>
-        {panel === 'search' && <SearchPanel leagues={leagues} onClose={closePanel} />}
-      </div>
+      </nav>
+      <div className="dg-nav-footer"><span>Appearance</span><ThemeToggle /></div>
     </header>
-  );
+    <div className="dg-utility-bar" ref={searchRef}>
+      <div className="dg-utility-context"><button className="dg-mobile-menu" aria-label="Open navigation" aria-expanded={mobileOpen} onClick={() => setMobileOpen(!mobileOpen)}><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M3 5h14M3 10h14M3 15h14"/></svg></button><span className="dg-utility-brand">DraftGap</span><span className="dg-context-slash">/</span><strong>{section}</strong></div>
+      <button ref={searchTrigger} className="dg-search-trigger" type="button" aria-label="Open search" aria-expanded={searchOpen} aria-controls="dg-search-panel" onClick={() => setSearchOpen(!searchOpen)}><SearchIcon/><span>Search competitions</span><span className="dg-search-key">↵</span></button>
+      {searchOpen && <SearchPanel leagues={leagues} onClose={closeSearch} />}
+    </div>
+  </>;
 }

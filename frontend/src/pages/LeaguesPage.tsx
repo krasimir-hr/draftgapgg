@@ -18,23 +18,13 @@ export async function leaguesLoader({ request }: LoaderFunctionArgs): Promise<Le
   return { leagues: res.data.results, count: res.data.count, page };
 }
 
-const LEAGUE_COLOR: Record<string, string> = {
-  LCK:   '#a78bfa',
-  LPL:   '#dc2626',
-  LEC:   '#3b82f6',
-  LCS:   '#06b6d4',
-  CBLoL: '#10b981',
-  LCP:   '#f59e0b',
-};
-
 function LeagueIcon({ league }: { league: League }) {
   const label = league.short_name ?? league.name;
-  const color = LEAGUE_COLOR[label] ?? 'var(--accent)';
   if (league.logo) {
     return (
       <div
-        className="flex items-center justify-center shrink-0"
-        style={{ width: 48, height: 48, borderRadius: 10, background: color }}
+        className="dg-directory-mark flex items-center justify-center shrink-0"
+        style={{ width: 56, height: 56, borderRadius: 9, background: 'var(--surface-sub)' }}
       >
         <img
           src={league.logo}
@@ -51,9 +41,9 @@ function LeagueIcon({ league }: { league: League }) {
   }
   return (
     <div
-      className="flex items-center justify-center shrink-0 text-white font-bold"
+      className="flex items-center justify-center shrink-0 text-(--text-h) font-bold"
       style={{
-        width: 48, height: 48, borderRadius: 10, background: color,
+        width: 56, height: 56, borderRadius: 9, background: 'var(--surface-sub)',
         fontFamily: 'var(--font-sans)', fontSize: 14, letterSpacing: '-0.02em',
       }}
     >
