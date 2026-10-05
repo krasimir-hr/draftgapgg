@@ -16,7 +16,7 @@ const { resolveLeagueView, bracketNeeds } = await import(moduleUrl('../src/lib/l
   '../utils/slugs': moduleUrl('../src/utils/slugs.ts'),
 }));
 const { orderedBracketTabs } = await import(moduleUrl('../src/lib/bracketRounds.ts'));
-const { buildPlayoffs } = await import(moduleUrl('../src/lib/playoffStructure.ts', {
+const { buildPlayoffs, orderPlayoffRounds } = await import(moduleUrl('../src/lib/playoffStructure.ts', {
   './bracketRounds': moduleUrl('../src/lib/bracketRounds.ts'),
 }));
 const league = { id: 1, name: 'LoL Champions Korea', short_name: 'LCK' };
@@ -128,4 +128,15 @@ test('pending fixtures preserve explicit wiring without inventing champions or T
   assert.deepEqual(model.teams, []);
   assert.deepEqual(model.rounds[0].matches[0].winnerNext, { matchId: 2, round: 'Finals', lane: 'final' });
   assert.equal(model.rounds[0].matches[0].loserNext, undefined);
+});
+
+
+test('whole bracket aligns feeders with destinations without changing chronological round details', () => {
+  const model = buildPlayoffs(lckPlayoffs);
+  const arranged = orderPlayoffRounds(model.rounds);
+  assert.deepEqual(arranged[0].matches.filter(e => e.lane === 'upper').map(e => e.match.id), [886, 885]);
+  assert.deepEqual(arranged[1].matches.filter(e => e.lane === 'upper').map(e => e.match.id), [888, 889]);
+  assert.deepEqual(model.rounds[0].matches.map(e => e.match.id), [885, 886, 887]);
+  assert.equal(arranged.flatMap(r => r.matches).length, 10);
+  assert.deepEqual(arranged.map(r => r.key), model.rounds.map(r => r.key));
 });

@@ -9,6 +9,20 @@ export interface PlayoffMatch {
   loserNext?: { matchId: number; round: string; lane: PlayoffLane };
 }
 export interface PlayoffRound { key: string; label: string; matches: PlayoffMatch[] }
+
+// Arrange feeders beside their destinations without changing chronological detail views.
+export function orderPlayoffRounds(rounds: PlayoffRound[]): PlayoffRound[] {
+  const arranged = rounds.map(r => ({ ...r, matches: [...r.matches] }));
+  for (let i = arranged.length - 2; i >= 0; i--) {
+    const positions = new Map(arranged.slice(i + 1).flatMap((r, col) => r.matches.map((e, row) => [e.match.id, { col, row }] as const)));
+    arranged[i].matches.sort((a, b) => {
+      if (a.lane !== b.lane || !a.winnerNext || !b.winnerNext) return 0;
+      const toA = positions.get(a.winnerNext.matchId), toB = positions.get(b.winnerNext.matchId);
+      return toA && toB && toA.col === toB.col ? toA.row - toB.row : 0;
+    });
+  }
+  return arranged;
+}
 const realTeam = (name: string) => !!name?.trim() && !/^tbd$/i.test(name.trim());
 const finalMatch = (m: Match) => m.is_final || /^(?:grand\s+)?finals?$/i.test(m.tab?.trim() ?? '');
 const placementMatch = (m: Match) => /\b(?:third[ -]?place|3rd[ -]?place|bronze|placement)\b/i.test(m.tab ?? '');
