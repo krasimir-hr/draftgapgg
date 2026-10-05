@@ -134,52 +134,30 @@ function AccoladesRow({ highlights, teamShortNames }: { highlights: EventHighlig
 }
 
 function HighlightTile({
-  kicker, title, sub, visual, backdrop,
+  kicker, title, sub, visual,
 }: {
   kicker: string;
   title: React.ReactNode;
   sub: React.ReactNode;
   visual: React.ReactNode;
-  backdrop?: React.ReactNode;
 }) {
   return (
-    <div className="hl-card">
-      {backdrop}
-      <div className="hl-glow" aria-hidden />
-      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.6) 60%, rgba(0,0,0,0.5) 100%)' }} />
-      <div style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', gap: 12, height: '100%', padding: '0 14px' }}>
-        <div style={{ flexShrink: 0 }}>{visual}</div>
-        <div style={{ minWidth: 0, flex: 1 }}>
-          <div style={{ fontSize: 8.5, letterSpacing: '0.13em', fontWeight: 700, color: '#c4b5fd', textTransform: 'uppercase', marginBottom: 3, textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>
-            {kicker}
-          </div>
-          <div style={{ fontSize: 14, fontWeight: 700, color: '#fff', letterSpacing: '-0.01em', lineHeight: 1.15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {title}
-          </div>
-          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 6 }}>
-            {sub}
-          </div>
-        </div>
+    <div className="dg-highlight">
+      <div className="dg-highlight-visual">{visual}</div>
+      <div className="dg-highlight-copy">
+        <p className="dg-highlight-label">{kicker}</p>
+        <div className="dg-highlight-title">{title}</div>
+        <div className="dg-highlight-detail">{sub}</div>
       </div>
     </div>
   );
 }
 
-function BlurLogoBackdrop({ src }: { src: string }) {
-  return (
-    <img
-      src={src} alt="" aria-hidden className="hl-zoom"
-      style={{ position: 'absolute', top: '50%', left: '55%', marginTop: -110, marginLeft: -110, width: 220, height: 220, objectFit: 'contain', filter: 'blur(22px) brightness(0.55)', opacity: 0.9 }}
-    />
-  );
-}
-
-/* Fixed dark-theme W/L colors: the tiles keep a dark image scrim in both themes. */
 function MiniForm({ form }: { form: ('W' | 'L')[] }) {
   return (
     <span style={{ display: 'inline-flex', gap: 3 }}>
       {form.slice(-5).map((c, i) => (
-        <span key={i} style={{ fontSize: 9.5, fontWeight: 800, color: c === 'W' ? '#4ade80' : '#f87171' }}>{c}</span>
+        <span key={i} style={{ fontSize: 12, fontWeight: 600, color: c === 'W' ? 'var(--green)' : 'var(--red)' }}>{c}</span>
       ))}
     </span>
   );
@@ -190,15 +168,14 @@ function PlayerOfMonthCard({ p }: { p: NonNullable<EventHighlights['player_of_mo
     <HighlightTile
       kicker="Best Performer"
       title={p.name}
-      sub={<span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}><strong style={{ color: '#d8ccfd', fontWeight: 700 }}>{p.kda} KDA</strong> · {p.avg_kills}/{p.avg_deaths}/{p.avg_assists} · {p.team}</span>}
-      backdrop={p.team_logo ? <BlurLogoBackdrop src={p.team_logo} /> : undefined}
+      sub={<span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}><strong style={{ color: 'var(--accent)', fontWeight: 700 }}>{p.kda} KDA</strong> · {p.avg_kills}/{p.avg_deaths}/{p.avg_assists} · {p.team}</span>}
       visual={
         p.image ? (
           <div style={{ width: 44, height: 44, borderRadius: 10, overflow: 'hidden', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)' }}>
             <img src={p.image} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: '50% 12%' }} />
           </div>
         ) : p.team_logo ? (
-          <img src={p.team_logo} alt={p.team} style={{ width: 38, height: 38, objectFit: 'contain', filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.6))' }} />
+          <img src={p.team_logo} alt={p.team} style={{ width: 38, height: 38, objectFit: 'contain', filter: 'none' }} />
         ) : (
           <div style={{ width: 44, height: 44, borderRadius: 10, background: '#171717', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fafafa', fontSize: 15, fontWeight: 700 }}>{p.name.charAt(0)}</div>
         )
@@ -213,10 +190,9 @@ function InformTeamCard({ t }: { t: NonNullable<EventHighlights['inform_team']> 
       kicker="On Fire"
       title={t.team}
       sub={<><span>{t.wins}W–{t.played - t.wins}L</span><MiniForm form={t.form} /></>}
-      backdrop={t.logo ? <BlurLogoBackdrop src={t.logo} /> : undefined}
       visual={
         t.logo
-          ? <img src={t.logo} alt={t.team} style={{ width: 38, height: 38, objectFit: 'contain', filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.6))' }} />
+          ? <img src={t.logo} alt={t.team} style={{ width: 38, height: 38, objectFit: 'contain', filter: 'none' }} />
           : <div style={{ width: 44, height: 44, borderRadius: 10, background: '#171717', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fafafa', fontSize: 15, fontWeight: 700 }}>{t.team.charAt(0)}</div>
       }
     />
@@ -230,12 +206,9 @@ function MustPickCard({ c }: { c: NonNullable<EventHighlights['must_pick']> }) {
       title={c.name}
       sub={
         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
-          {c.win_rate !== null && <strong style={{ color: c.win_rate >= 60 ? '#4ade80' : '#fbbf24', fontWeight: 700 }}>{c.win_rate}% WR</strong>}
+          {c.win_rate !== null && <strong style={{ color: c.win_rate >= 60 ? 'var(--green)' : 'var(--amber)', fontWeight: 700 }}>{c.win_rate}% WR</strong>}
           {c.win_rate !== null && ' · '}{c.wins}W–{c.picks - c.wins}L · {c.picks} picks
         </span>
-      }
-      backdrop={
-        <img src={c.splash_url} alt="" aria-hidden className="hl-zoom" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 18%', filter: 'brightness(0.75)' }} />
       }
       visual={<img src={c.icon_url} alt={c.name} style={{ width: 44, height: 44, borderRadius: 10, border: '1px solid rgba(255,255,255,0.2)', display: 'block' }} />}
     />
@@ -252,7 +225,7 @@ function formatMatchWhen(iso: string | null): string | null {
 function FaceOffVisual({ logo1, logo2, name1, name2 }: { logo1: string | null; logo2: string | null; name1: string; name2: string }) {
   const logo = (src: string | null, name: string, offset: boolean) => (
     src
-      ? <img src={src} alt={name} style={{ width: 30, height: 30, objectFit: 'contain', marginLeft: offset ? -8 : 0, filter: 'drop-shadow(0 3px 8px rgba(0,0,0,0.7))' }} />
+      ? <img src={src} alt={name} style={{ width: 30, height: 30, objectFit: 'contain', marginLeft: offset ? -8 : 0, filter: 'none' }} />
       : <div style={{ width: 30, height: 30, borderRadius: 8, background: '#171717', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fafafa', fontSize: 10, fontWeight: 700, marginLeft: offset ? -8 : 0 }}>{name.slice(0, 2)}</div>
   );
   return (
@@ -285,7 +258,7 @@ function MatchOfWeekCard({ m, sn }: { m: NonNullable<EventHighlights['match_of_w
       title={
         <FaceOffTitle
           left={sn[m.team1] || m.team1}
-          center={<span style={{ color: 'rgba(255,255,255,0.4)', fontWeight: 600, fontSize: 11 }}>vs</span>}
+          center={<span style={{ color: 'var(--text-dim)', fontWeight: 600, fontSize: 11 }}>vs</span>}
           right={sn[m.team2] || m.team2}
         />
       }
@@ -295,7 +268,6 @@ function MatchOfWeekCard({ m, sn }: { m: NonNullable<EventHighlights['match_of_w
           {when ?? 'Time TBD'}
         </span>
       }
-      backdrop={m.team1_logo ? <BlurLogoBackdrop src={m.team1_logo} /> : m.team2_logo ? <BlurLogoBackdrop src={m.team2_logo} /> : undefined}
       visual={<FaceOffVisual logo1={m.team1_logo} logo2={m.team2_logo} name1={m.team1} name2={m.team2} />}
     />
   );
@@ -308,13 +280,12 @@ function BangerOfWeekCard({ m, sn }: { m: NonNullable<EventHighlights['banger_of
       kicker="Banger of the Week"
       title={
         <FaceOffTitle
-          left={<span style={{ color: m.winner === 1 ? '#fff' : 'rgba(255,255,255,0.55)' }}>{sn[m.team1] || m.team1}</span>}
-          center={<span style={{ color: '#d8ccfd', fontWeight: 800 }}>{m.team1_score}–{m.team2_score}</span>}
-          right={<span style={{ color: m.winner === 2 ? '#fff' : 'rgba(255,255,255,0.55)' }}>{sn[m.team2] || m.team2}</span>}
+          left={<span style={{ color: m.winner === 1 ? 'var(--text-h)' : 'var(--text-dim)' }}>{sn[m.team1] || m.team1}</span>}
+          center={<span style={{ color: 'var(--accent)', fontWeight: 800 }}>{m.team1_score}–{m.team2_score}</span>}
+          right={<span style={{ color: m.winner === 2 ? 'var(--text-h)' : 'var(--text-dim)' }}>{sn[m.team2] || m.team2}</span>}
         />
       }
       sub={<span>{when ?? 'Recently played'}</span>}
-      backdrop={m.team1_logo ? <BlurLogoBackdrop src={m.team1_logo} /> : m.team2_logo ? <BlurLogoBackdrop src={m.team2_logo} /> : undefined}
       visual={<FaceOffVisual logo1={m.team1_logo} logo2={m.team2_logo} name1={m.team1} name2={m.team2} />}
     />
   );

@@ -114,7 +114,7 @@ function MatchDetailView() {
         <div className="match-hero-bar">
           {/* Score row */}
           <div className="match-hero-score">
-            <div className="grid items-center" style={{ gridTemplateColumns: 'minmax(0, 1fr) auto minmax(0, 1fr)', gap: 18 }}>
+            <div className="dg-match-score-grid grid items-center" style={{ gridTemplateColumns: 'minmax(0, 1fr) auto minmax(0, 1fr)', gap: 18 }}>
               <TeamHeader team={t1} won={t1Win} played={played} align="left" onClick={() => openTeam(t1.name)} />
               <div className="font-display tabular-nums text-center" style={{ fontSize: 'clamp(30px, 7vw, 46px)', fontWeight: 700, color: 'var(--text-h)', letterSpacing: '-0.04em', lineHeight: 1, padding: '0 12px' }}>
                 {played ? (
@@ -222,7 +222,7 @@ function TeamHeader({ team, won, played, align, onClick }: { team: TeamMeta; won
     <button
       type="button"
       onClick={onClick}
-      className="flex items-center min-w-0 hover:opacity-80 transition-opacity"
+      className="dg-match-team flex items-center min-w-0 hover:opacity-80 transition-opacity"
       style={{ flexDirection: right ? 'row-reverse' : 'row', textAlign: right ? 'right' : 'left', gap: 14, background: 'transparent', border: 0, cursor: 'pointer' }}
     >
       <TeamMark team={team} size={64} />

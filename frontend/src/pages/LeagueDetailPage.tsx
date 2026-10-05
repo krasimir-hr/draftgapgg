@@ -218,14 +218,20 @@ export default function LeagueDetailPage() {
           <div className="league-hero-top flex items-center">
             <div className="league-hero-brand flex items-center">
               {league.logo && (
+                <span className="dg-league-crest">
                 <img
                   src={league.logo}
                   alt={leagueLabel}
                   decoding="async"
                   className="league-hero-bar-logo logo-themed"
                 />
+                </span>
               )}
-              <span className="league-hero-name">{leagueLabel}</span>
+              <div>
+                <p className="dg-eyebrow"><span />League of Legends · Tournament hub</p>
+                <h1 className="league-hero-name">{leagueLabel}</h1>
+                <p className="league-hero-subtitle">{league.name}</p>
+              </div>
             </div>
             <span className="league-hero-spacer" aria-hidden="true" />
             <div className="league-hero-selects flex items-center gap-2">

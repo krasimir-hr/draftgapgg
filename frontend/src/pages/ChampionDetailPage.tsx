@@ -32,9 +32,9 @@ type Tab = 'Overview' | 'Abilities' | 'Matches';
 const SECTION = 'text-(--text-dim) uppercase font-semibold';
 const sectionStyle = { fontSize: 10.5, letterSpacing: '0.1em' } as const;
 
-function Card({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
+function Card({ children, style, className = '' }: { children: React.ReactNode; style?: React.CSSProperties; className?: string }) {
   return (
-    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, ...style }}>
+    <div className={`card ${className}`} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, ...style }}>
       {children}
     </div>
   );
@@ -93,7 +93,7 @@ function kdaStr(k: number, d: number, a: number) {
 function Headline({ stats }: { stats: ChampionProfileStats }) {
   const wr = stats.win_rate ?? 0;
   return (
-    <Card style={{ display: 'grid', gridTemplateColumns: 'auto 1fr 1fr 1fr', alignItems: 'center' }}>
+    <Card className="dg-summary">
       <div className="flex items-center gap-3" style={{ padding: '18px 22px', borderRight: '1px solid var(--border)' }}>
         <Ring pct={wr} size={62} stroke={5}>
           <span className="tabular-nums font-display" style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-h)' }}>
@@ -128,7 +128,7 @@ function HeadlineCell({ label, value, sub, border }: { label: string; value: str
 /** Where the champion is played + how each side performs. */
 function RolesAndSides({ roles, stats }: { roles: ChampionProfileRole[]; stats: ChampionProfileStats }) {
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 22, alignItems: 'start' }}>
+    <div className="dg-profile-analysis">
       <div>
         <h3 className="section-label" style={{ marginBottom: 10 }}>Roles</h3>
         <Card style={{ overflow: 'hidden' }}>
@@ -187,7 +187,7 @@ function BestPlayers({ players, onPlayer }: { players: ChampionProfilePlayer[]; 
   return (
     <div style={{ marginTop: 22 }}>
       <h3 className="section-label" style={{ marginBottom: 10 }}>Best players</h3>
-      <Card style={{ overflow: 'hidden' }}>
+      <Card className="dg-pool">
         <div
           className="grid items-center text-(--text-dim) uppercase font-semibold"
           style={{ gridTemplateColumns: '40px 1fr 56px 150px 56px', gap: 14, padding: '9px 16px', fontSize: 9.5, letterSpacing: '0.07em', borderBottom: '1px solid var(--border)' }}
@@ -399,22 +399,11 @@ function ChampionDetailView() {
     <EsportsLayout right={<ChampionRail regions={best_regions} recent={recent_games} />}>
       {/* Hero card */}
       <div
-        className="card card-xl card-soft-shadow overflow-hidden relative"
+        className="card dg-profile-hero overflow-hidden relative"
         style={{ borderRadius: 16 }}
       >
-        {champion.splash_url && (
-          <div
-            aria-hidden
-            style={{
-              position: 'absolute', inset: 0,
-              backgroundImage: `linear-gradient(90deg, var(--surface) 12%, transparent 65%), url(${champion.splash_url})`,
-              backgroundSize: 'cover', backgroundPosition: 'right 22%',
-              opacity: 0.5, pointerEvents: 'none',
-            }}
-          />
-        )}
         <div className="relative">
-          <div className="flex gap-5 px-7 pt-6 pb-1" style={{ alignItems: 'center' }}>
+          <div className="dg-profile-identity flex gap-5" style={{ alignItems: 'center' }}>
             <ChampionIcon src={champion.icon_url} alt={champion.name} size={88} />
             <div className="flex-1 min-w-0">
               <h1 className="h-display" style={{ fontSize: 32, fontWeight: 700, lineHeight: 1.1 }}>{champion.name}</h1>
@@ -433,7 +422,7 @@ function ChampionDetailView() {
           </div>
 
           {/* Tab bar + year select */}
-          <div className="flex items-center border-t border-(--border)" style={{ padding: '0 14px', marginTop: 14 }}>
+          <div className="dg-profile-controls border-t border-(--border)" style={{ padding: '0 14px', marginTop: 14 }}>
             <div className="flex" style={{ flex: 1 }}>
               {tabs.map((t) => (
                 <button

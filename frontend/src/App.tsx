@@ -24,6 +24,7 @@ import DrawerHost from './components/drawers/DrawerHost';
 import TopLoadingBar from './components/TopLoadingBar';
 import RouteError from './components/RouteError';
 import './App.css';
+import './DesignSystem.css';
 
 // League short-names shown as icon-buttons, grouped (a divider separates the two).
 const REGIONAL = ['LCK', 'LPL', 'LEC', 'LCS', 'CBLOL', 'LCP'];

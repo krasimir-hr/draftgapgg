@@ -15,7 +15,6 @@ import {
   RoleChip,
   StagePicker,
   TeamMark,
-  ROLE_COLOR,
   type RoleFilter,
   type ViewLayout,
 } from './shared';
@@ -241,8 +240,7 @@ function PlayersTable({
 
   return (
     <div
-      className="card card-soft-shadow"
-      style={{ borderRadius: 12, border: 'none', background: 'var(--surface)' }}
+      className="card dg-table-wrap"
     >
         <table className="w-full font-sans" style={{ borderCollapse: 'collapse', fontSize: 12.5, tableLayout: 'fixed' }}>
           <colgroup>
@@ -373,8 +371,7 @@ function PlayersCards({ players, teamShortNames }: { players: UIPlayer[]; teamSh
   if (players.length === 0) return <EmptyCard message="No players match the current filter." />;
   return (
     <div
-      className="grid"
-      style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 14 }}
+      className="dg-player-grid"
     >
       {players.map((p) => <PlayerCard key={p.name} p={p} teamShortNames={teamShortNames} />)}
     </div>
@@ -383,34 +380,15 @@ function PlayersCards({ players, teamShortNames }: { players: UIPlayer[]; teamSh
 
 function PlayerCard({ p, teamShortNames }: { p: UIPlayer; teamShortNames: Record<string, string> }) {
   const { openPlayer } = useDrawer();
-  const teamColor = 'var(--accent)';
-  const roleColor = ROLE_COLOR[p.role] || teamColor;
 
   return (
     <button
       type="button"
       onClick={() => openPlayer(p.name)}
-      className="card card-soft-shadow text-left transition-all overflow-hidden flex flex-col"
+      className="card dg-player-card text-left transition-all overflow-hidden flex flex-col"
       style={{ borderRadius: 14, padding: 0, cursor: 'pointer' }}
     >
-      <div
-        className="relative"
-        style={{
-          padding: '14px 16px 12px',
-          borderBottom: '1px solid var(--border)',
-          background: 'transparent',
-        }}
-      >
-        <div
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            height: 3,
-            width: '100%',
-            background: `linear-gradient(90deg, ${teamColor} 0%, ${roleColor} 100%)`,
-          }}
-        />
+      <div className="dg-player-card-header">
         <div className="flex items-start" style={{ gap: 12 }}>
           <PlayerAvatar name={p.name} image={p.image} role={p.role} size={48} />
           <div className="flex-1 min-w-0">

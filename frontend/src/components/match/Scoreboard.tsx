@@ -117,7 +117,7 @@ function TeamBlock({
         )}
       </div>
 
-      <div style={{ padding: '0 16px' }}>
+      <div className="dg-scoreboard-rows" style={{ padding: '0 16px' }}>
         {rows.map(({ role, row }, i) =>
           row ? (
             <PlayerRow
@@ -159,7 +159,7 @@ function TeamBanners({
 
   return (
     <div
-      className="grid"
+      className="dg-scoreboard-banners grid"
       style={{
         gridTemplateColumns: '1fr auto 1fr',
         alignItems: 'stretch',
@@ -175,7 +175,7 @@ function TeamBanners({
       />
 
       <div
-        className="flex flex-col items-center justify-center"
+        className="dg-game-summary flex flex-col items-center justify-center"
         style={{
           padding: '22px 28px',
           borderLeft: '1px solid var(--border)',
@@ -230,7 +230,7 @@ function TeamSide({
 
   return (
     <div
-      className="flex flex-col"
+      className="dg-team-side flex flex-col"
       style={{ padding: '20px 24px 18px', gap: 14, background: 'var(--surface)' }}
     >
       <div className="flex items-center" style={{ gap: 14, flexDirection: blueSide ? 'row' : 'row-reverse', textAlign: blueSide ? 'left' : 'right' }}>
@@ -283,7 +283,7 @@ function TeamSide({
 export function TeamMark({ team, size }: { team: TeamMeta; size: number }) {
   if (team.logo) {
     return (
-      <div className="shrink-0 flex items-center justify-center overflow-hidden" style={{ width: size, height: size }}>
+      <div className="dg-team-mark shrink-0 flex items-center justify-center overflow-hidden" style={{ width: size, height: size }}>
         <img src={team.logo} alt={team.short} className="max-w-full max-h-full object-contain" />
       </div>
     );
@@ -357,7 +357,7 @@ function PlayerRow({
 }) {
   return (
     <div
-      className="grid items-center"
+      className="dg-scoreboard-player grid items-center"
       style={{
         // The mid-row PR breakdown (KeyMetrics) is the flexible track, so the
         // leftover width is filled with real content rather than blank space.

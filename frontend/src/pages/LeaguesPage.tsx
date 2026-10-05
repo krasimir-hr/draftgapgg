@@ -3,6 +3,7 @@ import { getLeagues } from '../api/core';
 import type { League } from '../types/models';
 import Pagination from '../components/Pagination';
 import EsportsLayout from '../components/EsportsLayout';
+import PageHeader from '../components/PageHeader';
 import { slugify } from '../utils/slugs';
 
 export interface LeaguesLoaderData {
@@ -72,15 +73,11 @@ export default function LeaguesPage() {
 
   return (
     <EsportsLayout>
-      <header className="mb-8">
-        <div className="eyebrow mb-2">Pro League · Directory</div>
-        <h1 className="h-display" style={{ fontSize: 'clamp(30px, 8vw, 44px)' }}>Leagues</h1>
-        <p className="mt-3 text-(--text)" style={{ fontSize: 15.5, maxWidth: 560, lineHeight: 1.55 }}>
-          {count > 0 ? <><b className="text-(--text-h) font-semibold">{count}</b> leagues tracked.</> : 'Browse the leagues we cover.'} Pick one to see standings, schedules, and player leaders.
-        </p>
-      </header>
+      <PageHeader eyebrow="League of Legends · League directory" title="Leagues" description="Find your league. Follow the standings, matches and players that matter to you.">
+        <span className="dg-directory-count">{count} leagues</span>
+      </PageHeader>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div className="dg-league-directory">
         {leagues.map((league) => (
           <Link
             key={league.id}
@@ -89,10 +86,9 @@ export default function LeaguesPage() {
           >
             <LeagueIcon league={league} />
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-(--text-h)">{league.name}</p>
-              {league.short_name && league.short_name !== league.name && (
-                <p className="text-xs text-(--text-dim) mt-0.5 tracking-wide uppercase">{league.short_name}</p>
-              )}
+              <p className="dg-league-title">{league.short_name || league.name}</p>
+              <p className="dg-league-description">{league.name}</p>
+
             </div>
             <span className="text-(--text-dim) text-sm shrink-0">→</span>
           </Link>

@@ -44,11 +44,11 @@ type Tab = 'Overview' | 'Stats' | 'Matches';
 /* ─── shared primitives ─────────────────────────────────────── */
 
 const SECTION = 'text-(--text-dim) uppercase font-semibold';
-const sectionStyle = { fontSize: 10.5, letterSpacing: '0.1em' } as const;
+const sectionStyle = { fontSize: 12, letterSpacing: '0.1em' } as const;
 
-function Card({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
+function Card({ children, style, className = '' }: { children: React.ReactNode; style?: React.CSSProperties; className?: string }) {
   return (
-    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, ...style }}>
+    <div className={`card ${className}`} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, ...style }}>
       {children}
     </div>
   );
@@ -93,7 +93,7 @@ function ResultTag({ won }: { won: boolean | null }) {
   const c = won ? 'var(--green)' : 'var(--red)';
   const bg = won ? 'var(--green-muted)' : 'var(--red-muted)';
   return (
-    <span className="font-bold inline-flex items-center justify-center" style={{ width: 18, height: 18, borderRadius: 5, fontSize: 10.5, color: c, background: bg }}>
+    <span className="font-bold inline-flex items-center justify-center" style={{ width: 18, height: 18, borderRadius: 5, fontSize: 12, color: c, background: bg }}>
       {won ? 'W' : 'L'}
     </span>
   );
@@ -108,7 +108,7 @@ function kdaStr(k: number, d: number, a: number) {
 function Headline({ stats }: { stats: PlayerProfileStats }) {
   const wr = stats.win_rate ?? 0;
   return (
-    <Card style={{ display: 'grid', gridTemplateColumns: 'auto 1fr 1fr 1fr', alignItems: 'center' }}>
+    <Card className="dg-summary">
       {/* Win rate ring */}
       <div className="flex items-center gap-3" style={{ padding: '18px 22px', borderRight: '1px solid var(--border)' }}>
         <Ring pct={wr} size={62} stroke={5}>
@@ -232,7 +232,7 @@ function ChampionPool({ champions }: { champions: PlayerProfileChampion[] }) {
   return (
     <div style={{ marginTop: 22 }}>
       <h3 className="section-label" style={{ marginBottom: 10 }}>Champion pool</h3>
-      <Card style={{ overflow: 'hidden' }}>
+      <Card className="dg-pool">
         {/* header */}
         <div
           className="grid items-center text-(--text-dim) uppercase font-semibold"
@@ -261,7 +261,7 @@ function ChampionPoolRow({ c, last }: { c: PlayerProfileChampion; last: boolean 
       <ChampionIcon src={c.icon_url} alt={c.name} size={36} />
       <div className="min-w-0">
         <div className="font-semibold text-(--text-h) truncate" style={{ fontSize: 13 }}>{c.name}</div>
-        <div className="text-(--text-dim) tabular-nums" style={{ fontSize: 10.5, marginTop: 1 }}>
+        <div className="text-(--text-dim) tabular-nums" style={{ fontSize: 12, marginTop: 1 }}>
           {c.avg_kills.toFixed(1)} / {c.avg_deaths.toFixed(1)} / {c.avg_assists.toFixed(1)}
         </div>
       </div>
@@ -318,11 +318,11 @@ function PerfRailRow({ g, isLast, onClick }: { g: PlayerProfileGame; isLast: boo
       )}
       <div className="min-w-0 flex-1">
         <div className="text-(--text-h) font-semibold truncate" style={{ fontSize: 12 }}>{g.champion ?? '—'}</div>
-        <div className="text-(--text-dim) truncate" style={{ fontSize: 10, marginTop: 1 }}>vs {g.opponent} · {date}</div>
+        <div className="text-(--text-dim) truncate" style={{ fontSize: 12, marginTop: 1 }}>vs {g.opponent} · {date}</div>
       </div>
       <div className="text-right shrink-0">
         <div className="tabular-nums font-semibold text-(--text-h)" style={{ fontSize: 12.5 }}>{kdaStr(g.kills, g.deaths, g.assists)}</div>
-        <div className="tabular-nums text-(--text-dim)" style={{ fontSize: 10, marginTop: 1 }}>{g.kills}/{g.deaths}/{g.assists}</div>
+        <div className="tabular-nums text-(--text-dim)" style={{ fontSize: 12, marginTop: 1 }}>{g.kills}/{g.deaths}/{g.assists}</div>
       </div>
     </button>
   );
@@ -374,14 +374,14 @@ function StatGrid({ stats }: { stats: PlayerProfileStats }) {
 
   return (
     <div
-      className="grid"
+      className="dg-stat-grid grid"
       style={{ gridTemplateColumns: 'repeat(4, 1fr)', gap: 1, marginTop: 10, background: 'var(--border)', border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}
     >
       {cells.map((s) => (
         <div key={s.label} style={{ background: 'var(--surface)', padding: '14px 16px' }}>
           <div className={SECTION} style={{ fontSize: 9.5, letterSpacing: '0.08em', marginBottom: 4 }}>{s.label}</div>
           <div className="font-display tabular-nums" style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-h)', lineHeight: 1.1 }}>{s.value}</div>
-          {s.sub && <div className="text-(--text-dim) tabular-nums" style={{ fontSize: 10.5, marginTop: 3 }}>{s.sub}</div>}
+          {s.sub && <div className="text-(--text-dim) tabular-nums" style={{ fontSize: 12, marginTop: 3 }}>{s.sub}</div>}
         </div>
       ))}
     </div>
@@ -410,13 +410,13 @@ function GameRow({ g, last }: { g: PlayerProfileGame; last: boolean }) {
       <div className="min-w-0 flex-1">
         <div className="text-(--text-h) font-semibold truncate" style={{ fontSize: 12.5 }}>
           {g.champion ?? '—'}
-          <span className="text-(--text-dim) font-normal ml-2" style={{ fontSize: 10.5 }}>vs {g.opponent}</span>
+          <span className="text-(--text-dim) font-normal ml-2" style={{ fontSize: 12 }}>vs {g.opponent}</span>
         </div>
-        <div className="text-(--text-dim)" style={{ fontSize: 10.5 }}>{date} · {g.event}</div>
+        <div className="text-(--text-dim)" style={{ fontSize: 12 }}>{date} · {g.event}</div>
       </div>
       <div className="text-right shrink-0 tabular-nums">
         <div className="font-semibold text-(--text-h)" style={{ fontSize: 13 }}>{kdaStr(g.kills, g.deaths, g.assists)}</div>
-        <div className="text-(--text-dim)" style={{ fontSize: 10.5, marginTop: 1 }}>{g.kills}/{g.deaths}/{g.assists}</div>
+        <div className="text-(--text-dim)" style={{ fontSize: 12, marginTop: 1 }}>{g.kills}/{g.deaths}/{g.assists}</div>
       </div>
     </button>
   );
@@ -460,10 +460,10 @@ function PlayerDetailView() {
     <EsportsLayout right={<PlayerRail upcoming={upcoming_matches} recent={recent_games} />}>
       {/* Hero card */}
       <div
-        className="card card-xl card-soft-shadow overflow-hidden"
+        className="card dg-profile-hero overflow-hidden"
         style={{ borderRadius: 16, background: 'var(--surface)' }}
       >
-        <div className="flex gap-6 px-7 pt-6" style={{ alignItems: 'flex-end' }}>
+        <div className="dg-profile-identity flex gap-6" style={{ alignItems: 'flex-end' }}>
           <div className="shrink-0 overflow-hidden" style={{ height: 140, borderRadius: '8px 8px 0 0', alignSelf: 'stretch' }}>
             {portraitSrc ? (
               <img src={portraitSrc} alt={player.name} decoding="async" fetchPriority="high" style={{ height: '100%', width: 'auto', display: 'block' }} />
@@ -475,6 +475,7 @@ function PlayerDetailView() {
           </div>
 
           <div className="flex-1 min-w-0" style={{ alignSelf: 'center' }}>
+            <p className="dg-eyebrow"><span />Player profile</p>
             <h1 className="h-display" style={{ fontSize: 32, fontWeight: 700, lineHeight: 1.1 }}>
               {player.name}
             </h1>
@@ -513,7 +514,7 @@ function PlayerDetailView() {
         </div>
 
         {/* Tab bar + year/event selects */}
-        <div className="flex items-center border-t border-(--border)" style={{ padding: '0 14px' }}>
+        <div className="dg-profile-controls border-t border-(--border)" style={{ padding: '0 14px' }}>
           <div className="flex" style={{ flex: 1 }}>
             {tabs.map((t) => (
               <button
@@ -527,7 +528,7 @@ function PlayerDetailView() {
             ))}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="dg-profile-filters flex items-center gap-2">
             {available_years.length > 0 && (
               <Select
                 ariaLabel="Year"
@@ -558,15 +559,7 @@ function PlayerDetailView() {
         {activeTab === 'Overview' && (
           <>
             <Headline stats={stats} />
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: traits ? 'minmax(0, 1.05fr) minmax(0, 1fr)' : 'minmax(0, 1fr)',
-                gap: 22,
-                marginTop: 22,
-                alignItems: 'start',
-              }}
-            >
+            <div className="dg-profile-analysis" style={!traits ? { gridTemplateColumns: 'minmax(0, 1fr)' } : undefined}>
               {traits && <PlayerTraits data={traits} />}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
                 <PerformanceList stats={stats} />

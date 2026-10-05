@@ -109,7 +109,7 @@ export function TeamMark({
   if (logo) {
     return (
       <div
-        className="shrink-0 flex items-center justify-center overflow-hidden"
+        className="dg-team-mark shrink-0 flex items-center justify-center overflow-hidden"
         style={{ width: size, height: size }}
       >
         <img src={logo} alt={short} width={size} height={size} loading="lazy" decoding="async" className="max-w-full max-h-full object-contain" />
@@ -737,8 +737,7 @@ export function FilterBar({
 
   return (
     <div
-      className="card card-soft-shadow flex items-center"
-      style={{ padding: '8px 14px', background: 'var(--surface)', border: 'none' }}
+      className="card dg-filter-bar flex items-center"
     >
       {/* Left: stage picker / search */}
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -773,11 +772,13 @@ export function FilterBar({
               key={r.key}
               type="button"
               onClick={() => onRole(r.key)}
+              aria-label={r.key === 'All' ? 'All roles' : r.key}
+              aria-pressed={active}
               title={r.key === 'All' ? 'All roles' : r.key}
               className="transition-all"
               style={pickerBtnStyle(active)}
             >
-              {r.key === 'All' ? r.label : <RoleIcon role={r.key} size={15} />}
+              {r.key === 'All' ? 'All roles' : <><RoleIcon role={r.key} size={15} /><span>{r.key}</span></>}
             </button>
           );
         })}

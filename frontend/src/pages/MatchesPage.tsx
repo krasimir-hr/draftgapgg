@@ -4,6 +4,7 @@ import { getMatches } from '../api/core';
 import type { Match } from '../types/models';
 import Pagination from '../components/Pagination';
 import EsportsLayout from '../components/EsportsLayout';
+import PageHeader from '../components/PageHeader';
 import { useDrawer } from '../contexts/DrawerContext';
 
 interface Props {
@@ -114,7 +115,7 @@ function MatchRow({ m, isLast }: { m: Match; isLast: boolean }) {
       <div className="flex items-center gap-3 min-w-0">
         <div
           className="flex items-center gap-2 flex-1 min-w-0"
-          style={{ opacity: played && !t1Win ? 0.55 : 1 }}
+          style={{ opacity: played && !t1Win ? 0.8 : 1 }}
         >
           <span
             className={`text-sm truncate ${t1Win ? 'font-bold text-(--text-h)' : 'font-medium text-(--text-h)'}`}
@@ -164,7 +165,7 @@ function MatchRow({ m, isLast }: { m: Match; isLast: boolean }) {
 
         <div
           className="flex items-center gap-2 flex-1 min-w-0 justify-end"
-          style={{ opacity: played && !t2Win ? 0.55 : 1 }}
+          style={{ opacity: played && !t2Win ? 0.8 : 1 }}
         >
           <span
             className={`text-sm truncate ${t2Win ? 'font-bold text-(--text-h)' : 'font-medium text-(--text-h)'}`}
@@ -253,14 +254,9 @@ export default function MatchesPage({ status }: Props) {
   return (
     <EsportsLayout>
       {/* Hero header */}
-      <header className="mb-6">
-        <div className="eyebrow mb-2">Pro League · Schedule</div>
-        <h1 className="h-display" style={{ fontSize: 'clamp(30px, 8vw, 44px)' }}>Matches</h1>
-        <p className="mt-3 text-(--text)" style={{ fontSize: 15.5, maxWidth: 560, lineHeight: 1.55 }}>
-          The full match feed. {count > 0 && <><b className="text-(--text-h) font-semibold">{count}</b> total. </>}
-          Click any match for picks, bans, and game-by-game stats.
-        </p>
-      </header>
+      <PageHeader eyebrow="League of Legends · Match centre" title="Matches" description="Follow upcoming matchups and recent results. Open a match to explore every game.">
+        <span className="dg-directory-count">{count} matches</span>
+      </PageHeader>
 
       {/* Filter bar */}
       <div
@@ -278,6 +274,7 @@ export default function MatchesPage({ status }: Props) {
               type="button"
               onClick={() => setScope(s.k)}
               className={`chip${scope === s.k ? ' active' : ''}`}
+              aria-pressed={scope === s.k}
             >
               {s.label}
             </button>
