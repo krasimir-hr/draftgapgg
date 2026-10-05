@@ -37,6 +37,7 @@ export default function OverviewTab({
 
   const activeIdx = Math.min(selectedIdx, stageOnlySubStages.length - 1);
   const activeSS = stageOnlySubStages[activeIdx] ?? null;
+  const isKnockout = !!activeSS && !activeSS.isStandings && !activeSS.swiss;
 
   const competitionHeading = !activeSS || activeSS.isStandings ? 'Standings' : activeSS.swiss ? 'Swiss stage' : 'Playoff bracket';
   const stageNav = stageOnlySubStages.length > 1 ? (
@@ -63,17 +64,17 @@ export default function OverviewTab({
 
   return (
     <div className="dg-league-overview">
-      <section className="dg-overview-matches" aria-label="Match centre">
+      {!isKnockout && <section className="dg-overview-matches" aria-label="Match centre">
         <div className="dg-match-centre-heading"><div><span className="dg-section-index">01 / MATCH CENTRE</span><h2>{matchScope === 'results' ? 'Latest results' : 'Next matches'}</h2></div>
           <div className="dg-match-centre-actions"><div className="dg-scope-switch"><button type="button" aria-pressed={matchScope === 'results'} onClick={() => setMatchScope('results')}>Results</button><button type="button" aria-pressed={matchScope === 'upcoming'} onClick={() => setMatchScope('upcoming')}>Upcoming</button></div>{onViewMatches && <button className="dg-all-matches" type="button" onClick={onViewMatches}>View all ↗</button>}</div>
         </div>
         <div className="dg-featured-matches">{(matchScope === 'results' ? recent : upcoming).slice(0,3).map(m => <MatchPreview key={m.id} match={m} teamLogos={teamLogos} teamShortNames={teamShortNames} onMatchSelect={onMatchSelect} />)}</div>
         {(matchScope === 'results' ? recent : upcoming).length === 0 && <p className="dg-match-empty">{matchScope === 'results' ? 'No results yet.' : 'No upcoming fixtures scheduled.'}</p>}
-      </section>
+      </section>}
 
       <div className="dg-overview-standings">
-        <div className="dg-standings-heading"><div><span className="dg-section-index">02 / COMPETITION</span><h2>{competitionHeading}</h2></div>{competitionHeading === 'Standings' && <span>{standings.length} teams · Series record</span>}</div>
-        <div className="card card-soft-shadow overflow-hidden" style={{ borderRadius: 12 }}>
+        <div className="dg-standings-heading"><div><span className="dg-section-index">{isKnockout ? '01' : '02'} / COMPETITION</span><h2>{competitionHeading}</h2></div>{competitionHeading === 'Standings' && <span>{standings.length} teams · Series record</span>}</div>
+        <div className={isKnockout ? 'po-overview' : 'card card-soft-shadow overflow-hidden'} style={{ borderRadius: 12 }}>
         {stageNav && (
           <div
             className="flex items-center justify-center"
@@ -87,7 +88,7 @@ export default function OverviewTab({
           activeSS.isStandings ? (
             <StandingsTable standings={standings} teamShortNames={teamShortNames} />
           ) : (
-            <div style={{ padding: '12px 12px 16px' }}>
+            <div style={{ padding: isKnockout ? 0 : '12px 12px 16px' }}>
               {activeSS.swiss ? (
                 <SwissStage
                   key={activeSS.event.id}
@@ -99,7 +100,7 @@ export default function OverviewTab({
                 />
               ) : (
                 <BracketTab
-                  key={activeSS.event.id + (activeSS.tabFilter?.join(',') ?? '') + (activeSS.tabPrefix ?? '')}
+                  key={`${activeSS.event.id}:${activeSS.stageId ?? ''}:${activeSS.tabFilter?.join(',') ?? ''}:${activeSS.tabPrefix ?? ''}`}
                   eventId={activeSS.event.id}
                   stageId={activeSS.stageId}
                   tabFilter={activeSS.tabFilter}

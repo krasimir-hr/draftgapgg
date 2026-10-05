@@ -15,6 +15,7 @@ export function orderedBracketTabs(matches: Match[]): string[] {
     if (round) return Number(round[1]);
     if (/quarterfinal/i.test(tab)) return 1000;
     if (/semifinal/i.test(tab)) return 1001;
+    if (/third[ -]?place|3rd[ -]?place|bronze|placement/i.test(tab)) return 1001.5;
     if (/\b(?:grand\s+)?finals?\b/i.test(tab)) return 1002;
     return null;
   };

@@ -16,6 +16,9 @@ const { resolveLeagueView, bracketNeeds } = await import(moduleUrl('../src/lib/l
   '../utils/slugs': moduleUrl('../src/utils/slugs.ts'),
 }));
 const { orderedBracketTabs } = await import(moduleUrl('../src/lib/bracketRounds.ts'));
+const { buildPlayoffs } = await import(moduleUrl('../src/lib/playoffStructure.ts', {
+  './bracketRounds': moduleUrl('../src/lib/bracketRounds.ts'),
+}));
 const league = { id: 1, name: 'LoL Champions Korea', short_name: 'LCK' };
 const event = (name, stages = []) => ({ id: 28, name, league, year: 2026, start_date: '2026-01-01', is_active: true, stages });
 const resolve = (e) => resolveLeagueView(e.league, [e], e.league.short_name.toLowerCase(), undefined);
@@ -75,4 +78,54 @@ test('named knockout rounds sort correctly and explicit bracket columns are not 
   assert.deepEqual(orderedBracketTabs([
     { tab: 'Finals' }, { tab: 'Semifinals' }, { tab: 'Quarterfinals' }, { tab: 'Wired round', bracket_col: 1 },
   ]), ['Quarterfinals', 'Semifinals', 'Finals']);
+});
+
+const fixture = (id, tab, day, team1, team2, winner) => ({
+  id, tab, datetime_utc: day ? `2026-${day}T08:00:00Z` : null, team1, team2, winner,
+  bracket_col: null, is_lower_bracket: false, is_final: false, next_match: null,
+});
+const lckPlayoffs = [
+  fixture(884, 'Finals', '09-13', 'GEN', 'HLE', 1),
+  fixture(893, 'Round 4', '09-12', 'HLE', 'T1', 1),
+  fixture(891, 'Round 3', '09-06', 'T1', 'DK', 1),
+  fixture(892, 'Round 4', '09-05', 'GEN', 'HLE', 1),
+  fixture(890, 'Round 2', '09-04', 'KT', 'DK', 2),
+  fixture(887, 'Round 1', '09-03', 'BFX', 'DK', 2),
+  fixture(889, 'Round 2', '09-02', 'HLE', 'T1', 1),
+  fixture(888, 'Round 2', '09-01', 'GEN', 'KT', 1),
+  fixture(886, 'Round 1', '08-30', 'DK', 'KT', 2),
+  fixture(885, 'Round 1', '08-29', 'T1', 'BFX', 1),
+];
+test('LCK matches separate into upper, lower and final paths in chronological order', () => {
+  const model = buildPlayoffs(lckPlayoffs);
+  assert.equal(model.doubleElimination, true);
+  assert.equal(model.champion, 'GEN');
+  assert.equal(model.teams.length, 6);
+  assert.deepEqual(model.rounds[0].matches.map(e => [e.match.id, e.lane]), [[885, 'upper'], [886, 'upper'], [887, 'lower']]);
+  assert.deepEqual(model.rounds[3].matches.map(e => [e.match.id, e.lane]), [[892, 'upper'], [893, 'lower']]);
+  assert.equal(model.rounds.at(-1).matches[0].lane, 'final');
+});
+test('recorded team progression follows both winners and losers to their actual next series', () => {
+  const first = buildPlayoffs(lckPlayoffs).rounds[0].matches[0];
+  assert.deepEqual(first.winnerNext, { matchId: 889, round: 'Round 2', lane: 'upper' });
+  assert.deepEqual(first.loserNext, { matchId: 887, round: 'Round 1', lane: 'lower' });
+});
+test('a third-place match does not turn single elimination into a lower bracket', () => {
+  const model = buildPlayoffs([
+    fixture(1, 'Semifinals', '09-01', 'A', 'B', 1), fixture(2, 'Semifinals', '09-02', 'C', 'D', 1),
+    fixture(3, 'Finals', '09-03', 'A', 'C', null), fixture(4, 'Third place', '09-03', 'B', 'D', 1),
+  ]);
+  assert.equal(model.doubleElimination, false);
+  assert.equal(model.champion, null);
+  assert.ok(model.rounds.every(r => r.matches.every(e => e.lane !== 'lower')));
+  assert.equal(model.rounds.find(r => r.label === 'Third place').matches[0].lane, 'placement');
+});
+
+test('pending fixtures preserve explicit wiring without inventing champions or TBD team paths', () => {
+  const first = { ...fixture(1, 'Round 1', null, 'TBD', 'TBD', null), next_match: 2 };
+  const model = buildPlayoffs([first, fixture(2, 'Finals', null, 'TBD', 'TBD', null)]);
+  assert.equal(model.champion, null);
+  assert.deepEqual(model.teams, []);
+  assert.deepEqual(model.rounds[0].matches[0].winnerNext, { matchId: 2, round: 'Finals', lane: 'final' });
+  assert.equal(model.rounds[0].matches[0].loserNext, undefined);
 });
