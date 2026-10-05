@@ -13,4 +13,15 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// An expired admin session must not prevent visitors from reading public data.
+api.interceptors.response.use(response => response, async error => {
+  const config = error.config;
+  if (error.response?.status === 401 && config?.method === 'get' && config.headers?.Authorization) {
+    localStorage.removeItem('access_token');
+    delete config.headers.Authorization;
+    return api.request(config);
+  }
+  return Promise.reject(error);
+});
+
 export default api;

@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useReducer, useState } from 'react';
+import { useRevalidator } from 'react-router-dom';
 import { getMatches, getEventRosters } from '../../api/core';
 import type { Match } from '../../types/models';
 import { TeamMark } from './shared';
 import { Select } from '../ui/Select';
 import { buildPlayoffs, type PlayoffMatch, type PlayoffLane } from '../../lib/playoffStructure';
 import PlayoffOverview from './PlayoffOverview';
+import BracketEditor from './BracketEditor';
 import './Playoffs.css';
 
 interface Props {
@@ -44,6 +46,7 @@ function dateRange(matches: Match[]) {
 const viewSelections = new Map<string, string>();
 
 export default function BracketTab({ eventId, stageId, tabFilter, tabPrefix, teamLogos, teamShortNames = {}, onMatchSelect, noBorder, preloadedMatches, eventName }: Props) {
+  const revalidator = useRevalidator();
   const [state, dispatch] = useReducer(reducer, {
     matches: preloadedMatches ?? [], loading: preloadedMatches == null, error: null, logos: {}, shorts: {},
   });
@@ -89,6 +92,11 @@ export default function BracketTab({ eventId, stageId, tabFilter, tabPrefix, tea
     {champion && <div className="po-champion"><TeamMark short={shorts[champion] || champion} logo={logos[champion]} size={36}/><div><span>Champions</span><strong>{champion}</strong></div><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M7 3h10v5a5 5 0 0 1-10 0V3Zm0 2H3v2a5 5 0 0 0 5 5m9-7h4v2a5 5 0 0 1-5 5m-4 1v7m-4 0h8"/></svg></div>}
       <Select ariaLabel="Follow a team" value={selectedTeam} options={[{ value: '', label: 'All teams' }, ...teams.map(team => ({ value: team, label: team }))]} onChange={team => setSelectedTeam(String(team))} align="right" />
     </div>
+    <BracketEditor eventId={eventId} rounds={rounds} matches={matches} onSaved={updated => {
+      const saved = new Map(updated.map(m => [m.id, m]));
+      dispatch({ type: 'matches', matches: state.matches.map(m => saved.get(m.id) ?? m) });
+      void revalidator.revalidate();
+    }}/>
     <PlayoffOverview rounds={rounds} doubleElimination={doubleElimination} logos={logos} shorts={shorts} selectedTeam={selectedTeam} onMatchSelect={onMatchSelect}/>
     {selectedTeam && <div className="po-journey-title"><TeamMark short={shorts[selectedTeam] || selectedTeam} logo={logos[selectedTeam]} size={32}/><div><h3>{selectedTeam}’s run</h3><p>Every series, from the opening match onward.</p></div><button type="button" onClick={() => setSelectedTeam('')} aria-label="Clear team filter">Clear ×</button></div>}
     {selectedTeam && <div className="po-rounds">

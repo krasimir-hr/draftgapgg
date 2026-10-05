@@ -140,3 +140,16 @@ test('whole bracket aligns feeders with destinations without changing chronologi
   assert.equal(arranged.flatMap(r => r.matches).length, 10);
   assert.deepEqual(arranged.map(r => r.key), model.rounds.map(r => r.key));
 });
+
+
+test('saved admin positions override inferred lanes, feeder sorting and cleared winner links', () => {
+  const model = buildPlayoffs([
+    { ...fixture(1, 'Finals', '09-01', 'A', 'B', 1), bracket_col: 1, bracket_order: 2 },
+    { ...fixture(2, 'Round 1', '09-02', 'C', 'D', 1), bracket_col: 1, bracket_order: 1 },
+    { ...fixture(3, 'Round 2', '09-03', 'A', 'C', 1), bracket_col: 2, bracket_order: 1, is_final: true },
+  ]);
+  assert.deepEqual(orderPlayoffRounds(model.rounds)[0].matches.map(e => e.match.id), [2, 1]);
+  assert.equal(model.rounds[0].matches.find(e => e.match.id === 1).lane, 'upper');
+  assert.equal(model.rounds[0].matches.find(e => e.match.id === 1).winnerNext, undefined);
+  assert.equal(model.rounds[1].matches[0].lane, 'final');
+});

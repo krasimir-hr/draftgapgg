@@ -71,3 +71,79 @@ class EventImportTests(TestCase):
         worlds.refresh_from_db()
         self.assertEqual(worlds.short_name, 'Worlds')
         self.assertEqual(Event.objects.get().league, regional)
+
+
+class BracketLayoutTests(TestCase):
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        from rest_framework.test import APIClient
+        from core.models import Match
+        self.client = APIClient()
+        self.staff = get_user_model().objects.create_user(username='editor', is_staff=True)
+        league = League.objects.create(name='Test league')
+        self.event = Event.objects.create(name='Test playoffs', league=league)
+        self.a = Match.objects.create(event=self.event, match_id='a', team1='A', team2='B', bracket_col=1, bracket_order=1)
+        self.b = Match.objects.create(event=self.event, match_id='b', team1='C', team2='D', bracket_col=1, bracket_order=2)
+        self.url = '/api/matches/bracket-layout/'
+
+    def layout(self, entries):
+        return {'event': self.event.pk, 'matches': [dict(id=m.pk, bracket_col=col, bracket_order=slot, is_lower_bracket=lower, is_final=final, next_match=nxt) for m, col, slot, lower, final, nxt in entries]}
+
+    def test_writes_require_staff_and_public_read_remains_available(self):
+        from django.contrib.auth import get_user_model
+        data = self.layout([(self.a, 1, 2, False, False, None), (self.b, 1, 1, False, False, None)])
+        self.assertEqual(self.client.post(self.url, data, format='json').status_code, 401)
+        self.assertEqual(self.client.patch(f'/api/matches/{self.a.pk}/bracket/', {'bracket_col': 2}, format='json').status_code, 401)
+        self.assertEqual(self.client.post('/api/matches/rename-column/', {'event': self.event.pk, 'bracket_col': 1}, format='json').status_code, 401)
+        self.assertEqual(self.client.get('/api/matches/').status_code, 200)
+        self.assertFalse(self.client.get('/api/matches/bracket-access/').data['can_edit'])
+        self.client.force_authenticate(get_user_model().objects.create_user(username='viewer'))
+        self.assertEqual(self.client.post(self.url, data, format='json').status_code, 403)
+        self.client.force_authenticate(self.staff)
+        self.assertTrue(self.client.get('/api/matches/bracket-access/').data['can_edit'])
+
+    def test_swap_saves_without_unique_position_collision(self):
+        self.client.force_authenticate(self.staff)
+        data = self.layout([(self.a, 1, 2, False, False, None), (self.b, 1, 1, False, False, None)])
+        response = self.client.post(self.url, data, format='json')
+        self.assertEqual(response.status_code, 200, response.data)
+        self.a.refresh_from_db(); self.b.refresh_from_db()
+        self.assertEqual((self.a.bracket_order, self.b.bracket_order), (2, 1))
+        self.assertEqual(len(response.data['matches']), 2)
+
+    def test_invalid_layouts_leave_saved_positions_unchanged(self):
+        self.client.force_authenticate(self.staff)
+        cases = [
+            [(self.a, 1, 1, False, False, None), (self.b, 1, 1, False, False, None)],
+            [(self.a, 2, 1, False, False, self.b.pk), (self.b, 1, 1, False, False, None)],
+            [(self.a, 1, 1, False, False, self.a.pk), (self.b, 2, 1, False, False, None)],
+            [(self.a, 1, 1, True, True, None), (self.b, 2, 1, False, False, None)],
+        ]
+        for entries in cases:
+            self.assertEqual(self.client.post(self.url, self.layout(entries), format='json').status_code, 400)
+            self.a.refresh_from_db(); self.b.refresh_from_db()
+            self.assertEqual((self.a.bracket_col, self.a.bracket_order, self.b.bracket_order), (1, 1, 2))
+
+    def test_occupied_unedited_slot_rolls_back_all_changes(self):
+        self.client.force_authenticate(self.staff)
+        response = self.client.post(self.url, self.layout([(self.a, 1, 2, False, False, None)]), format='json')
+        self.assertEqual(response.status_code, 400)
+        self.a.refresh_from_db()
+        self.assertEqual(self.a.bracket_order, 1)
+
+    def test_cross_event_matches_and_connections_are_rejected(self):
+        from core.models import Match
+        other = Event.objects.create(name='Other', league=self.event.league)
+        foreign = Match.objects.create(event=other, match_id='foreign', team1='X', team2='Y')
+        self.client.force_authenticate(self.staff)
+        self.assertEqual(self.client.post(self.url, self.layout([(foreign, 1, 1, False, False, None)]), format='json').status_code, 400)
+        self.assertEqual(self.client.post(self.url, self.layout([(self.a, 1, 1, False, False, foreign.pk)]), format='json').status_code, 400)
+
+    def test_staff_can_move_to_lower_path_and_connect_winner(self):
+        self.client.force_authenticate(self.staff)
+        data = self.layout([(self.a, 1, 1, True, False, self.b.pk), (self.b, 2, 1, False, True, None)])
+        self.assertEqual(self.client.post(self.url, data, format='json').status_code, 200)
+        self.a.refresh_from_db(); self.b.refresh_from_db()
+        self.assertTrue(self.a.is_lower_bracket)
+        self.assertEqual(self.a.next_match_id, self.b.pk)
+        self.assertTrue(self.b.is_final)
