@@ -246,19 +246,19 @@ function PlayersTable({
     >
         <table className="w-full font-sans" style={{ borderCollapse: 'collapse', fontSize: 12.5, tableLayout: 'fixed' }}>
           <colgroup>
-            <col style={{ width: 42 }} />   {/* # */}
-            <col style={{ width: 52 }} />   {/* Team — logo only */}
-            <col style={{ width: 52 }} />   {/* Role */}
-            <col style={{ width: 140 }} />   {/* Player */}
-            <col style={{ width: 60 }} />   {/* Games */}
-            <col style={{ width: 62 }} />   {/* PR */}
-            <col style={{ width: 62 }} />   {/* KDA */}
-            <col style={{ width: 96 }} />   {/* K/D/A */}
-            <col style={{ width: 65 }} />   {/* CS/m */}
-            <col style={{ width: 68 }} />   {/* Carry% */}
-            <col style={{ width: 58 }} />   {/* MVPs */}
-            <col style={{ width: 72 }} />   {/* Form */}
-            <col style={{ width: 108 }} />  {/* Best champs */}
+            <col style={{ width: 42 }} />
+            <col style={{ width: 52 }} />
+            <col style={{ width: 52 }} />
+            <col style={{ width: 140 }} />
+            <col style={{ width: 60 }} />
+            <col style={{ width: 62 }} />
+            <col style={{ width: 62 }} />
+            <col style={{ width: 96 }} />
+            <col style={{ width: 65 }} />
+            <col style={{ width: 68 }} />
+            <col style={{ width: 58 }} />
+            <col style={{ width: 72 }} />
+            <col style={{ width: 108 }} />
           </colgroup>
           <thead>
             <tr style={{ borderBottom: '1px solid var(--border)' }}>
