@@ -76,13 +76,13 @@ export async function loadTeamMeta(eventId: number): Promise<TeamMeta> {
   return { teamLogos, teamShortNames };
 }
 
-async function loadOverview(eventIds: number[], eventId: number): Promise<OverviewData> {
+async function loadOverview(eventIds: number[], eventId: number, includeStandings: boolean): Promise<OverviewData> {
   const now = new Date();
   const eventParam = eventIds.join(',') || String(eventId);
   const [upRes, resRes, standRes] = await Promise.all([
     getMatches({ event__in: eventParam, has_result: 'false', page_size: 50 }),
     getMatches({ event__in: eventParam, has_result: 'true', page_size: 20 }),
-    getEventStandings(eventId).catch(() => ({ data: [] as StandingsEntry[] })),
+    includeStandings ? getEventStandings(eventId).catch(() => ({ data: [] as StandingsEntry[] })) : Promise.resolve({ data: [] as StandingsEntry[] }),
   ]);
   const upcoming = [...upRes.data.results]
     .filter((m) => m.datetime_utc && new Date(m.datetime_utc) > now)
@@ -98,7 +98,7 @@ async function loadOverview(eventIds: number[], eventId: number): Promise<Overvi
 export async function loadLeagueTab(view: LeagueView, eventId: number): Promise<LeagueTabData> {
   switch (view.activeTab) {
     case 'Overview':
-      return { overview: await loadOverview(view.overviewEventIds, eventId) };
+      return { overview: await loadOverview(view.overviewEventIds, eventId, !view.subStages.length || view.subStages.some((s) => s.isStandings)) };
     case 'Matches':
       return { matches: (await getMatches({ event: eventId, page_size: 500 })).data.results };
     case 'Team Stats':

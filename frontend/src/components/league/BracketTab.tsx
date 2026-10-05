@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { getMatches, getEventRosters, getEvent, patchMatchBracket } from '../../api/core';
 import type { Match } from '../../types/models';
 import { TeamMark } from './shared';
+import { orderedBracketTabs } from '../../lib/bracketRounds';
 
 interface Props {
   eventId: number;
@@ -104,15 +105,10 @@ function buildBracket(matches: Match[]): Built {
   }
   const tabToPseudo = new Map<string, number>();
   let nextPseudo = (seenCols.size ? Math.max(...seenCols) : 0) + 1;
-  for (const m of matches) {
-    if (m.bracket_col == null) {
-      const key = m.tab || 'Stage 1';
-      if (!tabToPseudo.has(key)) {
-        tabToPseudo.set(key, nextPseudo);
-        seenCols.add(nextPseudo);
-        nextPseudo++;
-      }
-    }
+  for (const tab of orderedBracketTabs(matches)) {
+    tabToPseudo.set(tab, nextPseudo);
+    seenCols.add(nextPseudo);
+    nextPseudo++;
   }
 
   const colOrder = [...seenCols].sort((a, b) => a - b);
@@ -331,7 +327,11 @@ export default function BracketTab({ eventId, stageId, tabFilter, tabPrefix, tea
         }
       }
     }
-    return labels;
+    return labels.map((label, i) => {
+      if (finalCols.has(i)) return label;
+      const tabs = [...new Set([...(upperByCol.get(i) ?? []), ...(lowerByCol.get(i) ?? [])].map(m => m.tab).filter(Boolean))];
+      return tabs.length === 1 ? tabs[0] : label;
+    });
   }, [built]);
 
   const layout = useMemo(() => {

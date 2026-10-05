@@ -38,7 +38,8 @@ export default function OverviewTab({
   const activeIdx = Math.min(selectedIdx, stageOnlySubStages.length - 1);
   const activeSS = stageOnlySubStages[activeIdx] ?? null;
 
-  const stageNav = stageOnlySubStages.length > 0 ? (
+  const competitionHeading = !activeSS || activeSS.isStandings ? 'Standings' : activeSS.swiss ? 'Swiss stage' : 'Playoff bracket';
+  const stageNav = stageOnlySubStages.length > 1 ? (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
       {stageOnlySubStages.map((ss, i) => (
         <Fragment key={ss.label}>
@@ -71,9 +72,7 @@ export default function OverviewTab({
       </section>
 
       <div className="dg-overview-standings">
-        {!stageNav && (
-          <div className="dg-standings-heading"><div><span className="dg-section-index">02 / COMPETITION</span><h2>Standings</h2></div><span>{standings.length} teams · Series record</span></div>
-        )}
+        <div className="dg-standings-heading"><div><span className="dg-section-index">02 / COMPETITION</span><h2>{competitionHeading}</h2></div>{competitionHeading === 'Standings' && <span>{standings.length} teams · Series record</span>}</div>
         <div className="card card-soft-shadow overflow-hidden" style={{ borderRadius: 12 }}>
         {stageNav && (
           <div
