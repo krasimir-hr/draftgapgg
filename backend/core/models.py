@@ -39,6 +39,8 @@ class Event(models.Model):
     leaguepedia_page = models.CharField(max_length=200, blank=True, null=True)
     prize_pool = models.CharField(max_length=50, blank=True, default='')
 
+    bracket_layout = models.JSONField(default=dict, blank=True)
+
     is_fully_synced = models.BooleanField(default=False)
     last_synced_at = models.DateTimeField(null=True, blank=True)
 
@@ -153,6 +155,9 @@ class Match(models.Model):
         'self', on_delete=models.SET_NULL, null=True, blank=True,
         related_name='previous_matches',
     )
+    loser_next_match = models.ForeignKey(
+        'self', on_delete=models.SET_NULL, null=True, blank=True, related_name='loser_previous_matches',
+    )
     # Which bracket leg this match belongs to when the stage has_lower_bracket.
     is_lower_bracket = models.BooleanField(default=False)
 
@@ -164,6 +169,10 @@ class Match(models.Model):
     bracket_col   = models.PositiveSmallIntegerField(null=True, blank=True)
     bracket_order = models.PositiveSmallIntegerField(null=True, blank=True)
     is_final      = models.BooleanField(default=False)
+    team1_origin = models.CharField(max_length=80, blank=True, default='')
+    team2_origin = models.CharField(max_length=80, blank=True, default='')
+    loser_outcome = models.CharField(max_length=12, choices=[('auto', 'Automatic'), ('eliminated', 'Eliminated'), ('lower', 'Lower bracket'), ('none', 'Hide label')], default='auto')
+    bracket_hidden = models.BooleanField(default=False)
 
     class Meta:
         verbose_name_plural = "matches"

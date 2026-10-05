@@ -292,8 +292,13 @@ export interface Match {
   team1_score: number;
   team2_score: number;
   next_match: number | null;
+  loser_next_match?: number | null;
+  team1_origin?: string;
+  team2_origin?: string;
+  loser_outcome?: 'auto' | 'eliminated' | 'lower' | 'none';
   bracket_col: number | null;
   bracket_order: number | null;
+  bracket_hidden?: boolean;
   is_lower_bracket: boolean;
   is_final: boolean;
   league_logo: string | null;

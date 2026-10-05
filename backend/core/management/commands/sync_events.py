@@ -1,10 +1,12 @@
 from django.conf import settings
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 from mwrogue.esports_client import EsportsClient
 from mwrogue.auth_credentials import AuthCredentials
 from core.models import Event, EventStage, League, Organization, Player, TeamRoster, RosterPlayer
 from django.utils import timezone
 from datetime import datetime
+from itertools import zip_longest
+import re
 
 # Page name suffixes that mark a child stage rather than a standalone event.
 # Maps suffix → (stage name, stage type, display order within the parent event).
@@ -27,7 +29,12 @@ LEAGUE_REDIRECTS = {
 class Command(BaseCommand):
     help = 'Syncs events data from Leaguepedia.'
 
+    def add_arguments(self, parser):
+        parser.add_argument('--year', type=int, help='Import a single year (default: 2025 onward).')
+
     def handle(self, *args, **options):
+        if not settings.LEAGUEPEDIA_USERNAME or not settings.LEAGUEPEDIA_PASSWORD:
+            raise CommandError('Set LEAGUEPEDIA_USERNAME and LEAGUEPEDIA_PASSWORD in backend/.env before syncing.')
         credentials = AuthCredentials(
             username=settings.LEAGUEPEDIA_USERNAME,
             password=settings.LEAGUEPEDIA_PASSWORD,
@@ -38,17 +45,21 @@ class Command(BaseCommand):
         # --- Step 1: Get all official primary events from 2025 onward ---
         # EWC is IsOfficial='0' in Leaguepedia despite being a major international
         # tournament, so we include it via an explicit League filter.
+        date_filter = (f"DateStart >= '{options['year']}-01-01' AND DateStart < '{options['year'] + 1}-01-01'"
+                       if options.get('year') else "DateStart >= '2025-01-01'")
         event_data = site.cargo_client.query(
             tables="Tournaments",
             fields="Name, Region, DateStart, Date, OverviewPage, League, TournamentLevel, IsOfficial, Prizepool",
-            where="TournamentLevel = 'Primary' AND (IsOfficial = '1' OR League = 'Esports World Cup') AND DateStart >= '2025-01-01'",
-            limit=500
+            where=f"TournamentLevel = 'Primary' AND (IsOfficial = '1' OR League = 'Esports World Cup') AND {date_filter}",
+            order_by="DateStart, OverviewPage"
         )
 
         events = [e["OverviewPage"] for e in event_data if e.get("OverviewPage")]
 
         for data in event_data:
             overview_page = data.get('OverviewPage')
+            if not overview_page:
+                continue
             short_name = ''
             year = ''
 
@@ -101,9 +112,8 @@ class Command(BaseCommand):
                 year = overview_page.split(' ')[-1]
                 short_name = 'EWC'
             elif 'First Stand' in overview_page or 'Mid-Season' in overview_page:
-                league_data = overview_page.split(' ')
-                short_name = f'{league_data[1]} {league_data[2]}'
-                year = league_data[0]
+                short_name = 'MSI' if 'Mid-Season' in overview_page else 'First Stand'
+                year = overview_page.split(' ')[0]
             elif 'World Championship' in overview_page:
                 league_data = overview_page.split('/')[0]
                 short_name = 'Worlds'
@@ -111,20 +121,30 @@ class Command(BaseCommand):
             else:
                 league_data = overview_page.split('/')
                 short_name = league_data[0]
-                year = league_data[1].split(' ')[0]
+                year_match = re.search(r'\b(20\d{2})\b', overview_page)
+                if not year_match:
+                    self.stdout.write(self.style.WARNING(f'No year found: {overview_page}; skipping.'))
+                    continue
+                year = year_match.group(1)
 
             league_name = LEAGUE_REDIRECTS.get(data.get("League", ""), data.get("League", ""))
-            league, _ = League.objects.get_or_create(
+            # Regional Worlds qualifiers remain in their regional league. Cargo
+            # sometimes tags them World Championship before the actual Worlds event.
+            if league_name == 'World Championship' and '/' in overview_page and 'World Championship' not in overview_page:
+                regional = League.objects.filter(short_name=short_name).first()
+                if regional:
+                    league_name = regional.name
+            league, _ = League.objects.update_or_create(
                 name=league_name,
                 defaults={
                     "short_name": short_name,
                 }
             )
 
-            start_date = datetime.strptime(data.get("DateStart"), "%Y-%m-%d").date()
-            end_date = datetime.strptime(data.get("Date"), "%Y-%m-%d").date()
-
-            is_active = start_date <= timezone.now().date() <= end_date
+            # Future events often do not have a final date yet.
+            start_date = datetime.strptime(data['DateStart'], '%Y-%m-%d').date() if data.get('DateStart') else None
+            end_date = datetime.strptime(data['Date'], '%Y-%m-%d').date() if data.get('Date') else None
+            is_active = bool(start_date and end_date and start_date <= timezone.now().date() <= end_date)
 
             event, event_created = Event.objects.update_or_create(
                 leaguepedia_page=data.get("OverviewPage"),
@@ -188,6 +208,12 @@ class Command(BaseCommand):
             # The standalone event is now redundant — its matches live on the parent.
             road_to_msi.delete()
 
+        # Resolve child-page rosters to the parent that owns their matches.
+        event_by_page = {event.leaguepedia_page: event for event in Event.objects.all()}
+        event_by_page.update({stage.leaguepedia_page: stage.event for stage in
+                             EventStage.objects.exclude(leaguepedia_page__isnull=True)
+                             .exclude(leaguepedia_page='').select_related('event')})
+        events = [page for page in events if page in event_by_page]
         BATCH_SIZE = 20
 
         all_teams = []
@@ -201,10 +227,9 @@ class Command(BaseCommand):
 
             teams = site.cargo_client.query(
                 tables="TournamentRosters=TR, Teams=TM",
-                fields="TR.OverviewPage, TR.Team, TM.Short, TM.Region, TM.OverviewPage=TeamOverviewPage, ",
+                fields="TR.OverviewPage, TR.Team, TM.Short, TM.Region, TM.OverviewPage=TeamOverviewPage",
                 where=where_clause,
                 join_on="TR.Team=TM.OverviewPage",
-                limit=500
             )
             all_teams.extend(teams)
 
@@ -212,11 +237,12 @@ class Command(BaseCommand):
                 tables="TournamentRosters=TR",
                 fields="TR.OverviewPage, TR.Team, TR.RosterLinks, TR.Roles, TR.Flags",
                 where=where_clause,
-                limit=500
             )
             all_rosters.extend(rosters)
     
         for team_data in all_teams:
+            if team_data.get("Team") == "TBD":
+                continue
 
             ### -- Orgs creation -- ###
             org, org_created = Organization.objects.update_or_create(
@@ -231,8 +257,8 @@ class Command(BaseCommand):
             ### -- Team Rosters creation -- ###
 
             try:
-                event = Event.objects.get(leaguepedia_page=team_data.get("OverviewPage"))
-            except Event.DoesNotExist:
+                event = event_by_page[team_data.get("OverviewPage")]
+            except KeyError:
                 self.stdout.write(self.style.ERROR(
                     f"Event not found for: {team_data.get('OverviewPage')} — skipping roster"
                 ))
@@ -250,9 +276,11 @@ class Command(BaseCommand):
             )
 
         for roster_data in all_rosters:
+            if roster_data.get("Team") == "TBD":
+                continue
             try:
-                event = Event.objects.get(leaguepedia_page=roster_data.get("OverviewPage"))
-            except Event.DoesNotExist:
+                event = event_by_page[roster_data.get("OverviewPage")]
+            except KeyError:
                 self.stdout.write(self.style.ERROR(
                     f"Event not found for: {roster_data.get('OverviewPage')} — skipping player."
                 ))
@@ -273,11 +301,13 @@ class Command(BaseCommand):
             roles = roster_data.get("Roles", "")
             flags = roster_data.get("Flags", "")
 
-            player_list = [p.strip() for p in players.split(";;") if p.strip()] if players else []
-            role_list = [r.strip() for r in roles.split(";;") if r.strip()] if roles else []
-            flag_list = [f.strip() for f in flags.split(";;") if f.strip()] if roles else []
+            player_list = [p.strip() for p in players.split(";;")] if players else []
+            role_list = [r.strip() for r in roles.split(";;")] if roles else []
+            flag_list = [f.strip() for f in flags.split(";;")] if flags else []
 
-            for lp_page, role, flag in zip(player_list, role_list, flag_list):
+            for lp_page, role, flag in zip_longest(player_list, role_list, flag_list, fillvalue=""):
+                if not lp_page:
+                    continue
                 display_name = lp_page.split('(')[0].strip()
 
                 player, _ = Player.objects.update_or_create(
@@ -288,11 +318,11 @@ class Command(BaseCommand):
                     }
                 )
 
-                roster_player, _ = RosterPlayer.objects.get_or_create(
+                roster_player, _ = RosterPlayer.objects.update_or_create(
                     roster=team_roster,
                     player=player,
                     defaults={
-                        "role": role,
+                        "role": role or "Sub",
                     }
                 )
 

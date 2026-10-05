@@ -1,8 +1,8 @@
 import {
-  getMatches, getEventStandings, getEventHighlights, getEventPlayers, getEventChampions, getEventRatings, getEventRosters,
+  getMatches, getEventStandings, getEventPlayers, getEventChampions, getEventRatings, getEventRosters,
 } from '../api/core';
 import type {
-  Match, StandingsEntry, EventHighlights, EventPlayerStats, EventChampionStats, RatingEntry,
+  Match, StandingsEntry, EventPlayerStats, EventChampionStats, RatingEntry,
 } from '../types/models';
 import { bracketKey, type LeagueView, type BracketNeed } from './leagueView';
 
@@ -10,7 +10,6 @@ export interface OverviewData {
   upcoming: Match[];
   recent: Match[];
   standings: StandingsEntry[];
-  highlights: EventHighlights | null;
 }
 
 export interface LeagueTabData {
@@ -77,14 +76,13 @@ export async function loadTeamMeta(eventId: number): Promise<TeamMeta> {
   return { teamLogos, teamShortNames };
 }
 
-async function loadOverview(eventIds: number[], eventId: number): Promise<OverviewData> {
+async function loadOverview(eventIds: number[], eventId: number, includeStandings: boolean): Promise<OverviewData> {
   const now = new Date();
   const eventParam = eventIds.join(',') || String(eventId);
-  const [upRes, resRes, standRes, hlRes] = await Promise.all([
+  const [upRes, resRes, standRes] = await Promise.all([
     getMatches({ event__in: eventParam, has_result: 'false', page_size: 50 }),
     getMatches({ event__in: eventParam, has_result: 'true', page_size: 20 }),
-    getEventStandings(eventId).catch(() => ({ data: [] as StandingsEntry[] })),
-    getEventHighlights(eventId).catch(() => ({ data: null as EventHighlights | null })),
+    includeStandings ? getEventStandings(eventId).catch(() => ({ data: [] as StandingsEntry[] })) : Promise.resolve({ data: [] as StandingsEntry[] }),
   ]);
   const upcoming = [...upRes.data.results]
     .filter((m) => m.datetime_utc && new Date(m.datetime_utc) > now)
@@ -93,14 +91,14 @@ async function loadOverview(eventIds: number[], eventId: number): Promise<Overvi
   const recent = [...resRes.data.results]
     .sort((a, b) => (b.datetime_utc ?? '').localeCompare(a.datetime_utc ?? ''))
     .slice(0, 5);
-  return { upcoming, recent, standings: (standRes.data ?? []).slice(0, 10), highlights: hlRes.data };
+  return { upcoming, recent, standings: (standRes.data ?? []).slice(0, 10) };
 }
 
 // Data for the active leaf tab. Bracket tabs are handled by loadBracketMatches.
 export async function loadLeagueTab(view: LeagueView, eventId: number): Promise<LeagueTabData> {
   switch (view.activeTab) {
     case 'Overview':
-      return { overview: await loadOverview(view.overviewEventIds, eventId) };
+      return { overview: await loadOverview(view.overviewEventIds, eventId, !view.subStages.length || view.subStages.some((s) => s.isStandings)) };
     case 'Matches':
       return { matches: (await getMatches({ event: eventId, page_size: 500 })).data.results };
     case 'Team Stats':

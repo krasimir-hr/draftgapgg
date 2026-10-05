@@ -3,6 +3,7 @@ import { getEvent, getMatches } from '../api/core';
 import type { Event, Match } from '../types/models';
 import Pagination from '../components/Pagination';
 import EsportsLayout from '../components/EsportsLayout';
+import PageHeader from '../components/PageHeader';
 import { useDrawer } from '../contexts/DrawerContext';
 
 export interface EventDetailLoaderData {
@@ -35,25 +36,10 @@ export default function EventDetailPage() {
 
   return (
     <EsportsLayout>
-      <div className="card p-6 mb-8">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <h1 className="text-2xl font-bold text-(--text-h)">{event.name}</h1>
-              {event.is_active && <span className="badge badge-green">Active</span>}
-            </div>
-            <p className="text-sm text-(--text)">
-              {event.league.short_name ?? event.league.name}
-              {event.year ? ` · ${event.year}` : ''}
-              {event.start_date && event.end_date
-                ? ` · ${event.start_date} – ${event.end_date}`
-                : event.start_date
-                ? ` · ${event.start_date}`
-                : ''}
-            </p>
-          </div>
-        </div>
-      </div>
+      <PageHeader eyebrow="League of Legends · Tournament" title={event.name}
+        description={`${event.league.short_name || event.league.name} · ${event.year}${event.start_date ? ` · Starts ${new Date(event.start_date).toLocaleDateString('en-GB', {day:'numeric',month:'long'})}` : ''}`}>
+        {event.is_active && <span className="badge badge-green">Active</span>}
+      </PageHeader>
 
       <div className="flex items-baseline gap-3 mb-4">
         <h2 className="section-label">Matches</h2>

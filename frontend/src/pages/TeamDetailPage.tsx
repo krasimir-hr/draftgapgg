@@ -41,7 +41,7 @@ type Tab = 'Overview' | 'Roster' | 'Champions' | 'Matches';
 /* ─── shared primitives ─────────────────────────────────────── */
 
 const SECTION = 'text-(--text-dim) uppercase font-semibold';
-const sectionStyle = { fontSize: 10.5, letterSpacing: '0.1em' } as const;
+const sectionStyle = { fontSize: 12, letterSpacing: '0.1em' } as const;
 
 /** Country name → ISO-3166 alpha-2, for turning nationalities into flag emoji. */
 const COUNTRY_ISO: Record<string, string> = {
@@ -62,16 +62,16 @@ function Flag({ nationality }: { nationality: string }) {
   const iso = COUNTRY_ISO[nationality];
   const emoji = iso ? iso.replace(/./g, (c) => String.fromCodePoint(127397 + c.charCodeAt(0))) : null;
   return (
-    <span className="inline-flex items-center gap-1 text-(--text-dim)" title={nationality} style={{ fontSize: 10.5 }}>
+    <span className="inline-flex items-center gap-1 text-(--text-dim)" title={nationality} style={{ fontSize: 12 }}>
       {emoji ? <span style={{ fontSize: 13, lineHeight: 1 }}>{emoji}</span> : null}
       {iso ?? nationality}
     </span>
   );
 }
 
-function Card({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
+function Card({ children, style, className = '' }: { children: React.ReactNode; style?: React.CSSProperties; className?: string }) {
   return (
-    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, ...style }}>
+    <div className={`card ${className}`} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, ...style }}>
       {children}
     </div>
   );
@@ -116,7 +116,7 @@ function ResultTag({ won }: { won: boolean | null }) {
   const c = won ? 'var(--green)' : 'var(--red)';
   const bg = won ? 'var(--green-muted)' : 'var(--red-muted)';
   return (
-    <span className="font-bold inline-flex items-center justify-center" style={{ width: 18, height: 18, borderRadius: 5, fontSize: 10.5, color: c, background: bg }}>
+    <span className="font-bold inline-flex items-center justify-center" style={{ width: 18, height: 18, borderRadius: 5, fontSize: 12, color: c, background: bg }}>
       {won ? 'W' : 'L'}
     </span>
   );
@@ -127,7 +127,7 @@ function ResultTag({ won }: { won: boolean | null }) {
 function Headline({ stats }: { stats: TeamProfileStats }) {
   const wr = stats.match_win_rate ?? 0;
   return (
-    <Card style={{ display: 'grid', gridTemplateColumns: 'auto 1fr 1fr 1fr', alignItems: 'center' }}>
+    <Card className="dg-summary">
       {/* Match win rate ring */}
       <div className="flex items-center gap-3" style={{ padding: '18px 22px', borderRight: '1px solid var(--border)' }}>
         <Ring pct={wr} size={62} stroke={5}>
@@ -313,7 +313,7 @@ function ChampionPool({ champions }: { champions: TeamProfileChampion[] }) {
   return (
     <div>
       <h3 className="section-label" style={{ marginBottom: 10 }}>Most picked champions</h3>
-      <Card style={{ overflow: 'hidden' }}>
+      <Card className="dg-pool">
         <div
           className="grid items-center text-(--text-dim) uppercase font-semibold"
           style={{ gridTemplateColumns: '40px 1fr 56px 56px 150px 56px', gap: 14, padding: '9px 16px', fontSize: 9.5, letterSpacing: '0.07em', borderBottom: '1px solid var(--border)' }}
@@ -342,7 +342,7 @@ function ChampionPoolRow({ c, last }: { c: TeamProfileChampion; last: boolean })
       <ChampionIcon src={c.icon_url} alt={c.name} size={36} />
       <div className="min-w-0">
         <div className="font-semibold text-(--text-h) truncate" style={{ fontSize: 13 }}>{c.name}</div>
-        <div className="text-(--text-dim) tabular-nums" style={{ fontSize: 10.5, marginTop: 1 }}>
+        <div className="text-(--text-dim) tabular-nums" style={{ fontSize: 12, marginTop: 1 }}>
           {c.picks} {c.picks === 1 ? 'pick' : 'picks'}
         </div>
       </div>
@@ -379,7 +379,7 @@ function UpcomingRailRow({ m, isLast, onClick }: { m: TeamProfileMatch; isLast: 
       )}
       <div className="min-w-0 flex-1">
         <div className="text-(--text-h) font-semibold truncate" style={{ fontSize: 12 }}>vs {m.opponent}</div>
-        <div className="text-(--text-dim) truncate" style={{ fontSize: 10, marginTop: 1 }}>
+        <div className="text-(--text-dim) truncate" style={{ fontSize: 12, marginTop: 1 }}>
           {dt ? dt.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'TBD'} · BO{m.best_of}
         </div>
       </div>
@@ -404,7 +404,7 @@ function RecentRailRow({ m, isLast, onClick }: { m: TeamProfileMatch; isLast: bo
       )}
       <div className="min-w-0 flex-1">
         <div className="text-(--text-h) font-semibold truncate" style={{ fontSize: 12 }}>vs {m.opponent}</div>
-        <div className="text-(--text-dim) truncate" style={{ fontSize: 10, marginTop: 1 }}>{date}</div>
+        <div className="text-(--text-dim) truncate" style={{ fontSize: 12, marginTop: 1 }}>{date}</div>
       </div>
       <div className="tabular-nums font-semibold text-(--text-h) shrink-0" style={{ fontSize: 12.5 }}>
         {m.team_score}<span className="text-(--text-faint)">–</span>{m.opponent_score}
@@ -474,7 +474,7 @@ function RosterTab({ roster, players, teamColor }: { roster: TeamProfileRosterPl
             )}
             <div className="min-w-0">
               <div className="font-semibold text-(--text-h) truncate" style={{ fontSize: 13.5 }}>{r.name}</div>
-              <div className="flex items-center gap-1.5 text-(--text-dim)" style={{ fontSize: 11, marginTop: 3 }}>
+              <div className="flex items-center gap-1.5 text-(--text-dim)" style={{ fontSize: 13, marginTop: 3 }}>
                 <RoleIcon role={r.role} size={12} color="var(--text-dim)" />
                 {r.role}
                 {r.nationality && <span className="text-(--text-faint)">· {r.nationality}</span>}
@@ -515,13 +515,13 @@ function MatchRow({ m, last }: { m: TeamProfileMatch; last: boolean }) {
       )}
       <div className="min-w-0 flex-1">
         <div className="text-(--text-h) font-semibold truncate" style={{ fontSize: 12.5 }}>vs {m.opponent}</div>
-        <div className="text-(--text-dim) truncate" style={{ fontSize: 10.5 }}>{date} · {m.event}</div>
+        <div className="text-(--text-dim) truncate" style={{ fontSize: 12 }}>{date} · {m.event}</div>
       </div>
       <div className="text-right shrink-0 tabular-nums">
         <div className="font-bold text-(--text-h)" style={{ fontSize: 14 }}>
           {m.team_score}<span className="text-(--text-faint)">–</span>{m.opponent_score}
         </div>
-        <div className="text-(--text-dim)" style={{ fontSize: 10.5, marginTop: 1 }}>BO{m.best_of}</div>
+        <div className="text-(--text-dim)" style={{ fontSize: 12, marginTop: 1 }}>BO{m.best_of}</div>
       </div>
     </button>
   );
@@ -570,10 +570,10 @@ function TeamDetailView() {
     <EsportsLayout right={<TeamRail upcoming={upcoming} recent={played} />}>
       {/* Hero card */}
       <div
-        className="card card-xl card-soft-shadow overflow-hidden"
+        className="card dg-profile-hero overflow-hidden"
         style={{ borderRadius: 16 }}
       >
-        <div className="flex gap-6 px-7 pt-7 pb-1" style={{ alignItems: 'center' }}>
+        <div className="dg-profile-identity flex gap-6" style={{ alignItems: 'center' }}>
           <div
             className="shrink-0 flex items-center justify-center overflow-hidden"
             style={{ width: 96, height: 96, borderRadius: 18, background: team.logo ? 'var(--surface)' : teamColor, border: team.logo ? '1px solid var(--border)' : 'none' }}
@@ -588,6 +588,7 @@ function TeamDetailView() {
           </div>
 
           <div className="flex-1 min-w-0">
+            <p className="dg-eyebrow"><span />Team profile</p>
             <h1 className="h-display" style={{ fontSize: 32, fontWeight: 700, lineHeight: 1.1 }}>
               {team.name}
             </h1>
@@ -620,7 +621,7 @@ function TeamDetailView() {
         </div>
 
         {/* Tab bar + year/event selects */}
-        <div className="flex items-center border-t border-(--border)" style={{ padding: '0 14px', marginTop: 12 }}>
+        <div className="dg-profile-controls border-t border-(--border)" style={{ padding: '0 14px', marginTop: 12 }}>
           <div className="flex" style={{ flex: 1 }}>
             {tabs.map((t) => (
               <button
@@ -634,7 +635,7 @@ function TeamDetailView() {
             ))}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="dg-profile-filters flex items-center gap-2">
             {available_years.length > 0 && (
               <Select
                 ariaLabel="Year"
@@ -665,9 +666,7 @@ function TeamDetailView() {
         {activeTab === 'Overview' && (
           <>
             <Headline stats={stats} />
-            <div
-              style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 22, marginTop: 22, alignItems: 'start' }}
-            >
+            <div className="dg-profile-analysis">
               <PerformanceList stats={stats} />
               <Objectives stats={stats} />
             </div>

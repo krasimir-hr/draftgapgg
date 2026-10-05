@@ -1,446 +1,64 @@
-/* TopNav — flat full-width header (shadcn-style): logo + search + theme
-   toggle on the first row, league tabs on the second, hairline borders only.
-   On mobile the tab row is replaced by a bottom dock. */
-
-.top-nav-container {
-  position: fixed;
-  inset: 0 0 auto 0;
-  z-index: 60;
-  /* Float the bar down from the top and in from the side edges so it reads as a
-     contained, centered card rather than a full-bleed header. */
-  padding: 12px 24px 0;
+/* Global desk navigation. The rail stays dark in both appearance modes. */
+.dg-header { --rail-bg: #1b1724; --rail-text: #f8f5fc; --rail-muted: #b5abc4; --rail-dim: #9b8eab; --rail-border: #393042; --rail-border-strong: #514361; --rail-hover: #2c2339; --rail-active: #372949; --rail-accent: #c4a7ff; --rail-ink: #281b3a; position: fixed; z-index: 60; inset: 0 auto 0 0; width: 224px; display: flex; flex-direction: column; background: var(--rail-bg); color: var(--rail-text); border-right: 1px solid var(--rail-border); }
+.dg-brand { display: flex; align-items: center; gap: 10px; padding: 20px 22px 26px; }
+.dg-brand img { width: 130px; height: auto; filter: none; }
+.dg-brand-mark { display: grid; place-items: center; width: 32px; height: 32px; background: var(--rail-accent); color: var(--rail-ink); border-radius: 7px; }
+.dg-primary-nav { scrollbar-width: none; flex: 1; min-height: 0; overflow-y: auto; padding: 0 14px 16px; }
+.dg-nav-label { padding: 0 12px; margin: 0 0 8px; font-size: 10px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--rail-dim); }
+.dg-nav-link { display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 10px 12px; margin: 3px 0; color: var(--rail-muted); font-size: 13px; font-weight: 500; border-radius: 7px; transition: background 150ms, color 150ms; }
+.dg-nav-link:hover { color: var(--rail-text); background: var(--rail-hover); }
+.dg-nav-link.is-active { color: var(--rail-accent); background: var(--rail-active); }
+.dg-nav-link small { margin-left: auto; font-size: 9px; border: 1px solid var(--rail-border-strong); padding: 1px 5px; border-radius: 3px; color: var(--rail-muted); }
+.dg-league-list { margin-top: 24px; }
+.dg-league-link { display: flex; align-items: center; gap: 12px; padding: 8px 12px; min-height: 36px; color: var(--rail-muted); font-size: 12px; border-radius: 6px; }
+.dg-league-link > span:first-child { width: 20px; height: 20px; display: grid; place-items: center; font-size: 9px; }
+.dg-league-link img { width: 20px; height: 20px; object-fit: contain; }
+.dg-league-link .dg-invert-logo { filter: grayscale(1) brightness(0) invert(1); }
+.dg-league-link:hover { color: var(--rail-text); background: var(--rail-hover); }
+.dg-league-link.is-active { color: var(--rail-text); background: var(--rail-hover); box-shadow: inset 2px 0 var(--rail-accent); }
+.dg-league-arrow { margin-left: auto; opacity: 0; color: var(--rail-accent); }
+.dg-league-link:hover .dg-league-arrow, .dg-league-link.is-active .dg-league-arrow { opacity: 1; }
+.dg-nav-footer { display: flex; align-items: center; justify-content: space-between; padding: 20px 24px; border-top: 1px solid var(--rail-border); }
+.dg-nav-footer > span { font-size: 11px; color: var(--rail-dim); }
+.dg-nav-footer .theme-toggle { display: flex; gap: 4px; padding: 3px; border: 1px solid var(--rail-border-strong); border-radius: 7px; background: transparent; }
+.dg-nav-footer .theme-toggle-opt { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 4px; color: var(--rail-muted); }
+.dg-nav-footer .theme-toggle-opt.active { background: var(--rail-accent); color: var(--rail-ink); box-shadow: none; }
+.dg-utility-bar { position: fixed; inset: 0 0 auto 224px; height: 64px; padding: 0 36px; background: var(--bg); color: var(--text-h); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 20px; z-index: 50; }
+.dg-utility-context { display: flex; align-items: center; gap: 16px; font-size: 12px; }
+.dg-utility-brand { color: var(--text-dim); }
+.dg-context-slash { color: var(--text-faint); }
+.dg-utility-context strong { font-weight: 500; }
+.dg-search-trigger { display: flex; align-items: center; gap: 10px; color: var(--text-dim); font-size: 12px; min-height: 38px; }
+.dg-search-trigger svg { width: 16px; height: 16px; }
+.dg-search-trigger:hover { color: var(--text-h); }
+.dg-search-key { margin-left: 24px; padding: 0 6px; border: 1px solid var(--border); border-radius: 4px; font-size: 12px; }
+.dg-mobile-menu { display: none; }
+.dg-nav-backdrop { display: none; }
+.dg-search-panel { position: absolute; z-index: 80; top: 56px; right: 28px; width: 440px; padding: 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); box-shadow: 0 20px 60px rgb(0 0 0 / 16%); }
+.dg-search-input { display: flex; align-items: center; gap: 10px; padding: 12px; border: 1px solid var(--border); border-radius: 6px; }
+.dg-search-input input { width: 100%; min-width: 0; outline: 0; background: transparent; color: var(--text-h); font-size: 14px; }
+.dg-search-close { color: var(--text-dim); font-size: 10px; padding: 3px 6px; border: 1px solid var(--border); border-radius: 4px; }
+.dg-panel-label { font-size: 10px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--text-dim); padding: 14px 10px 8px; }
+.dg-search-result { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 46px; padding: 9px 12px; text-align: left; color: var(--text-h); font-size: 13px; border-radius: 5px; }
+.dg-search-result[aria-selected="true"] { background: var(--accent-muted); }
+.dg-search-result small { margin-left: auto; color: var(--text-dim); font-size: 10px; }
+.dg-result-symbol { width: 28px; height: 28px; display: grid; place-items: center; color: var(--text-dim); }
+.dg-result-symbol img { width: 24px; height: 24px; object-fit: contain; }
+.dg-white-logo { filter: brightness(0); }
+.dark .dg-white-logo { filter: none; }
+.dg-no-results { font-size: 13px; padding: 20px 12px; color: var(--text-dim); }
+.dg-search-hint { display: flex; justify-content: space-between; padding: 12px 10px 4px; border-top: 1px solid var(--border); margin-top: 8px; font-size: 10px; color: var(--text-dim); }
+.dg-header a:focus-visible, .dg-header button:focus-visible { outline: 2px solid var(--rail-accent); outline-offset: 2px; }
+@media (max-width: 900px) {
+  .dg-header { display: none; }
+  .dg-header.is-mobile-open { display: flex; }
+  .dg-utility-bar { left: 0; padding: 0 20px; height: 60px; }
+  .dg-utility-context { gap: 12px; }
+  .dg-mobile-menu { display: grid; place-items: center; width: 30px; height: 36px; }
+  .dg-nav-backdrop { display: block; position: fixed; z-index: 59; inset: 0; background: rgb(0 0 0 / 50%); }
+  .dg-search-trigger > span { display: none; }
+  .dg-search-trigger { width: 36px; justify-content: center; }
+  .dg-search-panel { position: fixed; top: 66px; left: 12px; right: 12px; width: auto; }
 }
 
-.top-nav {
-  /* On-nav tokens alias the page's neutral tokens; kept as a layer so the
-     header and the mobile dock share one vocabulary. */
-  --nav-fg:             var(--text-h);
-  --nav-fg-dim:         var(--text-dim);
-  --nav-fg-faint:       var(--text-faint);
-  --nav-line:           var(--border);
-  --nav-line-strong:    var(--border-strong);
-  --nav-field-bg:       var(--surface-sub);
-  --nav-field-bg-focus: var(--surface-sub);
-  --nav-hover:          var(--surface-sub);
-  --nav-active:         var(--surface-sub);
-
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  background: var(--nav-bg);
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--nav-line);
-}
-
-/* Desktop header: a contained bar as wide as the main content shell (1280px),
-   centered, with a full hairline border + rounded corners — floating over the
-   page rather than spanning the viewport edge-to-edge. Stacks two rows: logo +
-   search, then league tabs. */
-.top-nav-container .top-nav {
-  flex-direction: column;
-  align-items: stretch;
-  height: auto;
-  gap: 0;
-  padding: 0;
-  max-width: 1280px;
-  margin: 0 auto;
-  border: 1px solid var(--nav-line);
-  border-radius: 14px;
-}
-
-.top-nav-main {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  height: 56px;
-  width: 100%;
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 0 24px;
-}
-
-.top-nav-logo {
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-  padding-right: 4px;
-}
-
-.top-nav-logo img {
-  height: 28px;
-  width: auto;
-}
-
-/* The wordmark asset is white; ink it on the light header, leave it in dark. */
-.top-nav-logo-full { filter: brightness(0); }
-.dark .top-nav-logo-full { filter: none; }
-
-/* Theme toggle (see ThemeToggle.tsx): a segmented light | dark control. A pill
-   track sized to match the search field's 34px height, holding two circular
-   options; the active mode is raised on a lighter fill. */
-.theme-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  height: 34px;
-  padding: 0 3px;
-  flex-shrink: 0;
-  border: 1px solid var(--nav-line);
-  border-radius: 999px;
-  background: var(--nav-field-bg);
-}
-
-.theme-toggle-opt {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  flex-shrink: 0;
-  border: none;
-  border-radius: 999px;
-  background: transparent;
-  color: var(--nav-fg-faint);
-  cursor: pointer;
-  transition: background var(--t-fast), color var(--t-fast);
-}
-.theme-toggle-opt:hover { color: var(--nav-fg); }
-
-.theme-toggle-opt.active {
-  background: var(--surface);
-  color: var(--nav-fg);
-  box-shadow: var(--shadow-sm);
-}
-.dark .theme-toggle-opt.active {
-  background: var(--surface-hover);
-}
-
-/* Desktop: the league tabs sit in a second row below the logo/search line,
-   divided by a hairline. Mobile hides this — the bottom dock takes over. */
-.top-nav-leagues-slot {
-  display: block;
-  border-top: 1px solid var(--nav-line);
-}
-
-.top-nav-leagues-slot .top-nav-leagues {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 0 10px; /* tabs carry 14px of their own → labels align at 24px */
-}
-
-/* Mobile-only bottom dock for the league icon-buttons. */
-.bottom-nav-container {
-  display: none;
-  position: fixed;
-  inset: auto 0 0 0;
-  z-index: 60;
-}
-
-.top-nav-leagues {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  overflow-x: auto;
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-/* Separates the regional leagues from the international events. */
-.top-nav-divider {
-  flex-shrink: 0;
-  width: 1px;
-  height: 22px;
-  margin: 0 6px;
-  background: var(--nav-line);
-}
-
-.league-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 42px;
-  height: 42px;
-  flex-shrink: 0;
-  border-radius: var(--r-lg);
-  border: 1px solid transparent;
-  background: transparent;
-  cursor: pointer;
-  transition: background var(--t-fast), border-color var(--t-fast);
-}
-
-.league-btn:hover {
-  background: var(--nav-hover);
-}
-
-.league-btn.active {
-  background: var(--nav-active);
-  border-color: var(--nav-line);
-}
-
-.league-btn img {
-  width: 24px;
-  height: 24px;
-  object-fit: contain;
-}
-
-/* Some crests read dark; whiten them on dark surfaces only. */
-.dark .league-btn-white img {
-  filter: brightness(0) invert(1);
-}
-
-.league-btn-fallback {
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
-  color: var(--nav-fg-dim);
-}
-
-/* The crest buttons carry a text label too; shown as tabs in the desktop
-   second row, hidden in the mobile bottom dock (which stays icon-only). */
-.league-btn-label { display: none; }
-
-/* ==================================================================
-   Desktop second-row league tabs: crest + label, with an active underline.
-   Scoped to .top-nav-leagues-slot so the mobile bottom dock keeps the plain
-   .league-btn icon styling.
-   ================================================================== */
-.top-nav-leagues-slot .top-nav-leagues {
-  justify-content: flex-start;
-  gap: 0;
-}
-
-.top-nav-leagues-slot .league-btn {
-  position: relative;
-  width: auto;
-  height: 44px;
-  gap: 8px;
-  padding: 0 14px;
-  border-radius: 0;
-  border: none;
-}
-.top-nav-leagues-slot .league-btn:hover {
-  background: transparent;
-}
-.top-nav-leagues-slot .league-btn.active {
-  background: transparent;
-  border: none;
-}
-.top-nav-leagues-slot .league-btn img {
-  width: 20px;
-  height: 20px;
-  opacity: 0.7;
-  transition: opacity var(--t-fast);
-}
-.top-nav-leagues-slot .league-btn:hover img,
-.top-nav-leagues-slot .league-btn.active img {
-  opacity: 1;
-}
-.top-nav-leagues-slot .league-btn-label {
-  display: block;
-  font-family: var(--font-sans);
-  font-size: 13px;
-  font-weight: 500;
-  letter-spacing: -0.01em;
-  color: var(--nav-fg-dim);
-  white-space: nowrap;
-  transition: color var(--t-fast);
-}
-.top-nav-leagues-slot .league-btn:hover .league-btn-label {
-  color: var(--nav-fg);
-}
-.top-nav-leagues-slot .league-btn.active .league-btn-label {
-  color: var(--nav-fg);
-  font-weight: 600;
-}
-.top-nav-leagues-slot .league-btn.active::after {
-  content: '';
-  position: absolute;
-  left: 14px;
-  right: 14px;
-  bottom: -1px; /* sit on the header's bottom border */
-  height: 2px;
-  border-radius: 2px 2px 0 0;
-  background: var(--accent);
-}
-
-/* Search — pinned to the right of the bar with a results dropdown. */
-.top-nav-search {
-  position: relative;
-  flex-shrink: 0;
-  margin-left: auto;
-}
-
-.top-nav-search-field {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 200px;
-  height: 34px;
-  padding: 0 12px;
-  border-radius: var(--r-md);
-  border: 1px solid var(--nav-line);
-  background: var(--nav-field-bg);
-  color: var(--nav-fg-dim);
-  transition: border-color var(--t-fast), box-shadow var(--t-fast);
-}
-
-.top-nav-search-field:focus-within {
-  border-color: var(--accent-border);
-  box-shadow: var(--ring-focus);
-}
-
-.top-nav-search-field input {
-  flex: 1;
-  min-width: 0;
-  border: none;
-  outline: none;
-  background: transparent;
-  font-family: var(--font-sans);
-  font-size: 13px;
-  color: var(--nav-fg);
-}
-
-.top-nav-search-field input::placeholder {
-  color: var(--nav-fg-faint);
-}
-
-.top-nav-search-results {
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
-  min-width: 260px;
-  max-height: 340px;
-  overflow-y: auto;
-  padding: 5px;
-  border-radius: var(--r-lg);
-  border: 1px solid var(--border);
-  background: var(--surface);
-  box-shadow: var(--shadow-lg);
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  z-index: 10;
-}
-
-.top-nav-search-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  padding: 8px 10px;
-  border: none;
-  border-radius: var(--r-md);
-  background: transparent;
-  text-align: left;
-  cursor: pointer;
-  transition: background var(--t-fast);
-}
-
-.top-nav-search-item.active,
-.top-nav-search-item:hover {
-  background: var(--surface-sub);
-}
-
-.top-nav-search-item img {
-  width: 20px;
-  height: 20px;
-  object-fit: contain;
-  flex-shrink: 0;
-}
-
-.top-nav-search-icon {
-  width: 20px;
-  text-align: center;
-  color: var(--text-dim);
-  flex-shrink: 0;
-}
-
-.top-nav-search-label {
-  flex: 1;
-  min-width: 0;
-  font-family: var(--font-sans);
-  font-size: 13.5px;
-  font-weight: 500;
-  color: var(--text-h);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.top-nav-search-cat {
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--text-dim);
-  flex-shrink: 0;
-}
-
-/* ------------------------------------------------------------------
-   Mobile: two flat bars. The top one keeps the wordmark + search +
-   theme toggle; the league icon-buttons move into a full-width bottom
-   dock (Instagram-style tab bar).
-   ------------------------------------------------------------------ */
-@media (max-width: 768px) {
-  /* Mobile drops the floating-bar treatment — the header goes full-bleed again
-     (edge-to-edge, bottom border only) so it reads as a plain top bar. */
-  .top-nav-container { padding: 0; }
-
-  /* Single row again on mobile: the league tab row is hidden and the bottom
-     dock takes over, so the header collapses back to logo + search. */
-  .top-nav-container .top-nav {
-    flex-direction: row;
-    align-items: center;
-    height: 56px;
-    gap: 10px;
-    padding: 0 12px;
-    max-width: none;
-    margin: 0;
-    border: none;
-    border-bottom: 1px solid var(--nav-line);
-    border-radius: 0;
-  }
-  .top-nav-main {
-    display: contents;
-  }
-
-  .top-nav-logo img { height: 24px; }
-
-  /* Leagues leave the top bar… */
-  .top-nav-leagues-slot { display: none; }
-
-  /* …and the search stretches to fill the freed space. */
-  .top-nav-search { flex: 1 1 auto; min-width: 0; }
-  .top-nav-search-field { width: 100%; height: 36px; }
-
-  .top-nav-search-results {
-    min-width: 0;
-    width: 100%;
-    max-width: calc(100vw - 24px);
-  }
-
-  /* Bottom dock: league icon-buttons, horizontally scrollable. */
-  .bottom-nav-container { display: block; }
-
-  .bottom-nav {
-    height: calc(58px + env(safe-area-inset-bottom));
-    padding: 0 8px env(safe-area-inset-bottom);
-    justify-content: center;
-    border-bottom: none;
-    border-top: 1px solid var(--nav-line);
-  }
-
-  .bottom-nav .top-nav-leagues {
-    gap: 4px;
-    justify-content: flex-start;
-  }
-
-  .league-btn {
-    width: 42px;
-    height: 42px;
-  }
-  .league-btn img { width: 23px; height: 23px; }
-}
+.dg-primary-nav::-webkit-scrollbar { display: none; }

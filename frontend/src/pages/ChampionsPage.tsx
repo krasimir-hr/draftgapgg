@@ -5,6 +5,7 @@ import type { Champion, ChampionStats } from '../types/models';
 import Pagination from '../components/Pagination';
 import { ChampionIcon } from '../components/ChampionIcon';
 import EsportsLayout from '../components/EsportsLayout';
+import PageHeader from '../components/PageHeader';
 import ChampionStatsRail from '../components/ChampionStatsRail';
 
 export interface ChampionsLoaderData {
@@ -36,10 +37,9 @@ export default function ChampionsPage() {
 
   return (
     <EsportsLayout right={stats ? <ChampionStatsRail stats={stats} /> : undefined}>
-      <div className="flex items-baseline gap-3 mb-8">
-        <h1 className="text-2xl font-bold text-(--text-h)">Champions</h1>
-        {count > 0 && <span className="text-sm text-(--text-dim)">{count} total</span>}
-      </div>
+      <PageHeader eyebrow="League of Legends · Champion directory" title="Champions" description="Explore champion picks, performance and the current competitive meta.">
+        <span className="dg-directory-count">{count} champions</span>
+      </PageHeader>
 
       <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-7 gap-2">
         {champions.map((c) => (

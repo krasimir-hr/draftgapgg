@@ -86,13 +86,20 @@ export function resolveLeagueView(league: League | null, events: Event[], slug: 
   // the bracket can be reached without a separate dropdown entry. A "Regular
   // Season" standings entry is prepended so the nav reads: Regular Season → Playoffs.
   for (const event of stagesForYear) {
-    if (!event.stages?.length) continue;
+    // Imported standalone playoffs may not have EventStage metadata yet.
+    // Explicit stage types take precedence over this event-name fallback.
+    if (!event.stages?.length) {
+      if (!parentToChildren.has(event.id) && /\b(?:playoffs?|knockout|road to msi|season finals)\b/i.test(event.name)) {
+        parentToChildren.set(event.id, [{ label: 'Playoffs', event, stageOnly: true }]);
+      }
+      continue;
+    }
     for (const stage of event.stages) {
       if (stage.type !== 'playoff' && stage.type !== 'swiss' && stage.type !== 'play_in') continue;
       const label = stage.name; // e.g. "Playoffs", "Qualifying Series"
       if (!parentToChildren.has(event.id)) parentToChildren.set(event.id, []);
       const existing = parentToChildren.get(event.id)!;
-      if (!existing.some((ss) => ss.isStandings)) {
+      if (event.stages.some((s) => s.type === 'league' || s.type === 'group') && !existing.some((ss) => ss.isStandings)) {
         existing.push({ label: 'Regular Season', event, stageOnly: true, isStandings: true });
       }
       if (!existing.some((ss) => ss.label === label)) {

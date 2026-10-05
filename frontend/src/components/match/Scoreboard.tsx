@@ -117,7 +117,7 @@ function TeamBlock({
         )}
       </div>
 
-      <div style={{ padding: '0 16px' }}>
+      <div className="dg-scoreboard-rows" style={{ padding: '0 16px' }}>
         {rows.map(({ role, row }, i) =>
           row ? (
             <PlayerRow
@@ -159,7 +159,7 @@ function TeamBanners({
 
   return (
     <div
-      className="grid"
+      className="dg-scoreboard-banners grid"
       style={{
         gridTemplateColumns: '1fr auto 1fr',
         alignItems: 'stretch',
@@ -175,7 +175,7 @@ function TeamBanners({
       />
 
       <div
-        className="flex flex-col items-center justify-center"
+        className="dg-game-summary flex flex-col items-center justify-center"
         style={{
           padding: '22px 28px',
           borderLeft: '1px solid var(--border)',
@@ -230,7 +230,7 @@ function TeamSide({
 
   return (
     <div
-      className="flex flex-col"
+      className="dg-team-side flex flex-col"
       style={{ padding: '20px 24px 18px', gap: 14, background: 'var(--surface)' }}
     >
       <div className="flex items-center" style={{ gap: 14, flexDirection: blueSide ? 'row' : 'row-reverse', textAlign: blueSide ? 'left' : 'right' }}>
@@ -283,7 +283,7 @@ function TeamSide({
 export function TeamMark({ team, size }: { team: TeamMeta; size: number }) {
   if (team.logo) {
     return (
-      <div className="shrink-0 flex items-center justify-center overflow-hidden" style={{ width: size, height: size }}>
+      <div className="dg-team-mark shrink-0 flex items-center justify-center overflow-hidden" style={{ width: size, height: size }}>
         <img src={team.logo} alt={team.short} className="max-w-full max-h-full object-contain" />
       </div>
     );
@@ -291,7 +291,7 @@ export function TeamMark({ team, size }: { team: TeamMeta; size: number }) {
   return (
     <div
       className="shrink-0 flex items-center justify-center text-white"
-      style={{ width: size, height: size, borderRadius: Math.max(4, size * 0.22), background: team.color || 'var(--accent)', fontWeight: 700, fontSize: size * 0.38, fontFamily: 'var(--font-sans)', letterSpacing: '-0.04em' }}
+      style={{ width: size, height: size, borderRadius: Math.max(4, size * 0.22), background: team.color || '#3a2b50', fontWeight: 700, fontSize: size * 0.38, fontFamily: 'var(--font-sans)', letterSpacing: '-0.04em' }}
     >
       {team.short.slice(0, 3)}
     </div>
@@ -357,11 +357,9 @@ function PlayerRow({
 }) {
   return (
     <div
-      className="grid items-center"
+      className="dg-scoreboard-player grid items-center"
       style={{
-        // The mid-row PR breakdown (KeyMetrics) is the flexible track, so the
-        // leftover width is filled with real content rather than blank space.
-        gridTemplateColumns: '28px 44px 120px 44px 84px 116px minmax(0, 1fr) auto auto',
+        gridTemplateColumns: '20px 44px minmax(100px, 1fr) 44px 78px minmax(116px, 1fr) auto auto',
         alignItems: 'center',
         gap: 16,
         padding: '11px 4px',
@@ -374,7 +372,6 @@ function PlayerRow({
       <RatingBadge rating={row.rating} role={row.role} blue />
       <KDABlock kills={row.kills} deaths={row.deaths} assists={row.assists} blue />
       <StatBlock cs={row.cs} gold={row.gold} dmg={row.damage_to_champions} vision={row.vision_score} maxDmg={maxDmg} accent={accent} blue fluid />
-      <KeyMetrics rating={row.rating} />
       <Loadout spellD={row.summoner_spell_d} spellF={row.summoner_spell_f} keystone={row.keystone_rune} runes={row.runes} blue />
       <Inventory items={row.items} trinket={row.trinket} blue />
     </div>
@@ -415,51 +412,6 @@ const METRIC_LABELS: Record<string, string> = {
   dmg_mitig: 'Damage mitigated',
   dpm: 'Damage / min',
 };
-
-// Compact labels for the inline per-row breakdown (hover shows full names).
-const METRIC_SHORT: Record<string, string> = {
-  kda: 'KDA',
-  kp: 'KP',
-  dmg_share: 'DMG%',
-  cs_min: 'CS/M',
-  gold_eff: 'GOLD',
-  survive: 'SURV',
-  vision_min: 'VIS',
-  objective: 'OBJ',
-  lane_diff15: 'LANE',
-  dmg_mitig: 'MIT',
-  dpm: 'DPM',
-};
-
-/* Inline PR breakdown: the role's primary metrics (the same ★ key stats the
-   hover card highlights) as mini score bars, filling the row's mid-width. */
-function KeyMetrics({ rating }: { rating: PerformanceRatingInfo | null }) {
-  const top = (rating?.metrics ?? [])
-    .filter((m) => m.weight >= 0.15)
-    .sort((a, b) => b.weight - a.weight)
-    .slice(0, 3);
-  if (top.length === 0) return <div />;
-
-  return (
-    <div className="flex items-center" style={{ gap: 16, minWidth: 0 }}>
-      {top.map((m) => (
-        <div key={m.key} className="flex flex-col" style={{ gap: 4, flex: '1 1 0', minWidth: 0 }}>
-          <div className="flex items-center justify-between" style={{ gap: 6 }}>
-            <span className="font-bold uppercase truncate" style={{ fontSize: 8.5, letterSpacing: '0.07em', color: 'var(--text-faint)' }}>
-              {METRIC_SHORT[m.key] ?? m.key}
-            </span>
-            <span className="tabular-nums font-semibold" style={{ fontSize: 10.5, color: prColor(m.score) }}>
-              {m.score.toFixed(0)}
-            </span>
-          </div>
-          <div style={{ height: 4, borderRadius: 999, background: 'var(--surface-sub)', overflow: 'hidden' }}>
-            <div style={{ width: `${Math.max(2, Math.min(100, m.score))}%`, height: '100%', background: prColor(m.score) }} />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
 
 function RatingBadge({ rating, role, blue }: { rating: PlayerPerformance['rating']; role: string; blue: boolean }) {
   const pr = rating?.pr;

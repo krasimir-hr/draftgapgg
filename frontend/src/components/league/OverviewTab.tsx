@@ -1,7 +1,7 @@
 import { useState, Fragment } from 'react';
 import type React from 'react';
-import type { StandingsEntry, EventHighlights, Match } from '../../types/models';
-import { FormHistory } from './shared';
+import type { StandingsEntry, Match } from '../../types/models';
+import { FormHistory, TeamMark } from './shared';
 import type { OverviewData } from '../../lib/leagueData';
 import type { SubStage } from '../../lib/leagueView';
 import BracketTab from './BracketTab';
@@ -14,13 +14,15 @@ interface Props {
   teamLogos?: Record<string, string | null>;
   onMatchSelect?: (id: number) => void;
   subStages?: SubStage[];
+  onViewMatches?: () => void;
   bm?: (eventId: number, stageId?: number) => Match[] | undefined;
 }
 
 export default function OverviewTab({
-  data, teamShortNames, eventId, teamLogos = {}, onMatchSelect, subStages = [], bm,
+  data, teamShortNames, eventId, teamLogos = {}, onMatchSelect, subStages = [], bm, onViewMatches,
 }: Props) {
-  const { standings, highlights } = data;
+  const { standings, upcoming, recent } = data;
+  const [matchScope, setMatchScope] = useState<'upcoming' | 'results'>(upcoming.length ? 'upcoming' : 'results');
   const stageOnlySubStages = subStages.filter((ss) => ss.stageOnly);
   // Default to the current/latest stage: the last (most recent) stage that
   // already has a played match, falling back to the last stage overall.
@@ -35,8 +37,10 @@ export default function OverviewTab({
 
   const activeIdx = Math.min(selectedIdx, stageOnlySubStages.length - 1);
   const activeSS = stageOnlySubStages[activeIdx] ?? null;
+  const isKnockout = !!activeSS && !activeSS.isStandings && !activeSS.swiss;
 
-  const stageNav = stageOnlySubStages.length > 0 ? (
+  const competitionHeading = !activeSS || activeSS.isStandings ? 'Standings' : activeSS.swiss ? 'Swiss stage' : 'Playoff bracket';
+  const stageNav = stageOnlySubStages.length > 1 ? (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
       {stageOnlySubStages.map((ss, i) => (
         <Fragment key={ss.label}>
@@ -48,6 +52,7 @@ export default function OverviewTab({
           <button
             type="button"
             onClick={() => setSelectedIdx(i)}
+            aria-pressed={i === activeIdx}
             className={`chip${i === activeIdx ? ' active' : ''}`}
           >
             {ss.label}
@@ -58,16 +63,18 @@ export default function OverviewTab({
   ) : null;
 
   return (
-    <div className="flex flex-col" style={{ gap: 20 }}>
-      <AccoladesRow highlights={highlights} teamShortNames={teamShortNames} />
+    <div className="dg-league-overview">
+      {!isKnockout && <section className="dg-overview-matches" aria-label="Match centre">
+        <div className="dg-match-centre-heading"><div><span className="dg-section-index">01 / MATCH CENTRE</span><h2>{matchScope === 'results' ? 'Latest results' : 'Next matches'}</h2></div>
+          <div className="dg-match-centre-actions"><div className="dg-scope-switch"><button type="button" aria-pressed={matchScope === 'results'} onClick={() => setMatchScope('results')}>Results</button><button type="button" aria-pressed={matchScope === 'upcoming'} onClick={() => setMatchScope('upcoming')}>Upcoming</button></div>{onViewMatches && <button className="dg-all-matches" type="button" onClick={onViewMatches}>View all ↗</button>}</div>
+        </div>
+        <div className="dg-featured-matches">{(matchScope === 'results' ? recent : upcoming).slice(0,3).map(m => <MatchPreview key={m.id} match={m} teamLogos={teamLogos} teamShortNames={teamShortNames} onMatchSelect={onMatchSelect} />)}</div>
+        {(matchScope === 'results' ? recent : upcoming).length === 0 && <p className="dg-match-empty">{matchScope === 'results' ? 'No results yet.' : 'No upcoming fixtures scheduled.'}</p>}
+      </section>}
 
-      <div>
-        {!stageNav && (
-          <h2 className="section-label pl-1" style={{ marginBottom: 10 }}>
-            Tournament Standings
-          </h2>
-        )}
-        <div className="card card-soft-shadow overflow-hidden" style={{ borderRadius: 12 }}>
+      <div className="dg-overview-standings">
+        <div className="dg-standings-heading"><div><span className="dg-section-index">{isKnockout ? '01' : '02'} / COMPETITION</span><h2>{competitionHeading}</h2></div>{competitionHeading === 'Standings' && <span>{standings.length} teams · Series record</span>}</div>
+        <div className={isKnockout ? 'po-overview' : 'card card-soft-shadow overflow-hidden'} style={{ borderRadius: 12 }}>
         {stageNav && (
           <div
             className="flex items-center justify-center"
@@ -81,7 +88,7 @@ export default function OverviewTab({
           activeSS.isStandings ? (
             <StandingsTable standings={standings} teamShortNames={teamShortNames} />
           ) : (
-            <div style={{ padding: '12px 12px 16px' }}>
+            <div style={{ padding: isKnockout ? 0 : '12px 12px 16px' }}>
               {activeSS.swiss ? (
                 <SwissStage
                   key={activeSS.event.id}
@@ -93,7 +100,7 @@ export default function OverviewTab({
                 />
               ) : (
                 <BracketTab
-                  key={activeSS.event.id + (activeSS.tabFilter?.join(',') ?? '') + (activeSS.tabPrefix ?? '')}
+                  key={`${activeSS.event.id}:${activeSS.stageId ?? ''}:${activeSS.tabFilter?.join(',') ?? ''}:${activeSS.tabPrefix ?? ''}`}
                   eventId={activeSS.event.id}
                   stageId={activeSS.stageId}
                   tabFilter={activeSS.tabFilter}
@@ -116,208 +123,16 @@ export default function OverviewTab({
   );
 }
 
-/* Highlights strip (Best Performer · On Fire · Must Pick · Match of the Week)
-   — compact image-backed tiles rendered above the stages/standings card. */
-
-function AccoladesRow({ highlights, teamShortNames }: { highlights: EventHighlights | null; teamShortNames: Record<string, string> }) {
-  if (!highlights) return null;
-
-  const cards: React.ReactNode[] = [];
-  if (highlights.player_of_month) cards.push(<PlayerOfMonthCard key="pom" p={highlights.player_of_month} />);
-  if (highlights.inform_team) cards.push(<InformTeamCard key="team" t={highlights.inform_team} />);
-  if (highlights.must_pick) cards.push(<MustPickCard key="pick" c={highlights.must_pick} />);
-  if (highlights.match_of_week) cards.push(<MatchOfWeekCard key="motw" m={highlights.match_of_week} sn={teamShortNames} />);
-  else if (highlights.banger_of_week) cards.push(<BangerOfWeekCard key="botw" m={highlights.banger_of_week} sn={teamShortNames} />);
-  if (cards.length === 0) return null;
-
-  return <div className="hl-grid">{cards}</div>;
-}
-
-function HighlightTile({
-  kicker, title, sub, visual, backdrop,
-}: {
-  kicker: string;
-  title: React.ReactNode;
-  sub: React.ReactNode;
-  visual: React.ReactNode;
-  backdrop?: React.ReactNode;
+function MatchPreview({ match: m, teamLogos, teamShortNames, onMatchSelect }: {
+  match: Match; teamLogos: Record<string,string | null>; teamShortNames: Record<string,string>; onMatchSelect?: (id:number) => void;
 }) {
-  return (
-    <div className="hl-card">
-      {backdrop}
-      <div className="hl-glow" aria-hidden />
-      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.6) 60%, rgba(0,0,0,0.5) 100%)' }} />
-      <div style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', gap: 12, height: '100%', padding: '0 14px' }}>
-        <div style={{ flexShrink: 0 }}>{visual}</div>
-        <div style={{ minWidth: 0, flex: 1 }}>
-          <div style={{ fontSize: 8.5, letterSpacing: '0.13em', fontWeight: 700, color: '#c4b5fd', textTransform: 'uppercase', marginBottom: 3, textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>
-            {kicker}
-          </div>
-          <div style={{ fontSize: 14, fontWeight: 700, color: '#fff', letterSpacing: '-0.01em', lineHeight: 1.15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {title}
-          </div>
-          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 6 }}>
-            {sub}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function BlurLogoBackdrop({ src }: { src: string }) {
-  return (
-    <img
-      src={src} alt="" aria-hidden className="hl-zoom"
-      style={{ position: 'absolute', top: '50%', left: '55%', marginTop: -110, marginLeft: -110, width: 220, height: 220, objectFit: 'contain', filter: 'blur(22px) brightness(0.55)', opacity: 0.9 }}
-    />
-  );
-}
-
-/* Fixed dark-theme W/L colors: the tiles keep a dark image scrim in both themes. */
-function MiniForm({ form }: { form: ('W' | 'L')[] }) {
-  return (
-    <span style={{ display: 'inline-flex', gap: 3 }}>
-      {form.slice(-5).map((c, i) => (
-        <span key={i} style={{ fontSize: 9.5, fontWeight: 800, color: c === 'W' ? '#4ade80' : '#f87171' }}>{c}</span>
-      ))}
-    </span>
-  );
-}
-
-function PlayerOfMonthCard({ p }: { p: NonNullable<EventHighlights['player_of_month']> }) {
-  return (
-    <HighlightTile
-      kicker="Best Performer"
-      title={p.name}
-      sub={<span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}><strong style={{ color: '#d8ccfd', fontWeight: 700 }}>{p.kda} KDA</strong> · {p.avg_kills}/{p.avg_deaths}/{p.avg_assists} · {p.team}</span>}
-      backdrop={p.team_logo ? <BlurLogoBackdrop src={p.team_logo} /> : undefined}
-      visual={
-        p.image ? (
-          <div style={{ width: 44, height: 44, borderRadius: 10, overflow: 'hidden', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)' }}>
-            <img src={p.image} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: '50% 12%' }} />
-          </div>
-        ) : p.team_logo ? (
-          <img src={p.team_logo} alt={p.team} style={{ width: 38, height: 38, objectFit: 'contain', filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.6))' }} />
-        ) : (
-          <div style={{ width: 44, height: 44, borderRadius: 10, background: '#171717', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fafafa', fontSize: 15, fontWeight: 700 }}>{p.name.charAt(0)}</div>
-        )
-      }
-    />
-  );
-}
-
-function InformTeamCard({ t }: { t: NonNullable<EventHighlights['inform_team']> }) {
-  return (
-    <HighlightTile
-      kicker="On Fire"
-      title={t.team}
-      sub={<><span>{t.wins}W–{t.played - t.wins}L</span><MiniForm form={t.form} /></>}
-      backdrop={t.logo ? <BlurLogoBackdrop src={t.logo} /> : undefined}
-      visual={
-        t.logo
-          ? <img src={t.logo} alt={t.team} style={{ width: 38, height: 38, objectFit: 'contain', filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.6))' }} />
-          : <div style={{ width: 44, height: 44, borderRadius: 10, background: '#171717', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fafafa', fontSize: 15, fontWeight: 700 }}>{t.team.charAt(0)}</div>
-      }
-    />
-  );
-}
-
-function MustPickCard({ c }: { c: NonNullable<EventHighlights['must_pick']> }) {
-  return (
-    <HighlightTile
-      kicker="Must Pick"
-      title={c.name}
-      sub={
-        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
-          {c.win_rate !== null && <strong style={{ color: c.win_rate >= 60 ? '#4ade80' : '#fbbf24', fontWeight: 700 }}>{c.win_rate}% WR</strong>}
-          {c.win_rate !== null && ' · '}{c.wins}W–{c.picks - c.wins}L · {c.picks} picks
-        </span>
-      }
-      backdrop={
-        <img src={c.splash_url} alt="" aria-hidden className="hl-zoom" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 18%', filter: 'brightness(0.75)' }} />
-      }
-      visual={<img src={c.icon_url} alt={c.name} style={{ width: 44, height: 44, borderRadius: 10, border: '1px solid rgba(255,255,255,0.2)', display: 'block' }} />}
-    />
-  );
-}
-
-function formatMatchWhen(iso: string | null): string | null {
-  if (!iso) return null;
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return null;
-  return `${d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })} · ${d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}`;
-}
-
-function FaceOffVisual({ logo1, logo2, name1, name2 }: { logo1: string | null; logo2: string | null; name1: string; name2: string }) {
-  const logo = (src: string | null, name: string, offset: boolean) => (
-    src
-      ? <img src={src} alt={name} style={{ width: 30, height: 30, objectFit: 'contain', marginLeft: offset ? -8 : 0, filter: 'drop-shadow(0 3px 8px rgba(0,0,0,0.7))' }} />
-      : <div style={{ width: 30, height: 30, borderRadius: 8, background: '#171717', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fafafa', fontSize: 10, fontWeight: 700, marginLeft: offset ? -8 : 0 }}>{name.slice(0, 2)}</div>
-  );
-  return (
-    <div style={{ display: 'flex', alignItems: 'center' }}>
-      {logo(logo1, name1, false)}
-      {logo(logo2, name2, true)}
-    </div>
-  );
-}
-
-/* Both team names shrink independently so the middle (vs / score) never truncates away. */
-function FaceOffTitle({ left, center, right }: { left: React.ReactNode; center: React.ReactNode; right: React.ReactNode }) {
-  const name = (node: React.ReactNode) => (
-    <span style={{ flex: '0 1 auto', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{node}</span>
-  );
-  return (
-    <span style={{ display: 'flex', alignItems: 'baseline', gap: 5, minWidth: 0 }}>
-      {name(left)}
-      <span style={{ flexShrink: 0 }}>{center}</span>
-      {name(right)}
-    </span>
-  );
-}
-
-function MatchOfWeekCard({ m, sn }: { m: NonNullable<EventHighlights['match_of_week']>; sn: Record<string, string> }) {
-  const when = formatMatchWhen(m.datetime_utc);
-  return (
-    <HighlightTile
-      kicker="Match of the Week"
-      title={
-        <FaceOffTitle
-          left={sn[m.team1] || m.team1}
-          center={<span style={{ color: 'rgba(255,255,255,0.4)', fontWeight: 600, fontSize: 11 }}>vs</span>}
-          right={sn[m.team2] || m.team2}
-        />
-      }
-      sub={
-        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
-          {m.team1_pos != null && m.team2_pos != null && `#${m.team1_pos} vs #${m.team2_pos} · `}
-          {when ?? 'Time TBD'}
-        </span>
-      }
-      backdrop={m.team1_logo ? <BlurLogoBackdrop src={m.team1_logo} /> : m.team2_logo ? <BlurLogoBackdrop src={m.team2_logo} /> : undefined}
-      visual={<FaceOffVisual logo1={m.team1_logo} logo2={m.team2_logo} name1={m.team1} name2={m.team2} />}
-    />
-  );
-}
-
-function BangerOfWeekCard({ m, sn }: { m: NonNullable<EventHighlights['banger_of_week']>; sn: Record<string, string> }) {
-  const when = formatMatchWhen(m.datetime_utc);
-  return (
-    <HighlightTile
-      kicker="Banger of the Week"
-      title={
-        <FaceOffTitle
-          left={<span style={{ color: m.winner === 1 ? '#fff' : 'rgba(255,255,255,0.55)' }}>{sn[m.team1] || m.team1}</span>}
-          center={<span style={{ color: '#d8ccfd', fontWeight: 800 }}>{m.team1_score}–{m.team2_score}</span>}
-          right={<span style={{ color: m.winner === 2 ? '#fff' : 'rgba(255,255,255,0.55)' }}>{sn[m.team2] || m.team2}</span>}
-        />
-      }
-      sub={<span>{when ?? 'Recently played'}</span>}
-      backdrop={m.team1_logo ? <BlurLogoBackdrop src={m.team1_logo} /> : m.team2_logo ? <BlurLogoBackdrop src={m.team2_logo} /> : undefined}
-      visual={<FaceOffVisual logo1={m.team1_logo} logo2={m.team2_logo} name1={m.team1} name2={m.team2} />}
-    />
-  );
+  const date = m.datetime_utc ? new Date(m.datetime_utc) : null;
+  const played = m.winner != null;
+  return <button className="dg-match-preview" type="button" onClick={() => onMatchSelect?.(m.id)} aria-label={`${m.team1} ${played ? m.team1_score : 'vs'} ${m.team2} ${played ? m.team2_score : ''}`}>
+    <span className="dg-preview-meta"><span>{date ? date.toLocaleDateString('en-GB', {day:'numeric',month:'short'}) : 'TBD'}<span className="dg-meta-divider">/</span>{m.tab || `BO${m.best_of}`}</span><span className="dg-match-status">{played ? 'FINAL' : `BO${m.best_of}`}</span></span>
+    <span className="dg-preview-matchup">{[m.team1,m.team2].map((name,i) => <span className={`dg-preview-team${m.winner === i+1 ? ' is-winner' : ''}`} key={i}><TeamMark short={teamShortNames[name] || name} logo={teamLogos[name]} size={44}/><strong>{teamShortNames[name] || name}</strong></span>)}<span className="dg-preview-score">{played ? <><strong>{m.team1_score}</strong><span>:</span><strong>{m.team2_score}</strong></> : <small>{date ? date.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : 'TBD'}</small>}</span></span>
+    <span className="dg-preview-footer"><span>Best of {m.best_of}</span><span>Match details ↗</span></span>
+  </button>;
 }
 
 /* Standings card (top 10) */
@@ -335,7 +150,7 @@ function StandingsTable({
           No standings data yet.
         </p>
       ) : (
-        <table className="w-full font-sans" style={{ borderCollapse: 'collapse', fontSize: 12.5 }}>
+        <table className="dg-standings-table w-full font-sans" style={{ borderCollapse: 'collapse', fontSize: 12.5 }}>
           <thead>
             <tr style={{ borderBottom: '1px solid var(--border)' }}>
               <Th style={{ width: 42, textAlign: 'center', padding: '10px 8px' }}>#</Th>
@@ -351,7 +166,7 @@ function StandingsTable({
             {standings.map((s, i) => (
               <tr
                 key={s.team}
-                className="transition-colors hover:bg-(--surface-sub)"
+                className={`dg-standing-row${i === 0 ? ' is-first' : ''}`}
                 style={{ borderTop: i > 0 ? '1px solid var(--border)' : 'none' }}
               >
                 <td
@@ -363,15 +178,15 @@ function StandingsTable({
                 <td style={{ padding: '10px 16px' }}>
                   <div className="flex items-center" style={{ gap: 10 }}>
                     {s.logo ? (
-                      <img src={s.logo} alt={s.team} width={32} height={32} loading="lazy" decoding="async" style={{ width: 32, height: 32, objectFit: 'contain', flexShrink: 0 }} />
+                      <img className="dg-team-mark" src={s.logo} alt={s.team} width={32} height={32} loading="lazy" decoding="async" style={{ width: 32, height: 32, objectFit: 'contain', flexShrink: 0 }} />
                     ) : (
                       <div style={{ width: 32, height: 32, borderRadius: 6, background: 'var(--surface-sub)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700, color: 'var(--text-dim)', flexShrink: 0 }}>
                         {s.team.slice(0, 2)}
                       </div>
                     )}
                     <div>
-                      <div style={{ fontWeight: 600, color: 'var(--text-h)', fontSize: 13, whiteSpace: 'nowrap' }}>{s.team}</div>
-                      <div style={{ color: 'var(--text-dim)', fontSize: 11, marginTop: 1, whiteSpace: 'nowrap' }}>{teamShortNames[s.team] || ''}</div>
+                      <div style={{ fontWeight: 600, color: 'var(--text-h)', fontSize: 13, whiteSpace: 'nowrap' }}><span className="dg-team-full">{s.team}</span><span className="dg-team-short">{teamShortNames[s.team] || s.team}</span></div>
+
                     </div>
                   </div>
                 </td>

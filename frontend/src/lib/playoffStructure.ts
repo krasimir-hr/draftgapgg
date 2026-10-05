@@ -1,0 +1,102 @@
+import type { Match } from '../types/models';
+import { orderedBracketTabs } from './bracketRounds';
+
+export type PlayoffLane = 'upper' | 'lower' | 'final' | 'placement';
+export interface PlayoffMatch {
+  match: Match;
+  lane: PlayoffLane;
+  loserOutcome?: 'eliminated' | 'lower' | 'continues';
+  winnerNext?: { matchId: number; round: string; lane: PlayoffLane };
+  loserNext?: { matchId: number; round: string; lane: PlayoffLane };
+}
+export interface PlayoffRound { key: string; label: string; matches: PlayoffMatch[] }
+
+// Arrange feeders beside their destinations without changing chronological detail views.
+export function orderPlayoffRounds(rounds: PlayoffRound[]): PlayoffRound[] {
+  const arranged = rounds.map(r => ({ ...r, matches: [...r.matches] }));
+  for (let i = arranged.length - 2; i >= 0; i--) {
+    const positions = new Map(arranged.slice(i + 1).flatMap((r, col) => r.matches.map((e, row) => [e.match.id, { col, row }] as const)));
+    arranged[i].matches.sort((a, b) => {
+      if (a.match.bracket_order != null || b.match.bracket_order != null) return (a.match.bracket_order ?? 9999) - (b.match.bracket_order ?? 9999);
+      if (a.lane !== b.lane || !a.winnerNext || !b.winnerNext) return 0;
+      const toA = positions.get(a.winnerNext.matchId), toB = positions.get(b.winnerNext.matchId);
+      return toA && toB && toA.col === toB.col ? toA.row - toB.row : 0;
+    });
+  }
+  return arranged;
+}
+const realTeam = (name: string) => !!name?.trim() && !/^tbd$/i.test(name.trim());
+const finalMatch = (m: Match) => m.is_final || /^(?:grand\s+)?finals?$/i.test(m.tab?.trim() ?? '');
+const placementMatch = (m: Match) => /\b(?:third[ -]?place|3rd[ -]?place|bronze|placement)\b/i.test(m.tab ?? '');
+const chronological = (a: Match, b: Match) => (a.datetime_utc || '9999').localeCompare(b.datetime_utc || '9999') || a.id - b.id;
+
+export function buildPlayoffs(allMatches: Match[], roundLabels: string[] = []) {
+  const matches = allMatches.filter(m => !m.bracket_hidden);
+  const chronologicalMatches = [...matches].sort(chronological);
+  const losses = new Map<string, number>();
+  const lossesBefore = new Map<number, [number, number]>();
+  let doubleElimination = allMatches.some(m => m.is_lower_bracket);
+  for (const m of [...allMatches].sort(chronological)) {
+    const before: [number, number] = [losses.get(m.team1) ?? 0, losses.get(m.team2) ?? 0];
+    lossesBefore.set(m.id, before);
+    // A recorded loser playing again outside a final confirms a second path.
+    // Undated fixtures cannot establish progression from previous results.
+    if (m.bracket_col == null && m.datetime_utc && !finalMatch(m) && !placementMatch(m) && before.every(n => n > 0)) doubleElimination = true;
+    if (m.datetime_utc && m.winner != null) {
+      const loser = m.winner === 1 ? m.team2 : m.team1;
+      if (realTeam(loser)) losses.set(loser, (losses.get(loser) ?? 0) + 1);
+    }
+  }
+  const fallbackTabs = orderedBracketTabs(matches);
+  const columns = [...new Set(matches.map(m => m.bracket_col).filter((n): n is number => n != null))].sort((a,b) => a-b);
+  const layoutColumns = roundLabels.length ? Array.from({ length: Math.max(roundLabels.length, ...columns) }, (_, i) => i + 1) : columns;
+  const keys = [...layoutColumns.map(n => `column:${n}`), ...fallbackTabs.map(t => `tab:${t}`)];
+  const keyOf = (m: Match) => m.bracket_col != null ? `column:${m.bracket_col}` : `tab:${m.tab || 'Stage 1'}`;
+  const entries = chronologicalMatches.map((match): PlayoffMatch => ({
+    match,
+    lane: placementMatch(match) ? 'placement' : (match.is_final || (match.bracket_col == null && finalMatch(match))) ? 'final' : match.is_lower_bracket || (doubleElimination && match.bracket_col == null && !!match.datetime_utc && lossesBefore.get(match.id)!.every(n => n > 0)) ? 'lower' : 'upper',
+  }));
+  const rounds: PlayoffRound[] = keys.map((key, i) => {
+    const entriesInRound = entries.filter(e => keyOf(e.match) === key);
+    const labels = [...new Set(entriesInRound.map(e => e.match.tab).filter(Boolean))];
+    return { key, label: key.startsWith('column:') && roundLabels[Number(key.split(':')[1]) - 1] || (labels.length === 1 ? labels[0] : `Round ${i + 1}`), matches: entriesInRound.sort((a, b) => (a.match.bracket_order ?? 9999) - (b.match.bracket_order ?? 9999)) };
+  });
+  const roundOf = new Map(rounds.flatMap(r => r.matches.map(e => [e.match.id, r.label] as const)));
+  for (let i = 0; i < entries.length; i++) {
+    const e = entries[i];
+    const destination = (next: PlayoffMatch | undefined) => next ? { matchId: next.match.id, round: roundOf.get(next.match.id)!, lane: next.lane } : undefined;
+    const wired = entries.find(next => next.match.id === e.match.next_match);
+    if (wired) e.winnerNext = destination(wired);
+    const loserWired = entries.find(next => next.match.id === e.match.loser_next_match);
+    if (loserWired) e.loserNext = destination(loserWired);
+    if (e.match.winner == null || !e.match.datetime_utc) continue;
+    const winner = e.match.winner === 1 ? e.match.team1 : e.match.team2;
+    const loser = e.match.winner === 1 ? e.match.team2 : e.match.team1;
+    const nextFor = (team: string) => realTeam(team) ? entries.slice(i + 1).find(next => !!next.match.datetime_utc && (next.match.team1 === team || next.match.team2 === team)) : undefined;
+    if (e.match.bracket_col == null) e.winnerNext ??= destination(nextFor(winner));
+    if (e.match.bracket_col == null) e.loserNext ??= destination(nextFor(loser));
+  }
+  for (const entry of entries) {
+    const m = entry.match;
+    if (m.loser_outcome && m.loser_outcome !== 'auto') {
+      entry.loserOutcome = m.loser_outcome === 'none' ? undefined : m.loser_outcome;
+      continue;
+    }
+    const linked = allMatches.find(next => next.id === m.loser_next_match);
+    const linkedIsLater = !m.datetime_utc || !linked?.datetime_utc || linked.datetime_utc > m.datetime_utc;
+    if (entry.loserNext && ((m.loser_next_match != null && linkedIsLater) || m.winner == null)) { entry.loserOutcome = entry.loserNext.lane === 'lower' ? 'lower' : 'continues'; continue; }
+    if (m.winner == null) continue;
+    const loser = m.winner === 1 ? m.team2 : m.team1;
+    if (!realTeam(loser)) continue;
+    // Include hidden fixtures: removing a card does not change the team's actual run.
+    const future = m.datetime_utc ? [...allMatches].sort(chronological).find(next => next.datetime_utc && next.datetime_utc > m.datetime_utc! && (next.team1 === loser || next.team2 === loser)) : undefined;
+    if (future) { entry.loserOutcome = future.is_lower_bracket || (future.bracket_col == null && doubleElimination && !finalMatch(future) && !placementMatch(future)) ? 'lower' : 'continues'; continue; }
+    const losses = m.datetime_utc ? allMatches.filter(previous => previous.datetime_utc && previous.datetime_utc <= m.datetime_utc! && previous.winner != null && !placementMatch(previous) && (previous.winner === 1 ? previous.team2 : previous.team1) === loser).length : 0;
+    if (entry.lane === 'lower' || entry.lane === 'final' || (entry.lane === 'upper' && !doubleElimination) || losses >= 2) entry.loserOutcome = 'eliminated';
+  }
+  const finals = entries.filter(e => e.lane === 'final');
+  const decidedFinal = finals.length === 1 && finals[0].match.winner != null ? finals[0].match : null;
+  const champion = decidedFinal ? (decidedFinal.winner === 1 ? decidedFinal.team1 : decidedFinal.team2) : null;
+  const teams = [...new Set(matches.flatMap(m => [m.team1, m.team2]).filter(realTeam))].sort();
+  return { rounds, doubleElimination, champion, teams };
+}

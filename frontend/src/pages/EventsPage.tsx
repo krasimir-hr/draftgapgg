@@ -3,6 +3,7 @@ import { getEvents } from '../api/core';
 import type { Event } from '../types/models';
 import Pagination from '../components/Pagination';
 import EsportsLayout from '../components/EsportsLayout';
+import PageHeader from '../components/PageHeader';
 
 export interface EventsLoaderData {
   events: Event[];
@@ -27,10 +28,9 @@ export default function EventsPage() {
 
   return (
     <EsportsLayout>
-      <div className="flex items-baseline gap-3 mb-8">
-        <h1 className="text-2xl font-bold text-(--text-h)">Events</h1>
-        {count > 0 && <span className="text-sm text-(--text-dim)">{count} total</span>}
-      </div>
+      <PageHeader eyebrow="League of Legends · Tournament directory" title="Tournaments" description="Explore the season, from regional competition to the world stage.">
+        <span className="dg-directory-count">{count} tournaments</span>
+      </PageHeader>
 
       <div className="space-y-2">
         {events.map((e) => (

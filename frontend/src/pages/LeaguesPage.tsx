@@ -3,6 +3,7 @@ import { getLeagues } from '../api/core';
 import type { League } from '../types/models';
 import Pagination from '../components/Pagination';
 import EsportsLayout from '../components/EsportsLayout';
+import PageHeader from '../components/PageHeader';
 import { slugify } from '../utils/slugs';
 
 export interface LeaguesLoaderData {
@@ -17,23 +18,13 @@ export async function leaguesLoader({ request }: LoaderFunctionArgs): Promise<Le
   return { leagues: res.data.results, count: res.data.count, page };
 }
 
-const LEAGUE_COLOR: Record<string, string> = {
-  LCK:   '#a78bfa',
-  LPL:   '#dc2626',
-  LEC:   '#3b82f6',
-  LCS:   '#06b6d4',
-  CBLoL: '#10b981',
-  LCP:   '#f59e0b',
-};
-
 function LeagueIcon({ league }: { league: League }) {
   const label = league.short_name ?? league.name;
-  const color = LEAGUE_COLOR[label] ?? 'var(--accent)';
   if (league.logo) {
     return (
       <div
-        className="flex items-center justify-center shrink-0"
-        style={{ width: 48, height: 48, borderRadius: 10, background: color }}
+        className="dg-directory-mark flex items-center justify-center shrink-0"
+        style={{ width: 56, height: 56, borderRadius: 9, background: 'var(--surface-sub)' }}
       >
         <img
           src={league.logo}
@@ -50,9 +41,9 @@ function LeagueIcon({ league }: { league: League }) {
   }
   return (
     <div
-      className="flex items-center justify-center shrink-0 text-white font-bold"
+      className="flex items-center justify-center shrink-0 text-(--text-h) font-bold"
       style={{
-        width: 48, height: 48, borderRadius: 10, background: color,
+        width: 56, height: 56, borderRadius: 9, background: 'var(--surface-sub)',
         fontFamily: 'var(--font-sans)', fontSize: 14, letterSpacing: '-0.02em',
       }}
     >
@@ -72,15 +63,11 @@ export default function LeaguesPage() {
 
   return (
     <EsportsLayout>
-      <header className="mb-8">
-        <div className="eyebrow mb-2">Pro League · Directory</div>
-        <h1 className="h-display" style={{ fontSize: 'clamp(30px, 8vw, 44px)' }}>Leagues</h1>
-        <p className="mt-3 text-(--text)" style={{ fontSize: 15.5, maxWidth: 560, lineHeight: 1.55 }}>
-          {count > 0 ? <><b className="text-(--text-h) font-semibold">{count}</b> leagues tracked.</> : 'Browse the leagues we cover.'} Pick one to see standings, schedules, and player leaders.
-        </p>
-      </header>
+      <PageHeader eyebrow="League of Legends · League directory" title="Leagues" description="Find your league. Follow the standings, matches and players that matter to you.">
+        <span className="dg-directory-count">{count} leagues</span>
+      </PageHeader>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div className="dg-league-directory">
         {leagues.map((league) => (
           <Link
             key={league.id}
@@ -89,10 +76,9 @@ export default function LeaguesPage() {
           >
             <LeagueIcon league={league} />
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-(--text-h)">{league.name}</p>
-              {league.short_name && league.short_name !== league.name && (
-                <p className="text-xs text-(--text-dim) mt-0.5 tracking-wide uppercase">{league.short_name}</p>
-              )}
+              <p className="dg-league-title">{league.short_name || league.name}</p>
+              <p className="dg-league-description">{league.name}</p>
+
             </div>
             <span className="text-(--text-dim) text-sm shrink-0">→</span>
           </Link>

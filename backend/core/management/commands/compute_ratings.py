@@ -8,6 +8,7 @@ sync_matches + pull_oracleselixir. See docs/player-rating-system.md.
 from collections import defaultdict
 
 from django.core.management.base import BaseCommand, CommandError
+from django.db import transaction
 
 from core.models import Event, PlayerPerformance, PerformanceRating
 from core import rating
@@ -38,6 +39,7 @@ class Command(BaseCommand):
             total += n
         self.stdout.write(self.style.SUCCESS(f"Computed {total} ratings across {len(events)} events."))
 
+    @transaction.atomic
     def _process_event(self, event):
         perfs = list(
             PlayerPerformance.objects

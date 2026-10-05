@@ -1,9 +1,10 @@
 from rest_framework import viewsets, mixins
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAdminUser
 from rest_framework.views import APIView
-from rest_framework import status as drf_status
+from rest_framework import status as drf_status, serializers
+from django.db import transaction, IntegrityError
 from django.db.models import Count, Q, Sum, Case, When, IntegerField, F
 from django.utils import timezone
 from datetime import date
@@ -867,7 +868,110 @@ class MatchViewSet(ReadOnlyModelViewSet):
             })
         return Response({'results': results})
 
-    @action(detail=True, methods=['patch'], url_path='bracket')
+    @action(detail=False, methods=['get'], url_path='bracket-access')
+    def bracket_access(self, request):
+        return Response({'can_edit': bool(request.user.is_authenticated and request.user.is_staff)})
+
+    @action(detail=False, methods=['get'], url_path='bracket-rounds')
+    def bracket_rounds(self, request):
+        event = Event.objects.filter(pk=request.query_params.get('event')).first()
+        if not event:
+            return Response({'error': 'Event not found.'}, status=404)
+        scope = request.query_params.get('scope', '')
+        return Response({'rounds': event.bracket_layout.get(scope, [])})
+
+    @action(detail=False, methods=['post'], url_path='bracket-layout', permission_classes=[IsAdminUser])
+    def bracket_layout(self, request):
+        class Placement(serializers.Serializer):
+            id = serializers.IntegerField(min_value=1)
+            bracket_col = serializers.IntegerField(min_value=1, max_value=100)
+            bracket_order = serializers.IntegerField(min_value=1, max_value=500)
+            is_lower_bracket = serializers.BooleanField()
+            is_final = serializers.BooleanField()
+            next_match = serializers.IntegerField(min_value=1, allow_null=True)
+            loser_next_match = serializers.IntegerField(min_value=1, allow_null=True, default=None)
+            team1_origin = serializers.CharField(max_length=80, allow_blank=True, required=False)
+            team2_origin = serializers.CharField(max_length=80, allow_blank=True, required=False)
+            loser_outcome = serializers.ChoiceField(choices=['auto', 'eliminated', 'lower', 'none'], required=False)
+
+        class Layout(serializers.Serializer):
+            event = serializers.IntegerField(min_value=1)
+            matches = Placement(many=True, allow_empty=True, max_length=500)
+            scope = serializers.CharField(max_length=500, allow_blank=True, default='')
+            rounds = serializers.ListField(child=serializers.CharField(max_length=100, allow_blank=False), max_length=100, required=False)
+            removed = serializers.ListField(child=serializers.IntegerField(min_value=1), max_length=500, default=list)
+
+        payload = Layout(data=request.data)
+        payload.is_valid(raise_exception=True)
+        data = payload.validated_data
+        entries = data['matches']
+        ids = [entry['id'] for entry in entries]
+        removed = data['removed']
+        if not ids and not removed and not data.get('rounds'):
+            return Response({'error': 'Include at least one match.'}, status=400)
+        if len(set(removed)) != len(removed) or set(ids) & set(removed):
+            return Response({'error': 'Removed matches cannot also occupy a position.'}, status=400)
+        if len(set(ids)) != len(ids):
+            return Response({'error': 'Each match must appear exactly once.'}, status=400)
+        try:
+            with transaction.atomic():
+                event = Event.objects.select_for_update().filter(pk=data['event']).first()
+                if event is None:
+                    return Response({'error': 'Event not found.'}, status=404)
+                # Lock the whole event so concurrent editors cannot interleave swaps.
+                event_matches = list(Match.objects.select_for_update().filter(event_id=data['event']))
+                by_id = {match.pk: match for match in event_matches}
+                if any(pk not in by_id for pk in ids + removed):
+                    return Response({'error': 'Every match must belong to this event.'}, status=400)
+                slots = {(m.stage_id, m.is_lower_bracket, m.bracket_col, m.bracket_order) for m in event_matches if m.pk not in ids + removed and not m.bracket_hidden and m.bracket_col is not None and m.bracket_order is not None}
+                for entry in entries:
+                    match = by_id[entry['id']]
+                    slot = (match.stage_id, entry['is_lower_bracket'], entry['bracket_col'], entry['bracket_order'])
+                    if slot in slots or (entry['is_final'] and entry['is_lower_bracket']):
+                        return Response({'error': 'Two matches cannot occupy the same slot.'}, status=400)
+                    slots.add(slot)
+                    next_id = entry['next_match']
+                    if next_id is not None:
+                        if next_id not in ids or next_id == match.pk or by_id[next_id].stage_id != match.stage_id:
+                            return Response({'error': 'The next series must be in the same playoff stage.'}, status=400)
+                        next_entry = next(e for e in entries if e['id'] == next_id)
+                        if next_entry['bracket_col'] <= entry['bracket_col']:
+                            return Response({'error': 'Winner paths must lead to a later round.'}, status=400)
+                    loser_id = entry['loser_next_match']
+                    if loser_id is not None:
+                        if loser_id not in ids or loser_id == match.pk or by_id[loser_id].stage_id != match.stage_id:
+                            return Response({'error': 'The loser destination must be in the same playoff stage.'}, status=400)
+                        loser_entry = next(e for e in entries if e['id'] == loser_id)
+                        if not loser_entry['is_lower_bracket'] or loser_entry['is_final']:
+                            return Response({'error': 'Losers must advance to a lower-bracket match.'}, status=400)
+                        same_round_drop = loser_entry['bracket_col'] == entry['bracket_col'] and not entry['is_lower_bracket'] and not entry['is_final']
+                        if loser_entry['bracket_col'] <= entry['bracket_col'] and not same_round_drop:
+                            return Response({'error': 'Loser paths cannot point backwards.'}, status=400)
+                        if loser_id == entry['next_match']:
+                            return Response({'error': 'Winner and loser destinations must be different.'}, status=400)
+                # Release positions first, then apply the entire layout in one transaction.
+                Match.objects.filter(pk__in=ids + removed).update(bracket_order=None)
+                Match.objects.filter(pk__in=removed).update(bracket_hidden=True, bracket_col=None, bracket_order=None, next_match=None, loser_next_match=None)
+                Match.objects.filter(event_id=data['event'], next_match_id__in=removed).update(next_match=None)
+                Match.objects.filter(event_id=data['event'], loser_next_match_id__in=removed).update(loser_next_match=None)
+                if 'rounds' in data:
+                    if any(e['bracket_col'] > len(data['rounds']) for e in entries):
+                        raise serializers.ValidationError({'error': 'Each match must be placed in an existing round.'})
+                    event.bracket_layout = {**event.bracket_layout, data['scope']: data['rounds']}
+                    event.save(update_fields=['bracket_layout'])
+                for entry in entries:
+                    match = by_id[entry['id']]
+                    for field, value in entry.items():
+                        if field != 'id':
+                            setattr(match, f'{field}_id' if field in ('next_match', 'loser_next_match') else field, value)
+                    match.bracket_hidden = False
+                    match.save(update_fields=['bracket_col', 'bracket_order', 'is_lower_bracket', 'is_final', 'next_match', 'loser_next_match', 'bracket_hidden', 'loser_outcome', 'team1_origin', 'team2_origin'])
+        except IntegrityError:
+            return Response({'error': 'A position is occupied by another match. Reload the bracket and try again.'}, status=400)
+        updated = self.get_queryset().filter(pk__in=ids + removed)
+        return Response({'matches': MatchListSerializer(updated, many=True, context={'request': request}).data})
+
+    @action(detail=True, methods=['patch'], url_path='bracket', permission_classes=[IsAdminUser])
     def bracket(self, request, pk=None):
         match = self.get_object()
         ser = MatchBracketSerializer(match, data=request.data, partial=True)
@@ -876,7 +980,7 @@ class MatchViewSet(ReadOnlyModelViewSet):
         updated = self.get_queryset().get(pk=match.pk)
         return Response(MatchListSerializer(updated, context={'request': request}).data)
 
-    @action(detail=False, methods=['post'], url_path='rename-column')
+    @action(detail=False, methods=['post'], url_path='rename-column', permission_classes=[IsAdminUser])
     def rename_column(self, request):
         event_id = request.data.get('event')
         stage_id = request.data.get('stage')
