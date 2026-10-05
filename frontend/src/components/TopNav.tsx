@@ -96,9 +96,9 @@ function SearchPanel({ leagues, onClose }: { leagues: TopNavLeague[]; onClose: (
   );
 }
 
-function NavGlyph({ kind }: { kind: 'matches' | 'leagues' | 'predictions' }) {
+function NavGlyph({ kind }: { kind: 'matches' | 'predictions' }) {
   return <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
-    {kind === 'matches' ? <><rect x="3" y="4" width="14" height="13" rx="2"/><path d="M7 2v4m6-4v4M3 9h14m-10 4h2m3 0h2"/></> : kind === 'leagues' ? <><path d="M6 3h8v5a4 4 0 0 1-8 0V3Zm4 9v5m-4 0h8M6 5H3v2a4 4 0 0 0 4 4m7-6h3v2a4 4 0 0 1-4 4"/></> : <><path d="m11 2-7 9h6l-1 7 7-10h-6l1-6Z"/></>}
+    {kind === 'matches' ? <><rect x="3" y="4" width="14" height="13" rx="2"/><path d="M7 2v4m6-4v4M3 9h14m-10 4h2m3 0h2"/></> : <><path d="m11 2-7 9h6l-1 7 7-10h-6l1-6Z"/></>}
   </svg>;
 }
 
@@ -129,7 +129,6 @@ export default function TopNav({ logo, logoAlt = 'DraftGap', leagues }: TopNavPr
         <p className="dg-nav-label">Explore</p>
         {([
           {to:'/matches',label:'Matches',kind:'matches'},
-          {to:'/leagues',label:'Leagues',kind:'leagues'},
           {to:'/worlds-2026/predictions',label:'Predictions',kind:'predictions'},
         ] as const).map(item => <Link key={item.to} to={item.to} onClick={navigateAway} className={`dg-nav-link${pathname.startsWith(item.to) ? ' is-active' : ''}`} aria-current={pathname.startsWith(item.to) ? 'page' : undefined}>
           <NavGlyph kind={item.kind}/>{item.label}{item.kind === 'predictions' && <small>2026</small>}
