@@ -269,3 +269,20 @@ class BracketLayoutTests(TestCase):
         self.assertEqual(self.client.post(self.url, data, format='json').status_code, 200)
         self.a.refresh_from_db()
         self.assertEqual((self.a.team1_origin, self.a.team2_origin), ('', ''))
+
+    def test_qualified_entries_save_validate_and_clear_removed_destinations(self):
+        self.client.force_authenticate(self.staff)
+        data = self.layout([(self.a, 1, 1, False, False, None), (self.b, 2, 1, False, False, None)])
+        entries = [{'team': 'A', 'label': 'Seed 1 · Bye', 'match_id': self.b.pk}, {'team': 'B', 'label': '', 'match_id': None}]
+        data.update(scope='playoffs', entries=entries)
+        self.assertEqual(self.client.post(self.url, data, format='json').status_code, 200)
+        self.assertEqual(self.client.get('/api/matches/bracket-rounds/', {'event': self.event.pk, 'scope': 'playoffs'}).data['entries'], entries)
+        data['entries'] = [entries[0], entries[0]]
+        self.assertEqual(self.client.post(self.url, data, format='json').status_code, 400)
+        data['entries'] = [{**entries[0], 'match_id': 999999}]
+        self.assertEqual(self.client.post(self.url, data, format='json').status_code, 400)
+        data = {'event': self.event.pk, 'matches': [], 'removed': [self.b.pk]}
+        self.assertEqual(self.client.post(self.url, data, format='json').status_code, 200)
+        self.event.refresh_from_db()
+        self.assertIsNone(self.event.bracket_entries['playoffs'][0]['match_id'])
+        self.assertEqual(self.event.bracket_entries['playoffs'][0]['label'], 'Seed 1 · Bye')

@@ -82,7 +82,7 @@
 .po-map-caption > span { font-size: 11px; color: var(--text-dim); }
 .po-map-scroll { overflow-x: auto; padding: 3px 3px 18px; scrollbar-width: thin; scrollbar-color: var(--accent-border) transparent; }
 .po-map-scroll:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 6px; }
-.po-map-board { position: relative; display: grid; grid-template-columns: repeat(var(--round-count), minmax(172px, 1fr)); gap: 32px; min-width: calc(var(--round-count) * 172px + (var(--round-count) - 1) * 32px); }
+.po-map-board { position: relative; display: grid; grid-template-columns: repeat(var(--round-count), minmax(156px, 1fr)); gap: 24px; min-width: calc(var(--round-count) * 156px + (var(--round-count) - 1) * 24px); }
 .po-map-column { position: relative; min-width: 0; }
 .po-map-round { display: flex; gap: 8px; align-items: center; padding-bottom: 14px; margin-bottom: 12px; border-bottom: 1px solid var(--border); }
 .po-map-round > span { font-family: var(--font-mono); font-size: 9px; color: var(--text-faint); }
@@ -218,3 +218,23 @@
 @media (max-width: 700px) { .po-entry-controls { grid-template-columns: 1fr; padding: 14px; } }
 
 .po-editor-origin { color: var(--accent); overflow-wrap: anywhere; }
+
+.po-qualified-list { display: grid; gap: 12px; }
+.po-qualified-card { position: relative; z-index: 1; display: flex; align-items: center; gap: 9px; min-height: 60px; padding: 10px; background: var(--surface); border: 1px solid var(--accent-border); border-radius: 9px; }
+.po-qualified-card > .po-qualified-identity { flex: 1; min-width: 0; display: grid; gap: 4px; }
+.po-qualified-card strong { font-size: 13px; color: var(--text-h); }
+.po-qualified-card small { font-size: 10px; color: var(--accent); overflow-wrap: anywhere; }
+.po-qualified-card > span { color: var(--accent); }
+.po-qualified-card.is-muted { opacity: .3; }
+.po-entry-hint { font-size: 10px; line-height: 1.5; color: var(--text-dim); margin: 0 0 12px; }
+.po-entry-card { position: relative; padding: 12px 30px 12px 10px; margin-bottom: 12px; border: 1px solid var(--accent-border); border-radius: 8px; background: var(--surface-sub); }
+.po-entry-card > strong { display: block; color: var(--text-h); font-size: 13px; margin-bottom: 8px; }
+.po-entry-card input { width: 100%; min-width: 0; font-size: 10px; color: var(--text); border: 1px solid var(--border); border-radius: 5px; padding: 8px; background: var(--surface); margin-bottom: 8px; }
+.po-entry-card .dg-select-trigger { width: 100%; min-width: 0; font-size: 10px; }
+.po-admin .po-entry-card .po-entry-port { position: absolute; right: 3px; top: 10px; padding: 5px; color: var(--accent); cursor: crosshair; }
+.po-entry-port[aria-pressed="true"] { background: var(--accent-muted) !important; border-color: var(--accent) !important; }
+
+.po-entry-card { padding: 8px 28px 8px 8px; margin-bottom: 8px; }
+.po-entry-card > strong { margin-bottom: 4px; }
+.po-entry-card input { padding: 6px; margin-bottom: 4px; }
+.po-entry-card .dg-select-trigger { padding: 6px 8px; min-height: 28px; }

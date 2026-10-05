@@ -40,6 +40,7 @@ class Event(models.Model):
     prize_pool = models.CharField(max_length=50, blank=True, default='')
 
     bracket_layout = models.JSONField(default=dict, blank=True)
+    bracket_entries = models.JSONField(default=dict, blank=True)
 
     is_fully_synced = models.BooleanField(default=False)
     last_synced_at = models.DateTimeField(null=True, blank=True)

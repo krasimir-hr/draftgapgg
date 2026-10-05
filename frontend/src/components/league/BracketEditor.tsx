@@ -4,6 +4,7 @@ import { adminLogin, getBracketAccess, saveBracketLayout, type BracketPlacement 
 import type { Match } from '../../types/models';
 import { orderPlayoffRounds, type PlayoffRound } from '../../lib/playoffStructure';
 import { leftConnectionPath, canConnect, type ConnectionKind } from '../../lib/bracketConnections';
+import type { BracketEntry } from '../../lib/bracketEntries';
 import { Select } from '../ui/Select';
 
 type Lane = 'upper' | 'lower' | 'final';
@@ -11,8 +12,8 @@ interface DraftRound { label: string; upper: number[]; lower: number[]; final: n
 const lanes: Lane[] = ['upper', 'lower', 'final'];
 const labels = { upper: 'Upper bracket', lower: 'Lower bracket', final: 'Final' };
 
-export default function BracketEditor({ eventId, rounds, matches, shorts, scope, onSaved }: {
-  eventId: number; rounds: PlayoffRound[]; matches: Match[]; shorts: Record<string, string>; scope: string; onSaved: (matches: Match[], labels: string[]) => void;
+export default function BracketEditor({ eventId, rounds, matches, shorts, scope, entries, onSaved }: {
+  eventId: number; rounds: PlayoffRound[]; matches: Match[]; shorts: Record<string, string>; scope: string; entries: BracketEntry[]; onSaved: (matches: Match[], labels: string[], entries: BracketEntry[]) => void;
 }) {
   const [canEdit, setCanEdit] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
@@ -21,6 +22,8 @@ export default function BracketEditor({ eventId, rounds, matches, shorts, scope,
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
+  const [entryDraft, setEntryDraft] = useState<BracketEntry[]>([]);
+  const [entryConnecting, setEntryConnecting] = useState<string | null>(null);
   const [draft, setDraft] = useState<DraftRound[]>([]);
   const [unplaced, setUnplaced] = useState<number[]>([]);
   const [selected, setSelected] = useState<number | null>(null);
@@ -42,6 +45,7 @@ export default function BracketEditor({ eventId, rounds, matches, shorts, scope,
 
   const begin = () => {
     const ordered = orderPlayoffRounds(rounds);
+    setEntryDraft(entries.map(e => ({ ...e }))); setEntryConnecting(null);
     setOrigins(Object.fromEntries(matches.map(m => [m.id, [m.team1_origin ?? '', m.team2_origin ?? '']])));
     setLoserOutcomes(Object.fromEntries(matches.map(m => [m.id, m.loser_outcome ?? 'auto'])));
     setUnplaced(matches.filter(m => m.bracket_hidden).map(m => m.id));
@@ -80,7 +84,7 @@ export default function BracketEditor({ eventId, rounds, matches, shorts, scope,
     const clearLinks = (prev: Record<number, number | null>) => Object.fromEntries(Object.entries(prev).map(([key, next]) => [key, removed.has(Number(key)) || (next != null && removed.has(next)) ? null : next]));
     setNextMatches(clearLinks); setLoserMatches(clearLinks);
     if (selected != null && removed.has(selected)) setSelected(null);
-    setConnecting(null); setDragging(null); setTarget('0:upper'); setMessage('Unsaved changes');
+    setConnecting(null); setEntryConnecting(null); setDragging(null); setTarget('0:upper'); setMessage('Unsaved changes');
   };
   const selectedCol = draft.findIndex(r => lanes.some(lane => selected != null && r[lane].includes(selected)));
   const byId = new Map(matches.map(m => [m.id, m]));
@@ -88,6 +92,7 @@ export default function BracketEditor({ eventId, rounds, matches, shorts, scope,
   const lowerDestinations = new Set([...Object.values(nextMatches), ...Object.values(loserMatches)].filter((id): id is number => id != null));
   const positions = new Map(draft.flatMap((r, col) => lanes.flatMap(lane => r[lane].map(id => [id, { col, lane }] as const))));
   const connect = (id: number) => {
+    if (entryConnecting) { setEntryDraft(prev => prev.map(e => e.team === entryConnecting ? { ...e, match_id: id } : e)); setEntryConnecting(null); setMessage('Unsaved changes'); return; }
     if (!connecting) { setSelected(id); return; }
     const { id: source, kind } = connecting;
     if (!canConnect(positions.get(source), positions.get(id), kind, source === id)) {
@@ -120,11 +125,19 @@ export default function BracketEditor({ eventId, rounds, matches, shorts, scope,
           paths.push({ key: `${source}:${kind}`, source: Number(source), kind, path });
         }
       }
+      for (const entry of entryDraft) {
+        if (entry.match_id == null) continue;
+        const from = root.querySelector(`[data-entry-port="${entryDraft.indexOf(entry)}"]`)?.getBoundingClientRect();
+        const to = root.querySelector(`[data-edit-series="${entry.match_id}"]`)?.getBoundingClientRect();
+        if (!from || !to) continue;
+        const x = from.right - origin.left, y = from.top + from.height / 2 - origin.top, tx = to.left - origin.left, ty = to.top + 20 - origin.top;
+        paths.push({ key: `entry:${entry.team}`, source: -1, kind: 'winner', path: `M ${x} ${y} H ${x + 12} V ${to.top - origin.top - 8} H ${tx - 9} V ${ty} H ${tx}` });
+      }
       setLines(paths);
     };
     const observer = new ResizeObserver(measure); observer.observe(root); measure();
     return () => observer.disconnect();
-  }, [editing, draft, nextMatches, loserMatches]);
+  }, [editing, draft, nextMatches, loserMatches, entryDraft]);
   const info = (id: number) => {
     const m = byId.get(id);
     const date = m?.datetime_utc ? new Date(m.datetime_utc) : null;
@@ -137,8 +150,10 @@ export default function BracketEditor({ eventId, rounds, matches, shorts, scope,
     setBusy(true); setMessage('');
     const placements: BracketPlacement[] = draft.flatMap((r, col) => lanes.flatMap(lane => r[lane].map((id, index) => ({ id, bracket_col: col + 1, bracket_order: index + 1 + (lane === 'final' ? r.upper.length : 0), is_lower_bracket: lane === 'lower', is_final: lane === 'final', next_match: nextMatches[id] ?? null, loser_next_match: loserMatches[id] ?? null, loser_outcome: loserOutcomes[id] ?? 'auto', team1_origin: (origins[id]?.[0] ?? '').trim(), team2_origin: (origins[id]?.[1] ?? '').trim() }))));
     try {
-      const response = await saveBracketLayout(eventId, placements, unplaced, { scope, rounds: draft.map(r => r.label.trim()) });
-      onSaved(response.data.matches, draft.map(r => r.label.trim())); setEditing(false); setMessage('Bracket saved');
+      const placed = new Set(placements.map(p => p.id));
+      const savedEntries = entryDraft.map(e => ({ ...e, label: e.label.trim(), match_id: e.match_id != null && placed.has(e.match_id) ? e.match_id : null }));
+      const response = await saveBracketLayout(eventId, placements, unplaced, { scope, rounds: draft.map(r => r.label.trim()), entries: savedEntries });
+      onSaved(response.data.matches, draft.map(r => r.label.trim()), savedEntries); setEditing(false); setMessage('Bracket saved');
     } catch (error) {
       setMessage(errorMessage(error));
       if (axios.isAxiosError(error) && (error.response?.status === 401 || error.response?.status === 403)) {
@@ -170,6 +185,7 @@ export default function BracketEditor({ eventId, rounds, matches, shorts, scope,
     {message && (editing || loginOpen) && <p className="po-admin-status" role="status">{message}</p>}
     {editing && <>
       <p className="po-admin-help">Drag a series to arrange it. Drag W → onto another series to connect its winner. Set loser destinations with the selector below. You can also click an arrow, then its destination. Winner arrows show advancement; loser destinations appear as text.</p>
+      {entryConnecting && <div className="po-connect-status" role="status">Choose the opening match for {shorts[entryConnecting] || entryConnecting}.<button type="button" onClick={() => setEntryConnecting(null)}>Cancel connection</button></div>}
       {connecting && <div className="po-connect-status" role="status">Connecting {connecting.kind} of {name(connecting.id)} — choose a destination.<button type="button" onClick={() => setConnecting(null)}>Cancel connection</button></div>}
       <fieldset disabled={busy} className="po-admin-fields">
         <div className="po-round-tools"><button type="button" disabled={draft.length >= 100} onClick={() => {
@@ -177,13 +193,16 @@ export default function BracketEditor({ eventId, rounds, matches, shorts, scope,
           setDraft(prev => [...prev, { label: `Round ${number}`, upper: [], lower: [], final: [] }]); setMessage('Unsaved changes');
         }}>+ Add round / stage</button><button type="button" disabled={draft.length >= 100} onClick={() => { setDraft(prev => [...prev, { label: 'Final', upper: [], lower: [], final: [] }]); setMessage('Unsaved changes'); }}>+ Add final</button><span>Rename any column below. Empty rounds are kept when you save.</span></div>
         {draft.length === 0 && <p className="po-admin-help">No stages yet. Add a round or final above, then restore or drag matches into it.</p>}
-        <div className="po-editor-scroll"><div ref={board} className="po-editor-columns" style={{ gridTemplateColumns: draft.length ? `repeat(${draft.length}, minmax(184px, 1fr))` : 'none', minWidth: Math.max(0, draft.length * 184 + (draft.length - 1) * 24) }}>
+        <div className="po-editor-scroll"><div ref={board} className="po-editor-columns" style={{ gridTemplateColumns: draft.length ? `repeat(${draft.length + 1}, minmax(184px, 1fr))` : 'none', minWidth: Math.max(0, (draft.length + 1) * 184 + draft.length * 24) }}>
           <svg className="po-editor-lines" aria-hidden="true"><defs>{(['winner', 'loser'] as const).map(kind => <marker key={kind} id={`${arrowId}-${kind}`} viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill={kind === 'winner' ? 'var(--accent)' : 'var(--text-dim)'}/></marker>)}</defs>{lines.map(line => <path key={line.key} d={line.path} markerEnd={`url(#${arrowId}-${line.kind})`} className={`${line.kind}${selected === line.source ? ' is-selected' : ''}`}/>)}</svg>
+          <section className="po-entry-column"><div className="po-round-title"><h4>Qualified teams</h4></div><p className="po-entry-hint">Drag → onto the team's opening match, or click → then a match.</p>
+            {entryDraft.map((entry, index) => <div className="po-entry-card" key={entry.team}><strong>{shorts[entry.team] || entry.team}</strong><input aria-label={`${entry.team} qualification label`} value={entry.label} maxLength={80} placeholder="Seed / regular-season finish" onChange={e => { const label = e.target.value; setEntryDraft(prev => prev.map((item, i) => i === index ? { ...item, label } : item)); setMessage('Unsaved changes'); }}/><button type="button" data-entry-port={index} className="po-entry-port" aria-label={`Connect entry of ${entry.team}`} aria-pressed={entryConnecting === entry.team} draggable={!busy} onClick={() => { setConnecting(null); setEntryConnecting(entry.team); }} onDragStart={e => { e.dataTransfer.setData('text/plain', `entry:${index}`); setDragging(null); setConnecting(null); setEntryConnecting(entry.team); }} onDragEnd={() => setEntryConnecting(null)}>→</button><Select ariaLabel={`${entry.team} enters at`} value={positions.has(entry.match_id ?? -1) ? String(entry.match_id) : ''} onChange={value => { setEntryDraft(prev => prev.map((item, i) => i === index ? { ...item, match_id: value ? Number(value) : null } : item)); setMessage('Unsaved changes'); }} options={[{ value: '', label: 'No entry connection' }, ...draft.flatMap(r => lanes.flatMap(lane => r[lane].map(id => ({ value: String(id), label: `${r.label} · ${name(id)}` }))))]}/></div>)}
+          </section>
           {draft.map((r, col) => <section key={col}><div className="po-round-title"><input className="po-round-name" aria-label={`Round or stage ${col + 1} name`} value={r.label} maxLength={100} onChange={e => { const label = e.target.value; setDraft(prev => prev.map((round, index) => index === col ? { ...round, label } : round)); setMessage('Unsaved changes'); }}/><button type="button" className="po-remove-round" aria-label={`Remove stage ${r.label || col + 1}`} title="Remove stage; matches move to the unplaced list" onClick={() => removeRound(col)}>×</button></div>{lanes.map(lane => <div key={lane} className={`po-drop-zone${dragging != null ? ' is-ready' : ''}`} onDragOver={e => { if (dragging != null) e.preventDefault(); }} onDrop={e => { e.preventDefault(); if (dragging != null) move(dragging, col, lane); }}>
-            <h5>{labels[lane]}</h5>{r[lane].map(id => <div key={id} data-edit-series={id} className={`po-editor-match${lane === 'lower' && lowerDestinations.has(id) ? ' is-lower-connected' : ''}${connecting && canConnect(positions.get(connecting.id), positions.get(id), connecting.kind, connecting.id === id) ? ' is-connect-target' : ''}`} draggable={!busy} onDragStart={e => { setConnecting(null); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', String(id)); setDragging(id); }} onDragEnd={() => setDragging(null)} onDragOver={e => { if (dragging != null || connecting) e.preventDefault(); }} onDrop={e => { e.preventDefault(); e.stopPropagation(); if (connecting) { connect(id); return; } if (dragging != null && dragging !== id) move(dragging, col, lane, id); }}>
+            <h5>{labels[lane]}</h5>{r[lane].map(id => <div key={id} data-edit-series={id} className={`po-editor-match${lane === 'lower' && lowerDestinations.has(id) ? ' is-lower-connected' : ''}${entryConnecting || connecting && canConnect(positions.get(connecting.id), positions.get(id), connecting.kind, connecting.id === id) ? ' is-connect-target' : ''}`} draggable={!busy} onDragStart={e => { setConnecting(null); setEntryConnecting(null); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', String(id)); setDragging(id); }} onDragEnd={() => setDragging(null)} onDragOver={e => { if (dragging != null || connecting || entryConnecting) e.preventDefault(); }} onDrop={e => { e.preventDefault(); e.stopPropagation(); if (connecting || entryConnecting) { connect(id); return; } if (dragging != null && dragging !== id) move(dragging, col, lane, id); }}>
               <button type="button" className="po-editor-select" aria-pressed={selected === id} onClick={() => connect(id)}><span aria-hidden="true">⠿</span><span>{name(id)}{info(id)}</span></button>
               <button type="button" className="po-editor-remove" aria-label={`Remove ${name(id)} from bracket`} title="Remove from bracket" onClick={() => remove(id)}>×</button>
-              <div className="po-connection-ports">{(['winner'] as const).map(kind => <button key={kind} type="button" data-port={`${id}:${kind}`} className={`po-connection-port ${kind}`} draggable={!busy} aria-label={`Connect ${kind} of ${name(id)}`} aria-pressed={connecting?.id === id && connecting.kind === kind} title={`Drag to connect ${kind}, or click then choose a match`} onClick={() => { setSelected(id); setConnecting({ id, kind }); }} onDragStart={e => { e.stopPropagation(); e.dataTransfer.effectAllowed = 'link'; e.dataTransfer.setData('text/plain', `${kind}:${id}`); setDragging(null); setSelected(id); setConnecting({ id, kind }); }} onDragEnd={() => setConnecting(null)}>{kind === 'winner' ? 'W' : 'L'} →</button>)}</div>
+              <div className="po-connection-ports">{(['winner'] as const).map(kind => <button key={kind} type="button" data-port={`${id}:${kind}`} className={`po-connection-port ${kind}`} draggable={!busy} aria-label={`Connect ${kind} of ${name(id)}`} aria-pressed={connecting?.id === id && connecting.kind === kind} title={`Drag to connect ${kind}, or click then choose a match`} onClick={() => { setEntryConnecting(null); setSelected(id); setConnecting({ id, kind }); }} onDragStart={e => { e.stopPropagation(); e.dataTransfer.effectAllowed = 'link'; e.dataTransfer.setData('text/plain', `${kind}:${id}`); setDragging(null); setEntryConnecting(null); setSelected(id); setConnecting({ id, kind }); }} onDragEnd={() => setConnecting(null)}>{kind === 'winner' ? 'W' : 'L'} →</button>)}</div>
             </div>)}<span className="po-drop-placeholder">Drop a series here</span>
           </div>)}</section>)}
         </div></div>

@@ -221,3 +221,13 @@ test('admin loser labels override inference and pending fixtures never invent el
     assert.equal(model.rounds[0].matches[0].loserOutcome, status === 'none' ? undefined : status);
   }
 });
+
+const { qualifiedEntries } = await import(moduleUrl('../src/lib/bracketEntries.ts'));
+test('qualified teams include hidden fixtures, skip TBD, and retain saved byes', () => {
+  const fixtures = [{ id: 1, team1: 'A', team2: 'B', datetime_utc: '2026-09-01', bracket_hidden: true }, { id: 2, team1: 'A', team2: 'C', datetime_utc: '2026-09-02' }, { id: 3, team1: 'D', team2: 'TBD', datetime_utc: '2026-09-03' }];
+  const entries = qualifiedEntries(fixtures, [{ team: 'C', label: 'Seed 2 · Bye', match_id: 2 }]);
+  assert.deepEqual(entries.map(e => e.team), ['C', 'A', 'B', 'D']);
+  assert.equal(entries[0].label, 'Seed 2 · Bye');
+  assert.equal(entries[1].match_id, null);
+  assert.equal(entries[3].match_id, 3);
+});

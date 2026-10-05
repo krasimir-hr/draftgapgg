@@ -7,6 +7,7 @@ import { Select } from '../ui/Select';
 import { buildPlayoffs, type PlayoffMatch, type PlayoffLane } from '../../lib/playoffStructure';
 import PlayoffOverview from './PlayoffOverview';
 import BracketEditor from './BracketEditor';
+import { qualifiedEntries, type BracketEntry } from '../../lib/bracketEntries';
 import './Playoffs.css';
 
 interface Props {
@@ -51,10 +52,11 @@ export default function BracketTab({ eventId, stageId, tabFilter, tabPrefix, tea
     matches: preloadedMatches ?? [], loading: preloadedMatches == null, error: null, logos: {}, shorts: {},
   });
   const viewKey = `${eventId}:${stageId ?? ''}:${tabFilter?.join(',') ?? ''}:${tabPrefix ?? ''}`;
+  const [savedEntries, setSavedEntries] = useState<BracketEntry[]>([]);
   const [roundLabels, setRoundLabels] = useState<string[]>([]);
   useEffect(() => {
     let cancelled = false;
-    getBracketRounds(eventId, viewKey).then(r => { if (!cancelled) setRoundLabels(r.data.rounds); }).catch(() => {});
+    getBracketRounds(eventId, viewKey).then(r => { if (!cancelled) { setRoundLabels(r.data.rounds); setSavedEntries(r.data.entries ?? []); } }).catch(() => {});
     return () => { cancelled = true; };
   }, [eventId, viewKey, preloadedMatches]);
   const [selectedTeam, setSelectedTeam] = useState(() => viewSelections.get(viewKey) ?? '');
@@ -82,7 +84,9 @@ export default function BracketTab({ eventId, stageId, tabFilter, tabPrefix, tea
     !tabFilter?.length && !tabPrefix || !!tabFilter?.includes(m.tab) || !!(tabPrefix && m.tab.startsWith(tabPrefix)),
   ), [state.matches, tabFilter, tabPrefix]);
   const structure = useMemo(() => buildPlayoffs(matches, roundLabels), [matches, roundLabels]);
-  const { rounds, teams, champion, doubleElimination } = structure;
+  const { rounds, champion, doubleElimination } = structure;
+  const entries = useMemo(() => qualifiedEntries(matches, savedEntries), [matches, savedEntries]);
+  const teams = entries.map(e => e.team);
   const logos = { ...teamLogos, ...state.logos }, shorts = { ...teamShortNames, ...state.shorts };
   const visibleRounds = rounds.map(r => ({ ...r, matches: r.matches.filter(e => e.match.team1 === selectedTeam || e.match.team2 === selectedTeam) }))
     .filter(r => r.matches.length);
@@ -98,13 +102,13 @@ export default function BracketTab({ eventId, stageId, tabFilter, tabPrefix, tea
     {champion && <div className="po-champion"><TeamMark short={shorts[champion] || champion} logo={logos[champion]} size={36}/><div><span>Champions</span><strong>{champion}</strong></div><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M7 3h10v5a5 5 0 0 1-10 0V3Zm0 2H3v2a5 5 0 0 0 5 5m9-7h4v2a5 5 0 0 1-5 5m-4 1v7m-4 0h8"/></svg></div>}
       <Select ariaLabel="Follow a team" value={selectedTeam} options={[{ value: '', label: 'All teams' }, ...teams.map(team => ({ value: team, label: team }))]} onChange={team => setSelectedTeam(String(team))} align="right" />
     </div>
-    <BracketEditor eventId={eventId} rounds={rounds} matches={matches} shorts={shorts} scope={viewKey} onSaved={(updated, labels) => {
-      setRoundLabels(labels);
+    <BracketEditor eventId={eventId} rounds={rounds} matches={matches} shorts={shorts} scope={viewKey} entries={entries} onSaved={(updated, labels, entryList) => {
+      setRoundLabels(labels); setSavedEntries(entryList);
       const saved = new Map(updated.map(m => [m.id, m]));
       dispatch({ type: 'matches', matches: state.matches.map(m => saved.get(m.id) ?? m) });
       void revalidator.revalidate();
     }}/>
-    {rounds.length > 0 ? <PlayoffOverview rounds={rounds} doubleElimination={doubleElimination} logos={logos} shorts={shorts} selectedTeam={selectedTeam} onMatchSelect={onMatchSelect}/> : <p className="po-empty">No matches are placed in this bracket. An admin can restore them from the unplaced list.</p>}
+    <PlayoffOverview entries={entries} rounds={rounds} doubleElimination={doubleElimination} logos={logos} shorts={shorts} selectedTeam={selectedTeam} onMatchSelect={onMatchSelect}/>{rounds.length === 0 && <p className="po-empty">No matches are placed in this bracket. An admin can restore them from the unplaced list.</p>}
     {selectedTeam && <div className="po-journey-title"><TeamMark short={shorts[selectedTeam] || selectedTeam} logo={logos[selectedTeam]} size={32}/><div><h3>{selectedTeam}’s run</h3><p>Every series, from the opening match onward.</p></div><button type="button" onClick={() => setSelectedTeam('')} aria-label="Clear team filter">Clear ×</button></div>}
     {selectedTeam && <div className="po-rounds">
       {visibleRounds.map(round => <section key={round.key} className="po-round-section" aria-label={`${round.label} matches`}>

@@ -878,7 +878,7 @@ class MatchViewSet(ReadOnlyModelViewSet):
         if not event:
             return Response({'error': 'Event not found.'}, status=404)
         scope = request.query_params.get('scope', '')
-        return Response({'rounds': event.bracket_layout.get(scope, [])})
+        return Response({'rounds': event.bracket_layout.get(scope, []), 'entries': event.bracket_entries.get(scope, [])})
 
     @action(detail=False, methods=['post'], url_path='bracket-layout', permission_classes=[IsAdminUser])
     def bracket_layout(self, request):
@@ -894,10 +894,16 @@ class MatchViewSet(ReadOnlyModelViewSet):
             team2_origin = serializers.CharField(max_length=80, allow_blank=True, required=False)
             loser_outcome = serializers.ChoiceField(choices=['auto', 'eliminated', 'lower', 'none'], required=False)
 
+        class Entry(serializers.Serializer):
+            team = serializers.CharField(max_length=200)
+            label = serializers.CharField(max_length=80, allow_blank=True, default='')
+            match_id = serializers.IntegerField(min_value=1, allow_null=True)
+
         class Layout(serializers.Serializer):
             event = serializers.IntegerField(min_value=1)
             matches = Placement(many=True, allow_empty=True, max_length=500)
             scope = serializers.CharField(max_length=500, allow_blank=True, default='')
+            entries = Entry(many=True, max_length=100, required=False)
             rounds = serializers.ListField(child=serializers.CharField(max_length=100, allow_blank=False), max_length=100, required=False)
             removed = serializers.ListField(child=serializers.IntegerField(min_value=1), max_length=500, default=list)
 
@@ -949,6 +955,16 @@ class MatchViewSet(ReadOnlyModelViewSet):
                             return Response({'error': 'Loser paths cannot point backwards.'}, status=400)
                         if loser_id == entry['next_match']:
                             return Response({'error': 'Winner and loser destinations must be different.'}, status=400)
+                if 'entries' in data:
+                    entry_teams = [e['team'] for e in data['entries']]
+                    if len(set(entry_teams)) != len(entry_teams):
+                        raise serializers.ValidationError({'error': 'Each qualified team must appear once.'})
+                    if any(e['match_id'] is not None and e['match_id'] not in ids for e in data['entries']):
+                        raise serializers.ValidationError({'error': 'Team entry arrows must point to a placed match in this bracket.'})
+                    event.bracket_entries = {**event.bracket_entries, data['scope']: data['entries']}
+                # Removing matches clears entry links in all saved views as well.
+                event.bracket_entries = {key: [{**e, 'match_id': None} if e.get('match_id') in removed else e for e in values] for key, values in event.bracket_entries.items()}
+                event.save(update_fields=['bracket_entries'])
                 # Release positions first, then apply the entire layout in one transaction.
                 Match.objects.filter(pk__in=ids + removed).update(bracket_order=None)
                 Match.objects.filter(pk__in=removed).update(bracket_hidden=True, bracket_col=None, bracket_order=None, next_match=None, loser_next_match=None)

@@ -1,9 +1,11 @@
 import { useEffect, useId, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { orderPlayoffRounds, type PlayoffMatch, type PlayoffRound } from '../../lib/playoffStructure';
 import { leftConnectionPath } from '../../lib/bracketConnections';
+import type { BracketEntry } from '../../lib/bracketEntries';
 import { TeamMark } from './shared';
 
 interface Props {
+  entries: BracketEntry[];
   rounds: PlayoffRound[];
   doubleElimination: boolean;
   logos: Record<string, string | null>;
@@ -13,7 +15,7 @@ interface Props {
 }
 interface Connection { id: string; path: string; lower: boolean; faded: boolean }
 
-export default function PlayoffOverview({ rounds, doubleElimination, logos, shorts, selectedTeam, onMatchSelect }: Props) {
+export default function PlayoffOverview({ entries, rounds, doubleElimination, logos, shorts, selectedTeam, onMatchSelect }: Props) {
   const arrowId = useId().replaceAll(':', '');
   const board = useRef<HTMLDivElement>(null);
   const displayRounds = useMemo(() => orderPlayoffRounds(rounds), [rounds]);
@@ -45,13 +47,23 @@ export default function PlayoffOverview({ rounds, doubleElimination, logos, shor
         const team = kind === 'winner' ? entry.match.winner === 1 ? entry.match.team1 : entry.match.team2 : entry.match.winner === 1 ? entry.match.team2 : entry.match.team1;
         links.push({ id: `${entry.match.id}:${kind}`, path, lower: false, faded: !!selectedTeam && team !== selectedTeam });
       }
+      for (const [index, entry] of entries.entries()) {
+        if (entry.match_id == null) continue;
+        const from = root.querySelector(`[data-qualified="${index}"]`)?.getBoundingClientRect();
+        const to = root.querySelector(`[data-series="${entry.match_id}"]`)?.getBoundingClientRect();
+        if (!from || !to) continue;
+        const destination = rounds.flatMap(r => r.matches).find(e => e.match.id === entry.match_id)?.match;
+        const rowOffset = destination?.team1 === entry.team ? 50 : destination?.team2 === entry.team ? 88 : to.height / 2;
+        const x = from.right - origin.left, y = from.top + from.height / 2 - origin.top, tx = to.left - origin.left, ty = to.top + rowOffset - origin.top;
+        links.push({ id: `entry:${index}`, lower: false, faded: !!selectedTeam && entry.team !== selectedTeam, path: `M ${x} ${y} H ${x + 12} V ${to.top - origin.top - 8} H ${tx - 9} V ${ty} H ${tx}` });
+      }
       setConnections(links);
     };
     const observer = new ResizeObserver(measure);
     observer.observe(root);
     measure();
     return () => observer.disconnect();
-  }, [rounds, selectedTeam]);
+  }, [rounds, selectedTeam, entries]);
 
   const card = (entry: PlayoffMatch) => {
     const m = entry.match, done = m.winner != null;
@@ -70,8 +82,9 @@ export default function PlayoffOverview({ rounds, doubleElimination, logos, shor
     <div className="po-map-caption"><p>Every round. One view.</p><span>Click a series for match details</span></div>
     <p className="po-pan-hint">Scroll sideways to follow the bracket →</p>
     <div className="po-map-scroll" tabIndex={0} role="region" aria-label="Full playoff bracket">
-      <div ref={board} className="po-map-board" style={{ '--round-count': rounds.length, '--upper-height': `${upperCount * 132 + (upperCount - 1) * 16}px`, '--lower-height': `${lowerCount * 132 + (lowerCount - 1) * 16}px` } as CSSProperties}>
+      <div ref={board} className="po-map-board" style={{ '--round-count': rounds.length + 1, '--upper-height': `${upperCount * 132 + (upperCount - 1) * 16}px`, '--lower-height': `${lowerCount * 132 + (lowerCount - 1) * 16}px` } as CSSProperties}>
         <svg className="po-map-lines" aria-hidden="true"><defs><marker id={`${arrowId}-path`} viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="var(--accent-border)"/></marker></defs>{connections.map(c => <path key={c.id} d={c.path} markerEnd={`url(#${arrowId}-path)`} className={`${c.lower ? 'is-lower' : ''}${c.faded ? ' is-muted' : ''}`}/>)}</svg>
+        <section className="po-map-column po-qualified" aria-label="Qualified teams"><header className="po-map-round"><span>IN</span><h3>Qualified teams</h3></header><div className="po-map-lane-label">Entry into playoffs</div><div className="po-qualified-list">{entries.map((entry, index) => <div key={entry.team} data-qualified={index} className={`po-qualified-card${selectedTeam && selectedTeam !== entry.team ? ' is-muted' : ''}`} title={[entry.team, entry.label].filter(Boolean).join(' · ')}><TeamMark short={shorts[entry.team] || entry.team} logo={logos[entry.team]} size={28}/><div className="po-qualified-identity"><strong>{shorts[entry.team] || entry.team}</strong>{entry.label && <small>{entry.label}</small>}</div><span aria-hidden="true">→</span></div>)}</div></section>
         {displayRounds.map((round, i) => {
           const upper = round.matches.filter(e => e.lane === 'upper');
           const lower = round.matches.filter(e => e.lane === 'lower');
