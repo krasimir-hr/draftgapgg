@@ -99,9 +99,10 @@ export interface BracketPlacement {
   id: number; bracket_col: number; bracket_order: number;
   is_lower_bracket: boolean; is_final: boolean; next_match: number | null; loser_next_match?: number | null;
 }
+export const getBracketRounds = (event: number, scope: string) => api.get<{ rounds: string[] }>('/api/matches/bracket-rounds/', { params: { event, scope } });
 export const getBracketAccess = () => api.get<{ can_edit: boolean }>('/api/matches/bracket-access/');
 export const adminLogin = (username: string, password: string) => api.post<{ access: string }>('/api/auth/login/', { username, password });
-export const saveBracketLayout = (event: number, matches: BracketPlacement[], removed: number[] = []) => api.post<{ matches: Match[] }>('/api/matches/bracket-layout/', { event, matches, removed });
+export const saveBracketLayout = (event: number, matches: BracketPlacement[], removed: number[] = [], layout?: { scope: string; rounds: string[] }) => api.post<{ matches: Match[] }>('/api/matches/bracket-layout/', { event, matches, removed, ...layout });
 export const getMatches = (params: Record<string, string | number> = {}) =>
   api.get<PaginatedResponse<Match>>('/api/matches/', { params });
 

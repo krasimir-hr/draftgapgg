@@ -207,3 +207,29 @@ class BracketLayoutTests(TestCase):
             self.a.refresh_from_db()
             self.assertIsNone(self.a.loser_next_match_id)
             self.assertEqual(self.a.bracket_col, 1)
+
+
+    def test_empty_rounds_and_custom_names_survive_removing_all_matches(self):
+        self.client.force_authenticate(self.staff)
+        names = ['Play-in', 'Quarterfinals', 'Semifinals', 'Grand final']
+        data = {'event': self.event.pk, 'matches': [], 'removed': [self.a.pk, self.b.pk], 'scope': 'playoffs', 'rounds': names}
+        self.assertEqual(self.client.post(self.url, data, format='json').status_code, 200)
+        self.client.force_authenticate(None)
+        self.assertEqual(self.client.get('/api/matches/bracket-rounds/', {'event': self.event.pk, 'scope': 'playoffs'}).data['rounds'], names)
+        self.assertEqual(self.client.get('/api/matches/bracket-rounds/', {'event': self.event.pk, 'scope': 'other-stage'}).data['rounds'], [])
+        self.client.force_authenticate(self.staff)
+        restored = self.layout([(self.a, 2, 1, False, False, self.b.pk), (self.b, 4, 1, False, True, None)])
+        restored.update(scope='playoffs', rounds=names)
+        self.assertEqual(self.client.post(self.url, restored, format='json').status_code, 200)
+        self.a.refresh_from_db()
+        self.assertEqual(self.a.bracket_col, 2)
+        self.assertFalse(self.a.bracket_hidden)
+
+    def test_round_only_layout_can_be_saved_and_invalid_names_are_rejected(self):
+        self.client.force_authenticate(self.staff)
+        data = {'event': self.event.pk, 'matches': [], 'scope': 'empty', 'rounds': ['Round 1', 'Final']}
+        self.assertEqual(self.client.post(self.url, data, format='json').status_code, 200)
+        data['rounds'] = ['']
+        self.assertEqual(self.client.post(self.url, data, format='json').status_code, 400)
+        self.event.refresh_from_db()
+        self.assertEqual(self.event.bracket_layout['empty'], ['Round 1', 'Final'])

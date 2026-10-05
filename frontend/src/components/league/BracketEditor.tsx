@@ -11,8 +11,8 @@ interface DraftRound { label: string; upper: number[]; lower: number[]; final: n
 const lanes: Lane[] = ['upper', 'lower', 'final'];
 const labels = { upper: 'Upper bracket', lower: 'Lower bracket', final: 'Final' };
 
-export default function BracketEditor({ eventId, rounds, matches, shorts, onSaved }: {
-  eventId: number; rounds: PlayoffRound[]; matches: Match[]; shorts: Record<string, string>; onSaved: (matches: Match[]) => void;
+export default function BracketEditor({ eventId, rounds, matches, shorts, scope, onSaved }: {
+  eventId: number; rounds: PlayoffRound[]; matches: Match[]; shorts: Record<string, string>; scope: string; onSaved: (matches: Match[], labels: string[]) => void;
 }) {
   const [canEdit, setCanEdit] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
@@ -91,7 +91,7 @@ export default function BracketEditor({ eventId, rounds, matches, shorts, onSave
     const measure = () => {
       const origin = root.getBoundingClientRect();
       const paths: typeof lines = [];
-      for (const kind of ['winner', 'loser'] as const) {
+      for (const kind of ['winner'] as const) {
         const links = kind === 'winner' ? nextMatches : loserMatches;
         for (const [source, target] of Object.entries(links)) {
           if (target == null) continue;
@@ -120,11 +120,12 @@ export default function BracketEditor({ eventId, rounds, matches, shorts, onSave
   };
   const errorMessage = (error: unknown) => axios.isAxiosError(error) ? error.response?.status === 401 || error.response?.status === 403 ? 'Your admin session expired. Sign in again to save.' : error.response?.data?.error || 'Could not save the layout. Your changes are still here; try again.' : 'Could not save the layout.';
   const save = async () => {
+    if (draft.some(r => !r.label.trim())) { setMessage('Give every round or stage a name before saving.'); return; }
     setBusy(true); setMessage('');
     const placements: BracketPlacement[] = draft.flatMap((r, col) => lanes.flatMap(lane => r[lane].map((id, index) => ({ id, bracket_col: col + 1, bracket_order: index + 1 + (lane === 'final' ? r.upper.length : 0), is_lower_bracket: lane === 'lower', is_final: lane === 'final', next_match: nextMatches[id] ?? null, loser_next_match: loserMatches[id] ?? null }))));
     try {
-      const response = await saveBracketLayout(eventId, placements, unplaced);
-      onSaved(response.data.matches); setEditing(false); setMessage('Bracket saved');
+      const response = await saveBracketLayout(eventId, placements, unplaced, { scope, rounds: draft.map(r => r.label.trim()) });
+      onSaved(response.data.matches, draft.map(r => r.label.trim())); setEditing(false); setMessage('Bracket saved');
     } catch (error) {
       setMessage(errorMessage(error));
       if (axios.isAxiosError(error) && (error.response?.status === 401 || error.response?.status === 403)) {
@@ -155,16 +156,20 @@ export default function BracketEditor({ eventId, rounds, matches, shorts, onSave
     {loginOpen && <form className="po-admin-login" onSubmit={login}><label>Admin username<input autoComplete="username" value={username} onChange={e => setUsername(e.target.value)} required/></label><label>Password<input type="password" autoComplete="current-password" value={password} onChange={e => setPassword(e.target.value)} required/></label><button type="submit" disabled={busy}>{busy ? 'Signing in…' : 'Sign in'}</button><button type="button" onClick={() => { setLoginOpen(false); setPassword(''); }}>Cancel</button></form>}
     {message && (editing || loginOpen) && <p className="po-admin-status" role="status">{message}</p>}
     {editing && <>
-      <p className="po-admin-help">Drag a series to arrange it. Drag W → or L → onto another series to connect its winner or loser. You can also click an arrow, then its destination. Solid lines show winners; dashed lines show losers.</p>
+      <p className="po-admin-help">Drag a series to arrange it. Drag W → onto another series to connect its winner. Set loser destinations with the selector below. You can also click an arrow, then its destination. Winner arrows show advancement; loser destinations appear as text.</p>
       {connecting && <div className="po-connect-status" role="status">Connecting {connecting.kind} of {name(connecting.id)} — choose a destination.<button type="button" onClick={() => setConnecting(null)}>Cancel connection</button></div>}
       <fieldset disabled={busy} className="po-admin-fields">
+        <div className="po-round-tools"><button type="button" disabled={draft.length >= 100} onClick={() => {
+          const number = Math.max(0, ...draft.map(r => Number(r.label.match(/^Round (\d+)$/i)?.[1] ?? 0))) + 1;
+          setDraft(prev => [...prev, { label: `Round ${number}`, upper: [], lower: [], final: [] }]); setMessage('Unsaved changes');
+        }}>+ Add round / stage</button><button type="button" disabled={draft.length >= 100} onClick={() => { setDraft(prev => [...prev, { label: 'Final', upper: [], lower: [], final: [] }]); setMessage('Unsaved changes'); }}>+ Add final</button><span>Rename any column below. Empty rounds are kept when you save.</span></div>
         <div className="po-editor-scroll"><div ref={board} className="po-editor-columns" style={{ gridTemplateColumns: `repeat(${draft.length}, minmax(184px, 1fr))`, minWidth: draft.length * 184 + (draft.length - 1) * 24 }}>
           <svg className="po-editor-lines" aria-hidden="true"><defs>{(['winner', 'loser'] as const).map(kind => <marker key={kind} id={`${arrowId}-${kind}`} viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill={kind === 'winner' ? 'var(--accent)' : 'var(--text-dim)'}/></marker>)}</defs>{lines.map(line => <path key={line.key} d={line.path} markerEnd={`url(#${arrowId}-${line.kind})`} className={`${line.kind}${selected === line.source ? ' is-selected' : ''}`}/>)}</svg>
-          {draft.map((r, col) => <section key={col}><h4>{r.label}</h4>{lanes.map(lane => <div key={lane} className={`po-drop-zone${dragging != null ? ' is-ready' : ''}`} onDragOver={e => { if (dragging != null) e.preventDefault(); }} onDrop={e => { e.preventDefault(); if (dragging != null) move(dragging, col, lane); }}>
+          {draft.map((r, col) => <section key={col}><input className="po-round-name" aria-label={`Round or stage ${col + 1} name`} value={r.label} maxLength={100} onChange={e => { const label = e.target.value; setDraft(prev => prev.map((round, index) => index === col ? { ...round, label } : round)); setMessage('Unsaved changes'); }}/>{lanes.map(lane => <div key={lane} className={`po-drop-zone${dragging != null ? ' is-ready' : ''}`} onDragOver={e => { if (dragging != null) e.preventDefault(); }} onDrop={e => { e.preventDefault(); if (dragging != null) move(dragging, col, lane); }}>
             <h5>{labels[lane]}</h5>{r[lane].map(id => <div key={id} data-edit-series={id} className={`po-editor-match${lane === 'lower' && lowerDestinations.has(id) ? ' is-lower-connected' : ''}${connecting && canConnect(positions.get(connecting.id), positions.get(id), connecting.kind, connecting.id === id) ? ' is-connect-target' : ''}`} draggable={!busy} onDragStart={e => { setConnecting(null); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', String(id)); setDragging(id); }} onDragEnd={() => setDragging(null)} onDragOver={e => { if (dragging != null || connecting) e.preventDefault(); }} onDrop={e => { e.preventDefault(); e.stopPropagation(); if (connecting) { connect(id); return; } if (dragging != null && dragging !== id) move(dragging, col, lane, id); }}>
               <button type="button" className="po-editor-select" aria-pressed={selected === id} onClick={() => connect(id)}><span aria-hidden="true">⠿</span><span>{name(id)}{info(id)}</span></button>
               <button type="button" className="po-editor-remove" aria-label={`Remove ${name(id)} from bracket`} title="Remove from bracket" onClick={() => remove(id)}>×</button>
-              <div className="po-connection-ports">{(['winner', 'loser'] as const).map(kind => <button key={kind} type="button" data-port={`${id}:${kind}`} className={`po-connection-port ${kind}`} draggable={!busy} aria-label={`Connect ${kind} of ${name(id)}`} aria-pressed={connecting?.id === id && connecting.kind === kind} title={`Drag to connect ${kind}, or click then choose a match`} onClick={() => { setSelected(id); setConnecting({ id, kind }); }} onDragStart={e => { e.stopPropagation(); e.dataTransfer.effectAllowed = 'link'; e.dataTransfer.setData('text/plain', `${kind}:${id}`); setDragging(null); setSelected(id); setConnecting({ id, kind }); }} onDragEnd={() => setConnecting(null)}>{kind === 'winner' ? 'W' : 'L'} →</button>)}</div>
+              <div className="po-connection-ports">{(['winner'] as const).map(kind => <button key={kind} type="button" data-port={`${id}:${kind}`} className={`po-connection-port ${kind}`} draggable={!busy} aria-label={`Connect ${kind} of ${name(id)}`} aria-pressed={connecting?.id === id && connecting.kind === kind} title={`Drag to connect ${kind}, or click then choose a match`} onClick={() => { setSelected(id); setConnecting({ id, kind }); }} onDragStart={e => { e.stopPropagation(); e.dataTransfer.effectAllowed = 'link'; e.dataTransfer.setData('text/plain', `${kind}:${id}`); setDragging(null); setSelected(id); setConnecting({ id, kind }); }} onDragEnd={() => setConnecting(null)}>{kind === 'winner' ? 'W' : 'L'} →</button>)}</div>
             </div>)}<span className="po-drop-placeholder">Drop a series here</span>
           </div>)}</section>)}
         </div></div>

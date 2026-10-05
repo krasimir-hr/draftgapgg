@@ -191,3 +191,8 @@
 .po-drop-zone .po-editor-select { padding-left: 20px; }
 .po-editor-scroll { padding-left: 14px; padding-right: 3px; }
 .po-map-scroll { padding-left: 15px; }
+
+.po-round-tools { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 14px 0; }
+.po-round-tools > span { color: var(--text-dim); font-size: 11px; }
+.po-round-name { width: 100%; min-width: 0; color: var(--text-h); background: var(--surface-sub); border: 1px solid var(--border); border-radius: 6px; padding: 9px 10px; font-size: 13px; font-weight: 600; margin: 8px 0 14px; }
+.po-round-name:hover, .po-round-name:focus { border-color: var(--accent); }

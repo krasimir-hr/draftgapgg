@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useReducer, useState } from 'react';
 import { useRevalidator } from 'react-router-dom';
-import { getMatches, getEventRosters } from '../../api/core';
+import { getMatches, getEventRosters, getBracketRounds } from '../../api/core';
 import type { Match } from '../../types/models';
 import { TeamMark } from './shared';
 import { Select } from '../ui/Select';
@@ -51,6 +51,12 @@ export default function BracketTab({ eventId, stageId, tabFilter, tabPrefix, tea
     matches: preloadedMatches ?? [], loading: preloadedMatches == null, error: null, logos: {}, shorts: {},
   });
   const viewKey = `${eventId}:${stageId ?? ''}:${tabFilter?.join(',') ?? ''}:${tabPrefix ?? ''}`;
+  const [roundLabels, setRoundLabels] = useState<string[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    getBracketRounds(eventId, viewKey).then(r => { if (!cancelled) setRoundLabels(r.data.rounds); }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [eventId, viewKey, preloadedMatches]);
   const [selectedTeam, setSelectedTeam] = useState(() => viewSelections.get(viewKey) ?? '');
   useEffect(() => { viewSelections.set(viewKey, selectedTeam); }, [viewKey, selectedTeam]);
   useEffect(() => {
@@ -75,7 +81,7 @@ export default function BracketTab({ eventId, stageId, tabFilter, tabPrefix, tea
   const matches = useMemo(() => state.matches.filter(m =>
     !tabFilter?.length && !tabPrefix || !!tabFilter?.includes(m.tab) || !!(tabPrefix && m.tab.startsWith(tabPrefix)),
   ), [state.matches, tabFilter, tabPrefix]);
-  const structure = useMemo(() => buildPlayoffs(matches), [matches]);
+  const structure = useMemo(() => buildPlayoffs(matches, roundLabels), [matches, roundLabels]);
   const { rounds, teams, champion, doubleElimination } = structure;
   const logos = { ...teamLogos, ...state.logos }, shorts = { ...teamShortNames, ...state.shorts };
   const visibleRounds = rounds.map(r => ({ ...r, matches: r.matches.filter(e => e.match.team1 === selectedTeam || e.match.team2 === selectedTeam) }))
@@ -92,7 +98,8 @@ export default function BracketTab({ eventId, stageId, tabFilter, tabPrefix, tea
     {champion && <div className="po-champion"><TeamMark short={shorts[champion] || champion} logo={logos[champion]} size={36}/><div><span>Champions</span><strong>{champion}</strong></div><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M7 3h10v5a5 5 0 0 1-10 0V3Zm0 2H3v2a5 5 0 0 0 5 5m9-7h4v2a5 5 0 0 1-5 5m-4 1v7m-4 0h8"/></svg></div>}
       <Select ariaLabel="Follow a team" value={selectedTeam} options={[{ value: '', label: 'All teams' }, ...teams.map(team => ({ value: team, label: team }))]} onChange={team => setSelectedTeam(String(team))} align="right" />
     </div>
-    <BracketEditor eventId={eventId} rounds={rounds} matches={matches} shorts={shorts} onSaved={updated => {
+    <BracketEditor eventId={eventId} rounds={rounds} matches={matches} shorts={shorts} scope={viewKey} onSaved={(updated, labels) => {
+      setRoundLabels(labels);
       const saved = new Map(updated.map(m => [m.id, m]));
       dispatch({ type: 'matches', matches: state.matches.map(m => saved.get(m.id) ?? m) });
       void revalidator.revalidate();

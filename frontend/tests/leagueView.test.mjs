@@ -189,3 +189,15 @@ test('explicit loser links work for pending fixtures and manual clears suppress 
   const cleared = buildPlayoffs(lckPlayoffs.map(m => ({ ...m, bracket_col: Number(m.tab.match(/\d/)?.[0] || 5), loser_next_match: null })));
   assert.ok(cleared.rounds.flatMap(r => r.matches).every(e => e.loserNext === undefined));
 });
+
+
+test('saved round names and empty columns remain available after every match is removed', () => {
+  const names = ['Play-in', 'Quarterfinals', 'Semifinals', 'Final'];
+  const empty = buildPlayoffs(lckPlayoffs.map(m => ({ ...m, bracket_hidden: true })), names);
+  assert.deepEqual(empty.rounds.map(r => r.label), names);
+  assert.ok(empty.rounds.every(r => r.matches.length === 0));
+  const restored = buildPlayoffs([{ ...fixture(1, 'Imported Round 1', null, 'A', 'B', null), bracket_col: 2 }], names);
+  assert.equal(restored.rounds[1].label, 'Quarterfinals');
+  assert.equal(restored.rounds[1].matches[0].match.id, 1);
+  assert.equal(restored.rounds.length, 4);
+});

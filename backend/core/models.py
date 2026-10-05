@@ -39,6 +39,8 @@ class Event(models.Model):
     leaguepedia_page = models.CharField(max_length=200, blank=True, null=True)
     prize_pool = models.CharField(max_length=50, blank=True, default='')
 
+    bracket_layout = models.JSONField(default=dict, blank=True)
+
     is_fully_synced = models.BooleanField(default=False)
     last_synced_at = models.DateTimeField(null=True, blank=True)
 

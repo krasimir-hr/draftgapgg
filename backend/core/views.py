@@ -872,6 +872,14 @@ class MatchViewSet(ReadOnlyModelViewSet):
     def bracket_access(self, request):
         return Response({'can_edit': bool(request.user.is_authenticated and request.user.is_staff)})
 
+    @action(detail=False, methods=['get'], url_path='bracket-rounds')
+    def bracket_rounds(self, request):
+        event = Event.objects.filter(pk=request.query_params.get('event')).first()
+        if not event:
+            return Response({'error': 'Event not found.'}, status=404)
+        scope = request.query_params.get('scope', '')
+        return Response({'rounds': event.bracket_layout.get(scope, [])})
+
     @action(detail=False, methods=['post'], url_path='bracket-layout', permission_classes=[IsAdminUser])
     def bracket_layout(self, request):
         class Placement(serializers.Serializer):
@@ -886,6 +894,8 @@ class MatchViewSet(ReadOnlyModelViewSet):
         class Layout(serializers.Serializer):
             event = serializers.IntegerField(min_value=1)
             matches = Placement(many=True, allow_empty=True, max_length=500)
+            scope = serializers.CharField(max_length=500, allow_blank=True, default='')
+            rounds = serializers.ListField(child=serializers.CharField(max_length=100, allow_blank=False), max_length=100, required=False)
             removed = serializers.ListField(child=serializers.IntegerField(min_value=1), max_length=500, default=list)
 
         payload = Layout(data=request.data)
@@ -894,7 +904,7 @@ class MatchViewSet(ReadOnlyModelViewSet):
         entries = data['matches']
         ids = [entry['id'] for entry in entries]
         removed = data['removed']
-        if not ids and not removed:
+        if not ids and not removed and not data.get('rounds'):
             return Response({'error': 'Include at least one match.'}, status=400)
         if len(set(removed)) != len(removed) or set(ids) & set(removed):
             return Response({'error': 'Removed matches cannot also occupy a position.'}, status=400)
@@ -902,6 +912,9 @@ class MatchViewSet(ReadOnlyModelViewSet):
             return Response({'error': 'Each match must appear exactly once.'}, status=400)
         try:
             with transaction.atomic():
+                event = Event.objects.select_for_update().filter(pk=data['event']).first()
+                if event is None:
+                    return Response({'error': 'Event not found.'}, status=404)
                 # Lock the whole event so concurrent editors cannot interleave swaps.
                 event_matches = list(Match.objects.select_for_update().filter(event_id=data['event']))
                 by_id = {match.pk: match for match in event_matches}
@@ -938,6 +951,11 @@ class MatchViewSet(ReadOnlyModelViewSet):
                 Match.objects.filter(pk__in=removed).update(bracket_hidden=True, bracket_col=None, bracket_order=None, next_match=None, loser_next_match=None)
                 Match.objects.filter(event_id=data['event'], next_match_id__in=removed).update(next_match=None)
                 Match.objects.filter(event_id=data['event'], loser_next_match_id__in=removed).update(loser_next_match=None)
+                if 'rounds' in data:
+                    if any(e['bracket_col'] > len(data['rounds']) for e in entries):
+                        raise serializers.ValidationError({'error': 'Each match must be placed in an existing round.'})
+                    event.bracket_layout = {**event.bracket_layout, data['scope']: data['rounds']}
+                    event.save(update_fields=['bracket_layout'])
                 for entry in entries:
                     match = by_id[entry['id']]
                     for field, value in entry.items():

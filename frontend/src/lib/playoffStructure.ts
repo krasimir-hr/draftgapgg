@@ -29,7 +29,7 @@ const finalMatch = (m: Match) => m.is_final || /^(?:grand\s+)?finals?$/i.test(m.
 const placementMatch = (m: Match) => /\b(?:third[ -]?place|3rd[ -]?place|bronze|placement)\b/i.test(m.tab ?? '');
 const chronological = (a: Match, b: Match) => (a.datetime_utc || '9999').localeCompare(b.datetime_utc || '9999') || a.id - b.id;
 
-export function buildPlayoffs(allMatches: Match[]) {
+export function buildPlayoffs(allMatches: Match[], roundLabels: string[] = []) {
   const matches = allMatches.filter(m => !m.bracket_hidden);
   const chronologicalMatches = [...matches].sort(chronological);
   const losses = new Map<string, number>();
@@ -48,7 +48,8 @@ export function buildPlayoffs(allMatches: Match[]) {
   }
   const fallbackTabs = orderedBracketTabs(matches);
   const columns = [...new Set(matches.map(m => m.bracket_col).filter((n): n is number => n != null))].sort((a,b) => a-b);
-  const keys = [...columns.map(n => `column:${n}`), ...fallbackTabs.map(t => `tab:${t}`)];
+  const layoutColumns = roundLabels.length ? Array.from({ length: Math.max(roundLabels.length, ...columns) }, (_, i) => i + 1) : columns;
+  const keys = [...layoutColumns.map(n => `column:${n}`), ...fallbackTabs.map(t => `tab:${t}`)];
   const keyOf = (m: Match) => m.bracket_col != null ? `column:${m.bracket_col}` : `tab:${m.tab || 'Stage 1'}`;
   const entries = chronologicalMatches.map((match): PlayoffMatch => ({
     match,
@@ -57,7 +58,7 @@ export function buildPlayoffs(allMatches: Match[]) {
   const rounds: PlayoffRound[] = keys.map((key, i) => {
     const entriesInRound = entries.filter(e => keyOf(e.match) === key);
     const labels = [...new Set(entriesInRound.map(e => e.match.tab).filter(Boolean))];
-    return { key, label: labels.length === 1 ? labels[0] : `Round ${i + 1}`, matches: entriesInRound.sort((a, b) => (a.match.bracket_order ?? 9999) - (b.match.bracket_order ?? 9999)) };
+    return { key, label: key.startsWith('column:') && roundLabels[Number(key.split(':')[1]) - 1] || (labels.length === 1 ? labels[0] : `Round ${i + 1}`), matches: entriesInRound.sort((a, b) => (a.match.bracket_order ?? 9999) - (b.match.bracket_order ?? 9999)) };
   });
   const roundOf = new Map(rounds.flatMap(r => r.matches.map(e => [e.match.id, r.label] as const)));
   for (let i = 0; i < entries.length; i++) {

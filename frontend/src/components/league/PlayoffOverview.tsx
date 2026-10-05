@@ -30,20 +30,20 @@ export default function PlayoffOverview({ rounds, doubleElimination, logos, shor
     const measure = () => {
       const origin = root.getBoundingClientRect();
       const links: Connection[] = [];
-      for (const round of rounds) for (const entry of round.matches) for (const kind of ['winner', 'loser'] as const) {
+      for (const round of rounds) for (const entry of round.matches) for (const kind of ['winner'] as const) {
         const next = kind === 'winner' ? entry.winnerNext : entry.loserNext;
         if (!next) continue;
         const from = root.querySelector<HTMLElement>(`[data-series="${entry.match.id}"]`)?.getBoundingClientRect();
         const to = root.querySelector<HTMLElement>(`[data-series="${next.matchId}"]`)?.getBoundingClientRect();
         if (!from || !to) continue;
         const sameColumn = to.left < from.right;
-        if (sameColumn && !(kind === 'loser' && to.top > from.bottom && next.lane === 'lower')) continue;
+        if (sameColumn) continue;
         const path = leftConnectionPath(
           { x: from.left - origin.left, y: from.top + from.height * (kind === 'winner' ? .4 : .7) - origin.top, top: from.top - origin.top },
           { x: to.left - origin.left, y: to.top + to.height / 2 - origin.top, top: to.top - origin.top }, kind,
         );
         const team = kind === 'winner' ? entry.match.winner === 1 ? entry.match.team1 : entry.match.team2 : entry.match.winner === 1 ? entry.match.team2 : entry.match.team1;
-        links.push({ id: `${entry.match.id}:${kind}`, path, lower: kind === 'loser', faded: !!selectedTeam && team !== selectedTeam });
+        links.push({ id: `${entry.match.id}:${kind}`, path, lower: false, faded: !!selectedTeam && team !== selectedTeam });
       }
       setConnections(links);
     };
