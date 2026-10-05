@@ -1082,9 +1082,9 @@ button { font-family: inherit; }
    ============================================================ */
 
 /* Match the masthead height, including its bottom border. */
-.app-main { padding-top: 89px; }
+.app-main { padding-top: 73px; }
 @media (max-width: 900px) {
-  .app-main { padding-top: 113px; }
+  .app-main { padding-top: 97px; }
 }
 
 @media (max-width: 768px) {

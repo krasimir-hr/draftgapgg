@@ -1,10 +1,9 @@
 import { useNavigate, useLoaderData, useParams, redirect, type LoaderFunctionArgs } from 'react-router-dom';
-import { useMemo, type ReactNode } from 'react';
+import { useMemo } from 'react';
 import { getLeagues, getEvents } from '../api/core';
 import type { League, Event, Match } from '../types/models';
 import OverviewTab from '../components/league/OverviewTab';
 import EsportsLayout from '../components/EsportsLayout';
-import { MatchRails } from '../components/Sidebar';
 import MatchesTab from '../components/league/MatchesTab';
 import StandingsTab from '../components/league/StandingsTab';
 import PlayersTab from '../components/league/PlayersTab';
@@ -18,52 +17,9 @@ import {
   type NavTab, type StaticTab,
 } from '../lib/leagueView';
 import {
-  loadTeamMeta, loadLeagueTab, loadRails, loadBracketMatches,
-  type LeagueTabData, type RailsData,
+  loadTeamMeta, loadLeagueTab, loadBracketMatches,
+  type LeagueTabData,
 } from '../lib/leagueData';
-
-// Icons for the section-tab menu. Shown in place of the text label on mobile
-// (see .league-hero-tabs in App.css); desktop keeps the text. navTabs is always
-// this fixed set — sub-stages never become tabs — so every tab has an icon.
-const svg = (children: ReactNode) => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round">
-    {children}
-  </svg>
-);
-const TAB_ICONS: Record<string, ReactNode> = {
-  Overview: svg(<>
-    <rect x="3.5" y="3.5" width="7" height="7" rx="1.6" />
-    <rect x="13.5" y="3.5" width="7" height="7" rx="1.6" />
-    <rect x="3.5" y="13.5" width="7" height="7" rx="1.6" />
-    <rect x="13.5" y="13.5" width="7" height="7" rx="1.6" />
-  </>),
-  Matches: svg(<>
-    <rect x="2.5" y="8" width="19" height="8.5" rx="4.25" />
-    <path d="M6.5 10.75v3" />
-    <path d="M5 12.25h3" />
-    <circle cx="15.3" cy="11.6" r="0.5" fill="currentColor" stroke="none" />
-    <circle cx="18" cy="13.4" r="0.5" fill="currentColor" stroke="none" />
-  </>),
-  'Team Stats': svg(<>
-    <path d="M5 20v-6" />
-    <path d="M12 20V5.5" />
-    <path d="M19 20v-9.5" />
-  </>),
-  Players: svg(<>
-    <circle cx="9" cy="8" r="3.3" />
-    <path d="M3.8 19.5a5.4 5.4 0 0 1 10.4 0" />
-    <path d="M15.6 5.2a3.2 3.2 0 0 1 0 5.7" />
-    <path d="M16.3 14.3a5.4 5.4 0 0 1 3.9 5.2" />
-  </>),
-  Champions: svg(<>
-    <path d="M14.5 17.5 3.5 6.5v-3h3l11 11" />
-    <path d="M13 19l6-6" />
-    <path d="M16 16l4.5 4.5" />
-    <path d="M14.5 6.5 17.5 3.5h3v3l-3 3" />
-    <path d="M5 14l4 4" />
-    <path d="M7.5 16.5 3.5 20.5" />
-  </>),
-};
 
 // Cached across league pages so switching leagues/tabs resolves from memory.
 let leaguesCache: League[] | null = null;
@@ -75,7 +31,6 @@ export interface LeagueLoaderData extends LeagueTabData {
   teamLogos: Record<string, string | null>;
   teamShortNames: Record<string, string>;
   bracketMatches: Record<string, Match[]>;
-  rails: RailsData;
 }
 
 // Resolves the league, events, team metadata and active-tab data before render.
@@ -108,18 +63,17 @@ export async function leagueLoader({ params }: LoaderFunctionArgs): Promise<Leag
   }
 
   if (view.activeEventId === null) {
-    return { league, events, teamLogos: {}, teamShortNames: {}, bracketMatches: {}, rails: { upcoming: [], recent: [] } };
+    return { league, events, teamLogos: {}, teamShortNames: {}, bracketMatches: {} };
   }
 
   // Rosters for the active event and every bracket sub-stage event, merged.
   const needs = bracketNeeds(view);
   const metaEventIds = [...new Set([view.activeEventId, ...needs.map((n) => n.eventId)])];
 
-  const [metas, bracketMatches, tabData, rails] = await Promise.all([
+  const [metas, bracketMatches, tabData] = await Promise.all([
     Promise.all(metaEventIds.map((id) => loadTeamMeta(id))),
     loadBracketMatches(needs),
     loadLeagueTab(view, view.activeEventId),
-    loadRails(view.overviewEventIds),
   ]);
 
   // Active event first; sub-stage events override.
@@ -130,7 +84,7 @@ export async function leagueLoader({ params }: LoaderFunctionArgs): Promise<Leag
     Object.assign(teamShortNames, m.teamShortNames);
   }
 
-  return { league, events, teamLogos, teamShortNames, bracketMatches, rails, ...tabData };
+  return { league, events, teamLogos, teamShortNames, bracketMatches, ...tabData };
 }
 
 
@@ -139,7 +93,7 @@ export default function LeagueDetailPage() {
   const navigate = useNavigate();
   const { openMatch } = useDrawer();
 
-  const { league, events, teamLogos, teamShortNames, bracketMatches, rails, overview, matches, standings, players, champions, ratings } =
+  const { league, events, teamLogos, teamShortNames, bracketMatches, overview, matches, standings, players, champions, ratings } =
     useLoaderData() as LeagueLoaderData;
 
   // Preloaded bracket match set (undefined → component self-fetches).
@@ -148,7 +102,7 @@ export default function LeagueDetailPage() {
   const view = useMemo(() => resolveLeagueView(league, events, slug, tab), [league, events, slug, tab]);
   const {
     years, effectiveYear, stagesForYear, parentStages, effectiveEvent,
-    subStages, activeEventId, overviewEventIds, navTabs, activeTab,
+    subStages, activeEventId, navTabs, activeTab,
   } = view;
 
   // Navigation helpers
@@ -194,25 +148,8 @@ export default function LeagueDetailPage() {
 
   const leagueLabel = league.short_name ?? league.name;
 
-  // Only the Overview tab carries a right sidebar (upcoming/recent matches);
-  // every other tab renders full-width with no rail.
-  const rightRail =
-    activeEventId == null || activeTab !== 'Overview' ? undefined
-    : (
-      <MatchRails
-        eventIds={overviewEventIds}
-        upcoming={rails.upcoming}
-        recent={rails.recent}
-        teamLogos={teamLogos}
-        teamShortNames={teamShortNames}
-        onMatchSelect={handleMatchSelect}
-        onViewAll={() => handleTabSelect('Matches')}
-      />
-    );
-
   return (
     <EsportsLayout
-      right={rightRail}
       header={
         <div className="league-hero-bar">
           <div className="league-hero-top flex items-center">
@@ -228,7 +165,6 @@ export default function LeagueDetailPage() {
                 </span>
               )}
               <div>
-                <p className="dg-eyebrow"><span />League of Legends · Tournament hub</p>
                 <h1 className="league-hero-name">{leagueLabel}</h1>
                 <p className="league-hero-subtitle">{league.name}</p>
               </div>
@@ -258,16 +194,14 @@ export default function LeagueDetailPage() {
           <div className="league-hero-tabs-row">
             <div className="league-hero-tabs flex">
               {navTabs.map((t) => {
-                const icon = TAB_ICONS[t];
                 return (
                   <button
                     key={t}
                     type="button"
                     onClick={() => handleTabSelect(t)}
-                    className={`section-tab${t === activeTab ? ' active' : ''}${icon ? ' section-tab--icon' : ''}`}
+                    className={`section-tab${t === activeTab ? ' active' : ''}`}
                     aria-label={t}
                   >
-                    {icon && <span className="section-tab-icon" aria-hidden="true">{icon}</span>}
                     <span className="section-tab-text">{t}</span>
                   </button>
                 );
@@ -286,6 +220,7 @@ export default function LeagueDetailPage() {
                 <OverviewTab
                   key={activeEventId}
                   data={overview}
+                  onViewMatches={() => handleTabSelect('Matches')}
                   teamShortNames={teamShortNames}
                   teamLogos={teamLogos}
                   eventId={activeEventId ?? undefined}

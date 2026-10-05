@@ -27,8 +27,7 @@ function groupByDate(matches: Match[]): DateGroup[] {
     if (diffDays === 0)       label = 'Today';
     else if (diffDays === 1)  label = 'Tomorrow';
     else if (diffDays === -1) label = 'Yesterday';
-    else if (diffDays > 0)    label = `In ${diffDays} days`;
-    else                      label = `${Math.abs(diffDays)} days ago`;
+    else label = d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' });
 
     const key = `${label}|${dayStart.toISOString()}`;
     if (!groups.has(key)) groups.set(key, { label, date: dayStart, matches: [] });
@@ -99,19 +98,20 @@ export default function MatchesTab({
       {/* Filter bar — matches the Players tab: flat surface, segmented scope
           picker with a purple active state, pipe divider, selects on the right. */}
       <div
-        className="card card-soft-shadow flex items-center flex-wrap"
-        style={{ padding: '8px 14px', background: 'var(--surface)', border: 'none', gap: 8 }}
+        className="card dg-filter-bar flex items-center flex-wrap"
+        style={{ gap: 8 }}
       >
         {/* Scope: Upcoming / Recent */}
         <div className="flex items-center" style={{ gap: 4 }}>
           {([
             { k: 'upcoming', label: 'Upcoming' },
-            { k: 'recent',   label: 'Recent' },
+            { k: 'recent',   label: 'Results' },
           ] as const).map((s) => (
             <button
               key={s.k}
               type="button"
               onClick={() => setScope(s.k)}
+              aria-pressed={scope === s.k}
               className="transition-all"
               style={pickerBtnStyle(scope === s.k)}
             >
@@ -190,16 +190,15 @@ function DateGroupSection({
         <h2
           className="font-display"
           style={{
-            fontSize: 12,
-            fontWeight: 700,
-            letterSpacing: '0.08em',
-            textTransform: 'uppercase',
+            fontSize: 14,
+            fontWeight: 600,
+            letterSpacing: '0',
             color: isToday ? 'var(--accent-2)' : 'var(--text-dim)',
           }}
         >
           {group.label}
         </h2>
-        {showDate && (
+        {showDate && ['Today','Tomorrow','Yesterday'].includes(group.label) && (
           <span
             className="tabular-nums text-(--text-faint)"
             style={{ fontSize: 11, fontWeight: 500 }}
@@ -274,7 +273,7 @@ function MatchListItem({
         {/* Team 1 — name then logo, pushed toward the score */}
         <div
           className="flex items-center justify-end min-w-0"
-          style={{ gap: 10, opacity: played && !t1Win ? 0.5 : 1 }}
+          style={{ gap: 10, opacity: played && !t1Win ? 0.8 : 1 }}
         >
           <span
             className={`text-sm truncate text-right ${t1Win ? 'font-bold' : 'font-medium'} text-(--text-h)`}
@@ -327,7 +326,7 @@ function MatchListItem({
         {/* Team 2 — logo then name, pushed toward the score */}
         <div
           className="flex items-center justify-start min-w-0"
-          style={{ gap: 10, opacity: played && !t2Win ? 0.5 : 1 }}
+          style={{ gap: 10, opacity: played && !t2Win ? 0.8 : 1 }}
         >
           <TeamMark short={name2} logo={teamLogos[m.team2]} size={30} />
           <span

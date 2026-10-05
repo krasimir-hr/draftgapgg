@@ -1,7 +1,7 @@
 import { useState, Fragment } from 'react';
 import type React from 'react';
-import type { StandingsEntry, EventHighlights, Match } from '../../types/models';
-import { FormHistory } from './shared';
+import type { StandingsEntry, Match } from '../../types/models';
+import { FormHistory, TeamMark } from './shared';
 import type { OverviewData } from '../../lib/leagueData';
 import type { SubStage } from '../../lib/leagueView';
 import BracketTab from './BracketTab';
@@ -14,13 +14,14 @@ interface Props {
   teamLogos?: Record<string, string | null>;
   onMatchSelect?: (id: number) => void;
   subStages?: SubStage[];
+  onViewMatches?: () => void;
   bm?: (eventId: number, stageId?: number) => Match[] | undefined;
 }
 
 export default function OverviewTab({
-  data, teamShortNames, eventId, teamLogos = {}, onMatchSelect, subStages = [], bm,
+  data, teamShortNames, eventId, teamLogos = {}, onMatchSelect, subStages = [], bm, onViewMatches,
 }: Props) {
-  const { standings, highlights } = data;
+  const { standings, upcoming, recent } = data;
   const stageOnlySubStages = subStages.filter((ss) => ss.stageOnly);
   // Default to the current/latest stage: the last (most recent) stage that
   // already has a played match, falling back to the last stage overall.
@@ -48,6 +49,7 @@ export default function OverviewTab({
           <button
             type="button"
             onClick={() => setSelectedIdx(i)}
+            aria-pressed={i === activeIdx}
             className={`chip${i === activeIdx ? ' active' : ''}`}
           >
             {ss.label}
@@ -58,13 +60,16 @@ export default function OverviewTab({
   ) : null;
 
   return (
-    <div className="flex flex-col" style={{ gap: 20 }}>
-      <AccoladesRow highlights={highlights} teamShortNames={teamShortNames} />
+    <div className="dg-league-overview">
+      <div className="dg-overview-matches">
+        <MatchSummary title="Upcoming" matches={upcoming} teamLogos={teamLogos} teamShortNames={teamShortNames} onMatchSelect={onMatchSelect} onViewAll={onViewMatches} />
+        <MatchSummary title="Results" matches={recent} teamLogos={teamLogos} teamShortNames={teamShortNames} onMatchSelect={onMatchSelect} onViewAll={onViewMatches} />
+      </div>
 
-      <div>
+      <div className="dg-overview-standings">
         {!stageNav && (
           <h2 className="section-label pl-1" style={{ marginBottom: 10 }}>
-            Tournament Standings
+            Standings
           </h2>
         )}
         <div className="card card-soft-shadow overflow-hidden" style={{ borderRadius: 12 }}>
@@ -116,179 +121,24 @@ export default function OverviewTab({
   );
 }
 
-/* Highlights strip (Best Performer · On Fire · Must Pick · Match of the Week)
-   — compact image-backed tiles rendered above the stages/standings card. */
-
-function AccoladesRow({ highlights, teamShortNames }: { highlights: EventHighlights | null; teamShortNames: Record<string, string> }) {
-  if (!highlights) return null;
-
-  const cards: React.ReactNode[] = [];
-  if (highlights.player_of_month) cards.push(<PlayerOfMonthCard key="pom" p={highlights.player_of_month} />);
-  if (highlights.inform_team) cards.push(<InformTeamCard key="team" t={highlights.inform_team} />);
-  if (highlights.must_pick) cards.push(<MustPickCard key="pick" c={highlights.must_pick} />);
-  if (highlights.match_of_week) cards.push(<MatchOfWeekCard key="motw" m={highlights.match_of_week} sn={teamShortNames} />);
-  else if (highlights.banger_of_week) cards.push(<BangerOfWeekCard key="botw" m={highlights.banger_of_week} sn={teamShortNames} />);
-  if (cards.length === 0) return null;
-
-  return <div className="hl-grid">{cards}</div>;
-}
-
-function HighlightTile({
-  kicker, title, sub, visual,
-}: {
-  kicker: string;
-  title: React.ReactNode;
-  sub: React.ReactNode;
-  visual: React.ReactNode;
+function MatchSummary({ title, matches, teamLogos, teamShortNames, onMatchSelect, onViewAll }: {
+  title: string; matches: Match[]; teamLogos: Record<string, string | null>;
+  teamShortNames: Record<string, string>; onMatchSelect?: (id: number) => void; onViewAll?: () => void;
 }) {
-  return (
-    <div className="dg-highlight">
-      <div className="dg-highlight-visual">{visual}</div>
-      <div className="dg-highlight-copy">
-        <p className="dg-highlight-label">{kicker}</p>
-        <div className="dg-highlight-title">{title}</div>
-        <div className="dg-highlight-detail">{sub}</div>
-      </div>
-    </div>
-  );
-}
-
-function MiniForm({ form }: { form: ('W' | 'L')[] }) {
-  return (
-    <span style={{ display: 'inline-flex', gap: 3 }}>
-      {form.slice(-5).map((c, i) => (
-        <span key={i} style={{ fontSize: 12, fontWeight: 600, color: c === 'W' ? 'var(--green)' : 'var(--red)' }}>{c}</span>
-      ))}
-    </span>
-  );
-}
-
-function PlayerOfMonthCard({ p }: { p: NonNullable<EventHighlights['player_of_month']> }) {
-  return (
-    <HighlightTile
-      kicker="Best Performer"
-      title={p.name}
-      sub={<span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}><strong style={{ color: 'var(--accent)', fontWeight: 700 }}>{p.kda} KDA</strong> · {p.avg_kills}/{p.avg_deaths}/{p.avg_assists} · {p.team}</span>}
-      visual={
-        p.image ? (
-          <div style={{ width: 44, height: 44, borderRadius: 10, overflow: 'hidden', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)' }}>
-            <img src={p.image} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: '50% 12%' }} />
-          </div>
-        ) : p.team_logo ? (
-          <img src={p.team_logo} alt={p.team} style={{ width: 38, height: 38, objectFit: 'contain', filter: 'none' }} />
-        ) : (
-          <div style={{ width: 44, height: 44, borderRadius: 10, background: '#171717', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fafafa', fontSize: 15, fontWeight: 700 }}>{p.name.charAt(0)}</div>
-        )
-      }
-    />
-  );
-}
-
-function InformTeamCard({ t }: { t: NonNullable<EventHighlights['inform_team']> }) {
-  return (
-    <HighlightTile
-      kicker="On Fire"
-      title={t.team}
-      sub={<><span>{t.wins}W–{t.played - t.wins}L</span><MiniForm form={t.form} /></>}
-      visual={
-        t.logo
-          ? <img src={t.logo} alt={t.team} style={{ width: 38, height: 38, objectFit: 'contain', filter: 'none' }} />
-          : <div style={{ width: 44, height: 44, borderRadius: 10, background: '#171717', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fafafa', fontSize: 15, fontWeight: 700 }}>{t.team.charAt(0)}</div>
-      }
-    />
-  );
-}
-
-function MustPickCard({ c }: { c: NonNullable<EventHighlights['must_pick']> }) {
-  return (
-    <HighlightTile
-      kicker="Must Pick"
-      title={c.name}
-      sub={
-        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
-          {c.win_rate !== null && <strong style={{ color: c.win_rate >= 60 ? 'var(--green)' : 'var(--amber)', fontWeight: 700 }}>{c.win_rate}% WR</strong>}
-          {c.win_rate !== null && ' · '}{c.wins}W–{c.picks - c.wins}L · {c.picks} picks
-        </span>
-      }
-      visual={<img src={c.icon_url} alt={c.name} style={{ width: 44, height: 44, borderRadius: 10, border: '1px solid rgba(255,255,255,0.2)', display: 'block' }} />}
-    />
-  );
-}
-
-function formatMatchWhen(iso: string | null): string | null {
-  if (!iso) return null;
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return null;
-  return `${d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })} · ${d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}`;
-}
-
-function FaceOffVisual({ logo1, logo2, name1, name2 }: { logo1: string | null; logo2: string | null; name1: string; name2: string }) {
-  const logo = (src: string | null, name: string, offset: boolean) => (
-    src
-      ? <img src={src} alt={name} style={{ width: 30, height: 30, objectFit: 'contain', marginLeft: offset ? -8 : 0, filter: 'none' }} />
-      : <div style={{ width: 30, height: 30, borderRadius: 8, background: '#171717', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fafafa', fontSize: 10, fontWeight: 700, marginLeft: offset ? -8 : 0 }}>{name.slice(0, 2)}</div>
-  );
-  return (
-    <div style={{ display: 'flex', alignItems: 'center' }}>
-      {logo(logo1, name1, false)}
-      {logo(logo2, name2, true)}
-    </div>
-  );
-}
-
-/* Both team names shrink independently so the middle (vs / score) never truncates away. */
-function FaceOffTitle({ left, center, right }: { left: React.ReactNode; center: React.ReactNode; right: React.ReactNode }) {
-  const name = (node: React.ReactNode) => (
-    <span style={{ flex: '0 1 auto', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{node}</span>
-  );
-  return (
-    <span style={{ display: 'flex', alignItems: 'baseline', gap: 5, minWidth: 0 }}>
-      {name(left)}
-      <span style={{ flexShrink: 0 }}>{center}</span>
-      {name(right)}
-    </span>
-  );
-}
-
-function MatchOfWeekCard({ m, sn }: { m: NonNullable<EventHighlights['match_of_week']>; sn: Record<string, string> }) {
-  const when = formatMatchWhen(m.datetime_utc);
-  return (
-    <HighlightTile
-      kicker="Match of the Week"
-      title={
-        <FaceOffTitle
-          left={sn[m.team1] || m.team1}
-          center={<span style={{ color: 'var(--text-dim)', fontWeight: 600, fontSize: 11 }}>vs</span>}
-          right={sn[m.team2] || m.team2}
-        />
-      }
-      sub={
-        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
-          {m.team1_pos != null && m.team2_pos != null && `#${m.team1_pos} vs #${m.team2_pos} · `}
-          {when ?? 'Time TBD'}
-        </span>
-      }
-      visual={<FaceOffVisual logo1={m.team1_logo} logo2={m.team2_logo} name1={m.team1} name2={m.team2} />}
-    />
-  );
-}
-
-function BangerOfWeekCard({ m, sn }: { m: NonNullable<EventHighlights['banger_of_week']>; sn: Record<string, string> }) {
-  const when = formatMatchWhen(m.datetime_utc);
-  return (
-    <HighlightTile
-      kicker="Banger of the Week"
-      title={
-        <FaceOffTitle
-          left={<span style={{ color: m.winner === 1 ? 'var(--text-h)' : 'var(--text-dim)' }}>{sn[m.team1] || m.team1}</span>}
-          center={<span style={{ color: 'var(--accent)', fontWeight: 800 }}>{m.team1_score}–{m.team2_score}</span>}
-          right={<span style={{ color: m.winner === 2 ? 'var(--text-h)' : 'var(--text-dim)' }}>{sn[m.team2] || m.team2}</span>}
-        />
-      }
-      sub={<span>{when ?? 'Recently played'}</span>}
-      visual={<FaceOffVisual logo1={m.team1_logo} logo2={m.team2_logo} name1={m.team1} name2={m.team2} />}
-    />
-  );
+  return <section className="dg-match-summary">
+    <div className="dg-panel-heading"><h2>{title}</h2>{onViewAll && <button type="button" onClick={onViewAll}>All matches ↗</button>}</div>
+    {matches.length === 0 ? <p className="dg-quiet-empty">{title === 'Upcoming' ? 'No upcoming matches scheduled.' : 'No results yet.'}</p> : matches.slice(0, 4).map(m => {
+      const date = m.datetime_utc ? new Date(m.datetime_utc) : null;
+      return <button className="dg-summary-match" key={m.id} type="button" onClick={() => onMatchSelect?.(m.id)}>
+        <span className="dg-summary-date">{date ? date.toLocaleDateString('en-GB', { day:'numeric', month:'short' }) : 'TBD'}<small>{m.winner == null && date ? date.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : `BO${m.best_of}`}</small></span>
+        <span className="dg-summary-teams">{[m.team1,m.team2].map((name,i) => <span key={i}>
+          <TeamMark short={teamShortNames[name] || name} logo={teamLogos[name]} size={24} />
+          <span className={m.winner === i+1 ? 'dg-winner' : ''}>{teamShortNames[name] || name}</span>
+          <strong>{m.winner == null ? '–' : i === 0 ? m.team1_score : m.team2_score}</strong>
+        </span>)}</span>
+      </button>;
+    })}
+  </section>;
 }
 
 /* Standings card (top 10) */
@@ -306,7 +156,7 @@ function StandingsTable({
           No standings data yet.
         </p>
       ) : (
-        <table className="w-full font-sans" style={{ borderCollapse: 'collapse', fontSize: 12.5 }}>
+        <table className="dg-standings-table w-full font-sans" style={{ borderCollapse: 'collapse', fontSize: 12.5 }}>
           <thead>
             <tr style={{ borderBottom: '1px solid var(--border)' }}>
               <Th style={{ width: 42, textAlign: 'center', padding: '10px 8px' }}>#</Th>
@@ -334,15 +184,15 @@ function StandingsTable({
                 <td style={{ padding: '10px 16px' }}>
                   <div className="flex items-center" style={{ gap: 10 }}>
                     {s.logo ? (
-                      <img src={s.logo} alt={s.team} width={32} height={32} loading="lazy" decoding="async" style={{ width: 32, height: 32, objectFit: 'contain', flexShrink: 0 }} />
+                      <img className="dg-team-mark" src={s.logo} alt={s.team} width={32} height={32} loading="lazy" decoding="async" style={{ width: 32, height: 32, objectFit: 'contain', flexShrink: 0 }} />
                     ) : (
                       <div style={{ width: 32, height: 32, borderRadius: 6, background: 'var(--surface-sub)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700, color: 'var(--text-dim)', flexShrink: 0 }}>
                         {s.team.slice(0, 2)}
                       </div>
                     )}
                     <div>
-                      <div style={{ fontWeight: 600, color: 'var(--text-h)', fontSize: 13, whiteSpace: 'nowrap' }}>{s.team}</div>
-                      <div style={{ color: 'var(--text-dim)', fontSize: 11, marginTop: 1, whiteSpace: 'nowrap' }}>{teamShortNames[s.team] || ''}</div>
+                      <div style={{ fontWeight: 600, color: 'var(--text-h)', fontSize: 13, whiteSpace: 'nowrap' }}><span className="dg-team-full">{s.team}</span><span className="dg-team-short">{teamShortNames[s.team] || s.team}</span></div>
+
                     </div>
                   </div>
                 </td>
