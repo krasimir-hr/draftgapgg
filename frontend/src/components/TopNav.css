@@ -1,28 +1,28 @@
 /* Global desk navigation. The rail stays dark in both appearance modes. */
-.dg-header { position: fixed; z-index: 60; inset: 0 auto 0 0; width: 224px; display: flex; flex-direction: column; background: #171b1a; color: #f7f9f4; border-right: 1px solid #2c322e; }
+.dg-header { --rail-bg: #1b1724; --rail-text: #f8f5fc; --rail-muted: #b5abc4; --rail-dim: #9b8eab; --rail-border: #393042; --rail-border-strong: #514361; --rail-hover: #2c2339; --rail-active: #372949; --rail-accent: #c4a7ff; --rail-ink: #281b3a; position: fixed; z-index: 60; inset: 0 auto 0 0; width: 224px; display: flex; flex-direction: column; background: var(--rail-bg); color: var(--rail-text); border-right: 1px solid var(--rail-border); }
 .dg-brand { display: flex; align-items: center; gap: 10px; padding: 20px 22px 26px; }
 .dg-brand img { width: 130px; height: auto; filter: none; }
-.dg-brand-mark { display: grid; place-items: center; width: 32px; height: 32px; background: #c8f76b; color: #172015; border-radius: 7px; }
+.dg-brand-mark { display: grid; place-items: center; width: 32px; height: 32px; background: var(--rail-accent); color: var(--rail-ink); border-radius: 7px; }
 .dg-primary-nav { scrollbar-width: none; flex: 1; min-height: 0; overflow-y: auto; padding: 0 14px 16px; }
-.dg-nav-label { padding: 0 12px; margin: 0 0 8px; font-size: 10px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: #8c9790; }
-.dg-nav-link { display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 10px 12px; margin: 3px 0; color: #abb5ae; font-size: 13px; font-weight: 500; border-radius: 7px; transition: background 150ms, color 150ms; }
-.dg-nav-link:hover { color: #f7f9f4; background: #242a26; }
-.dg-nav-link.is-active { color: #c8f76b; background: #2b3525; }
-.dg-nav-link small { margin-left: auto; font-size: 9px; border: 1px solid #4d5945; padding: 1px 5px; border-radius: 3px; color: #b8c4ae; }
+.dg-nav-label { padding: 0 12px; margin: 0 0 8px; font-size: 10px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--rail-dim); }
+.dg-nav-link { display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 10px 12px; margin: 3px 0; color: var(--rail-muted); font-size: 13px; font-weight: 500; border-radius: 7px; transition: background 150ms, color 150ms; }
+.dg-nav-link:hover { color: var(--rail-text); background: var(--rail-hover); }
+.dg-nav-link.is-active { color: var(--rail-accent); background: var(--rail-active); }
+.dg-nav-link small { margin-left: auto; font-size: 9px; border: 1px solid var(--rail-border-strong); padding: 1px 5px; border-radius: 3px; color: var(--rail-muted); }
 .dg-league-list { margin-top: 24px; }
-.dg-league-link { display: flex; align-items: center; gap: 12px; padding: 8px 12px; min-height: 36px; color: #abb5ae; font-size: 12px; border-radius: 6px; }
+.dg-league-link { display: flex; align-items: center; gap: 12px; padding: 8px 12px; min-height: 36px; color: var(--rail-muted); font-size: 12px; border-radius: 6px; }
 .dg-league-link > span:first-child { width: 20px; height: 20px; display: grid; place-items: center; font-size: 9px; }
 .dg-league-link img { width: 20px; height: 20px; object-fit: contain; }
 .dg-league-link .dg-invert-logo { filter: grayscale(1) brightness(0) invert(1); }
-.dg-league-link:hover { color: #f7f9f4; background: #242a26; }
-.dg-league-link.is-active { color: #f7f9f4; background: #292f2b; box-shadow: inset 2px 0 #c8f76b; }
-.dg-league-arrow { margin-left: auto; opacity: 0; color: #c8f76b; }
+.dg-league-link:hover { color: var(--rail-text); background: var(--rail-hover); }
+.dg-league-link.is-active { color: var(--rail-text); background: var(--rail-hover); box-shadow: inset 2px 0 var(--rail-accent); }
+.dg-league-arrow { margin-left: auto; opacity: 0; color: var(--rail-accent); }
 .dg-league-link:hover .dg-league-arrow, .dg-league-link.is-active .dg-league-arrow { opacity: 1; }
-.dg-nav-footer { display: flex; align-items: center; justify-content: space-between; padding: 20px 24px; border-top: 1px solid #2c322e; }
-.dg-nav-footer > span { font-size: 11px; color: #8c9790; }
-.dg-nav-footer .theme-toggle { display: flex; gap: 4px; padding: 3px; border: 1px solid #39423b; border-radius: 7px; background: transparent; }
-.dg-nav-footer .theme-toggle-opt { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 4px; color: #9fab9f; }
-.dg-nav-footer .theme-toggle-opt.active { background: #c8f76b; color: #172015; box-shadow: none; }
+.dg-nav-footer { display: flex; align-items: center; justify-content: space-between; padding: 20px 24px; border-top: 1px solid var(--rail-border); }
+.dg-nav-footer > span { font-size: 11px; color: var(--rail-dim); }
+.dg-nav-footer .theme-toggle { display: flex; gap: 4px; padding: 3px; border: 1px solid var(--rail-border-strong); border-radius: 7px; background: transparent; }
+.dg-nav-footer .theme-toggle-opt { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 4px; color: var(--rail-muted); }
+.dg-nav-footer .theme-toggle-opt.active { background: var(--rail-accent); color: var(--rail-ink); box-shadow: none; }
 .dg-utility-bar { position: fixed; inset: 0 0 auto 224px; height: 64px; padding: 0 36px; background: var(--bg); color: var(--text-h); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 20px; z-index: 50; }
 .dg-utility-context { display: flex; align-items: center; gap: 16px; font-size: 12px; }
 .dg-utility-brand { color: var(--text-dim); }
@@ -48,7 +48,7 @@
 .dark .dg-white-logo { filter: none; }
 .dg-no-results { font-size: 13px; padding: 20px 12px; color: var(--text-dim); }
 .dg-search-hint { display: flex; justify-content: space-between; padding: 12px 10px 4px; border-top: 1px solid var(--border); margin-top: 8px; font-size: 10px; color: var(--text-dim); }
-.dg-header a:focus-visible, .dg-header button:focus-visible { outline: 2px solid #c8f76b; outline-offset: 2px; }
+.dg-header a:focus-visible, .dg-header button:focus-visible { outline: 2px solid var(--rail-accent); outline-offset: 2px; }
 @media (max-width: 900px) {
   .dg-header { display: none; }
   .dg-header.is-mobile-open { display: flex; }

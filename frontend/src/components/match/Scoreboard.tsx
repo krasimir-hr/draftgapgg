@@ -291,7 +291,7 @@ export function TeamMark({ team, size }: { team: TeamMeta; size: number }) {
   return (
     <div
       className="shrink-0 flex items-center justify-center text-white"
-      style={{ width: size, height: size, borderRadius: Math.max(4, size * 0.22), background: team.color || '#293526', fontWeight: 700, fontSize: size * 0.38, fontFamily: 'var(--font-sans)', letterSpacing: '-0.04em' }}
+      style={{ width: size, height: size, borderRadius: Math.max(4, size * 0.22), background: team.color || '#3a2b50', fontWeight: 700, fontSize: size * 0.38, fontFamily: 'var(--font-sans)', letterSpacing: '-0.04em' }}
     >
       {team.short.slice(0, 3)}
     </div>

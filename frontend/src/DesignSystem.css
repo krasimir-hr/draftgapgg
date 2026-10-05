@@ -1,18 +1,18 @@
-/* DraftGap desk: warm neutrals, graphite, and a controlled lime accent. */
+/* DraftGap desk: soft lavender, violet charcoal, and purple accents. */
 :root {
-  --bg: #f5f5ef; --surface: #ffffff; --surface-sub: #f0f1eb; --surface-hover: #f2f6e9;
-  --text-h: #1b2420; --text: #424c45; --text-dim: #6b756d; --text-faint: #778177;
-  --border: #dfe3da; --border-strong: #c4cec0;
-  --accent: #4d711c; --accent-2: #4d711c; --accent-3: #4d711c; --accent-muted: #eaf2dd; --accent-border: #b6cd98;
+  --bg: #f6f5fa; --surface: #ffffff; --surface-sub: #f0edf6; --surface-hover: #f2eef9;
+  --text-h: #272234; --text: #4c455b; --text-dim: #746a84; --text-faint: #81768f;
+  --border: #e2dceb; --border-strong: #ccc1dc;
+  --accent: #7250b5; --accent-2: #7250b5; --accent-3: #7250b5; --accent-muted: #eee6fa; --accent-border: #c1a7e3;
   --green: #388553; --green-muted: #e7f1e9; --red: #b95346; --red-muted: #f8eae6;
   --amber: #9a761e; --amber-muted: #f3edda;
-  --shadow-sm: 0 2px 6px rgb(31 41 30 / 3%); --r-lg: 12px; --r-xl: 16px;
+  --shadow-sm: 0 2px 6px rgb(42 25 62 / 3%); --r-lg: 12px; --r-xl: 16px;
 }
 .dark {
-  --bg: #121714; --surface: #1c231e; --surface-sub: #242d25; --surface-hover: #28352a;
-  --text-h: #f1f4eb; --text: #c2ccc0; --text-dim: #9eac9d; --text-faint: #8b998b;
-  --border: #323d32; --border-strong: #4c5c48;
-  --accent: #c8f76b; --accent-2: #c8f76b; --accent-3: #c8f76b; --accent-muted: #2e3d23; --accent-border: #617a44;
+  --bg: #16131e; --surface: #211c2c; --surface-sub: #2a2337; --surface-hover: #30263f;
+  --text-h: #f5f1fc; --text: #cfc5df; --text-dim: #afa3c1; --text-faint: #9b8eaf;
+  --border: #3a3049; --border-strong: #584767;
+  --accent: #c4a7ff; --accent-2: #c4a7ff; --accent-3: #c4a7ff; --accent-muted: #38294d; --accent-border: #7a6199;
   --green: #9bd4a4; --green-muted: #263c2b; --red: #e99c8b; --red-muted: #422c25;
   --amber: #d9c57c; --amber-muted: #39341f; --shadow-sm: none;
 }
@@ -67,7 +67,7 @@ body::before, body::after { display: none; }
 .dg-page .league-hero-tabs .section-tab { padding: 12px 0; }
 .dg-page .section-tab-icon { display: none; }
 .dg-page .section-tab-text { display: inline; }
-.dg-team-mark { background: #f6f7f2; border-radius: 7px; padding: 4px; }
+.dg-team-mark { background: #f7f5fa; border-radius: 7px; padding: 4px; }
 /* Match-first overview. */
 .dg-league-overview { display: flex; flex-direction: column; gap: 28px; }
 .dg-match-centre-heading, .dg-standings-heading { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-bottom: 16px; }
@@ -81,7 +81,7 @@ body::before, body::after { display: none; }
 .dg-all-matches:hover { color: var(--text-h); }
 .dg-featured-matches { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 16px; }
 .dg-match-preview { display: flex; flex-direction: column; width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; text-align: left; transition: transform 160ms, border-color 160ms, box-shadow 160ms; }
-.dg-match-preview:hover { transform: translateY(-3px); border-color: var(--accent-border); box-shadow: 0 8px 18px rgb(24 39 18 / 5%); }
+.dg-match-preview:hover { transform: translateY(-3px); border-color: var(--accent-border); box-shadow: 0 8px 18px rgb(42 25 62 / 5%); }
 .dg-preview-meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 16px 18px 0; font-size: 10px; color: var(--text-dim); }
 .dg-preview-meta > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dg-meta-divider { padding: 0 8px; color: var(--border-strong); }
