@@ -196,3 +196,8 @@
 .po-round-tools > span { color: var(--text-dim); font-size: 11px; }
 .po-round-name { width: 100%; min-width: 0; color: var(--text-h); background: var(--surface-sub); border: 1px solid var(--border); border-radius: 6px; padding: 9px 10px; font-size: 13px; font-weight: 600; margin: 8px 0 14px; }
 .po-round-name:hover, .po-round-name:focus { border-color: var(--accent); }
+
+.po-round-title { display: flex; align-items: center; gap: 6px; margin: 8px 0 14px; }
+.po-round-title .po-round-name { margin: 0; flex: 1; }
+.po-admin .po-round-title .po-remove-round { flex: 0 0 28px; width: 28px; height: 32px; padding: 0; font-size: 20px; color: var(--text-dim); }
+.po-admin .po-round-title .po-remove-round:hover { color: var(--accent); border-color: var(--accent); }
