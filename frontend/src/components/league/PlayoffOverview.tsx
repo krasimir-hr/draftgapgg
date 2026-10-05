@@ -1,5 +1,6 @@
 import { useEffect, useId, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { orderPlayoffRounds, type PlayoffMatch, type PlayoffRound } from '../../lib/playoffStructure';
+import { leftConnectionPath } from '../../lib/bracketConnections';
 import { TeamMark } from './shared';
 
 interface Props {
@@ -17,6 +18,7 @@ export default function PlayoffOverview({ rounds, doubleElimination, logos, shor
   const board = useRef<HTMLDivElement>(null);
   const displayRounds = useMemo(() => orderPlayoffRounds(rounds), [rounds]);
   const [connections, setConnections] = useState<Connection[]>([]);
+  const lowerDestinations = new Set(rounds.flatMap(r => r.matches.flatMap(e => [e.winnerNext?.matchId, e.loserNext?.matchId])).filter((id): id is number => id != null));
   const upperCount = Math.max(1, ...rounds.map(r => r.matches.filter(e => e.lane === 'upper').length));
   const lowerCount = Math.max(1, ...rounds.map(r => r.matches.filter(e => e.lane === 'lower').length));
   const hasLower = rounds.some(r => r.matches.some(e => e.lane === 'lower'));
@@ -36,11 +38,12 @@ export default function PlayoffOverview({ rounds, doubleElimination, logos, shor
         if (!from || !to) continue;
         const sameColumn = to.left < from.right;
         if (sameColumn && !(kind === 'loser' && to.top > from.bottom && next.lane === 'lower')) continue;
-        const x1 = from.right - origin.left, y1 = from.top + from.height * (kind === 'winner' ? .4 : .7) - origin.top;
-        const x2 = (sameColumn ? to.right : to.left) - origin.left, y2 = to.top + to.height / 2 - origin.top;
-        const bend = sameColumn ? Math.max(x1, x2) + 10 : x1 + Math.min(kind === 'winner' ? 13 : 23, (x2 - x1) / 2);
+        const path = leftConnectionPath(
+          { x: from.left - origin.left, y: from.top + from.height * (kind === 'winner' ? .4 : .7) - origin.top, top: from.top - origin.top },
+          { x: to.left - origin.left, y: to.top + to.height / 2 - origin.top, top: to.top - origin.top }, kind,
+        );
         const team = kind === 'winner' ? entry.match.winner === 1 ? entry.match.team1 : entry.match.team2 : entry.match.winner === 1 ? entry.match.team2 : entry.match.team1;
-        links.push({ id: `${entry.match.id}:${kind}`, path: `M ${x1} ${y1} H ${bend} V ${y2} H ${x2}`, lower: kind === 'loser', faded: !!selectedTeam && team !== selectedTeam });
+        links.push({ id: `${entry.match.id}:${kind}`, path, lower: kind === 'loser', faded: !!selectedTeam && team !== selectedTeam });
       }
       setConnections(links);
     };
@@ -55,7 +58,7 @@ export default function PlayoffOverview({ rounds, doubleElimination, logos, shor
     const followed = m.team1 === selectedTeam || m.team2 === selectedTeam;
     const date = m.datetime_utc ? new Date(m.datetime_utc).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : 'Date pending';
     const loser = m.winner === 1 ? m.team2 : m.team1;
-    return <button key={m.id} type="button" data-series={m.id} className={`po-mini${entry.lane === 'final' ? ' po-mini--final' : ''}${selectedTeam && !followed ? ' is-muted' : ''}${followed ? ' is-followed' : ''}`} onClick={() => onMatchSelect(m.id)} aria-label={`${m.team1 || 'TBD'} vs ${m.team2 || 'TBD'}, ${done ? `${m.team1_score}–${m.team2_score}` : 'scheduled'}, ${date} — Match details`}>
+    return <button key={m.id} type="button" data-series={m.id} className={`po-mini${entry.lane === 'lower' && lowerDestinations.has(m.id) ? ' is-lower-connected' : ''}${entry.lane === 'final' ? ' po-mini--final' : ''}${selectedTeam && !followed ? ' is-muted' : ''}${followed ? ' is-followed' : ''}`} onClick={() => onMatchSelect(m.id)} aria-label={`${m.team1 || 'TBD'} vs ${m.team2 || 'TBD'}, ${done ? `${m.team1_score}–${m.team2_score}` : 'scheduled'}, ${date} — Match details`}>
       <div className="po-mini-meta"><span>{date}</span><span>BO{m.best_of}</span></div>
       {[m.team1, m.team2].map((team, i) => <div key={i} className={`po-mini-team${m.winner === i + 1 ? ' is-winner' : ''}`} title={team || 'TBD'}>
         <TeamMark short={shorts[team] || team || 'TBD'} logo={logos[team]} size={24}/><span>{shorts[team] || team || 'TBD'}</span>{m.winner === i + 1 && <small aria-label="Winner">✓</small>}<strong>{done ? i === 0 ? m.team1_score : m.team2_score : '–'}</strong>

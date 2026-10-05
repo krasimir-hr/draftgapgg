@@ -3,7 +3,7 @@ import axios from 'axios';
 import { adminLogin, getBracketAccess, saveBracketLayout, type BracketPlacement } from '../../api/core';
 import type { Match } from '../../types/models';
 import { orderPlayoffRounds, type PlayoffRound } from '../../lib/playoffStructure';
-import { canConnect, type ConnectionKind } from '../../lib/bracketConnections';
+import { leftConnectionPath, canConnect, type ConnectionKind } from '../../lib/bracketConnections';
 import { Select } from '../ui/Select';
 
 type Lane = 'upper' | 'lower' | 'final';
@@ -72,6 +72,7 @@ export default function BracketEditor({ eventId, rounds, matches, shorts, onSave
   const selectedCol = draft.findIndex(r => lanes.some(lane => selected != null && r[lane].includes(selected)));
   const byId = new Map(matches.map(m => [m.id, m]));
   const name = (id: number) => { const m = byId.get(id); return `${shorts[m?.team1 ?? ''] || m?.team1 || 'TBD'} vs ${shorts[m?.team2 ?? ''] || m?.team2 || 'TBD'}`; };
+  const lowerDestinations = new Set([...Object.values(nextMatches), ...Object.values(loserMatches)].filter((id): id is number => id != null));
   const positions = new Map(draft.flatMap((r, col) => lanes.flatMap(lane => r[lane].map(id => [id, { col, lane }] as const))));
   const connect = (id: number) => {
     if (!connecting) { setSelected(id); return; }
@@ -97,11 +98,13 @@ export default function BracketEditor({ eventId, rounds, matches, shorts, onSave
           const from = root.querySelector(`[data-port="${source}:${kind}"]`)?.getBoundingClientRect();
           const to = root.querySelector(`[data-edit-series="${target}"]`)?.getBoundingClientRect();
           if (!from || !to) continue;
-          const x = from.right - origin.left, y = from.top + from.height / 2 - origin.top;
-          const sameColumn = to.left < from.left;
-          const endX = (sameColumn ? to.right : to.left) - origin.left, endY = to.top + to.height / 2 - origin.top;
-          const bend = sameColumn ? Math.max(x, endX) + 9 : x + (endX - x) / 2;
-          paths.push({ key: `${source}:${kind}`, source: Number(source), kind, path: `M ${x} ${y} H ${bend} V ${endY} H ${endX}` });
+          const sourceCard = root.querySelector(`[data-edit-series="${source}"]`)?.getBoundingClientRect();
+          if (!sourceCard) continue;
+          const path = leftConnectionPath(
+            { x: from.left - origin.left, y: from.top + from.height / 2 - origin.top, top: sourceCard.top - origin.top },
+            { x: to.left - origin.left, y: to.top + 20 - origin.top, top: to.top - origin.top }, kind,
+          );
+          paths.push({ key: `${source}:${kind}`, source: Number(source), kind, path });
         }
       }
       setLines(paths);
@@ -158,7 +161,7 @@ export default function BracketEditor({ eventId, rounds, matches, shorts, onSave
         <div className="po-editor-scroll"><div ref={board} className="po-editor-columns" style={{ gridTemplateColumns: `repeat(${draft.length}, minmax(184px, 1fr))`, minWidth: draft.length * 184 + (draft.length - 1) * 24 }}>
           <svg className="po-editor-lines" aria-hidden="true"><defs>{(['winner', 'loser'] as const).map(kind => <marker key={kind} id={`${arrowId}-${kind}`} viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill={kind === 'winner' ? 'var(--accent)' : 'var(--text-dim)'}/></marker>)}</defs>{lines.map(line => <path key={line.key} d={line.path} markerEnd={`url(#${arrowId}-${line.kind})`} className={`${line.kind}${selected === line.source ? ' is-selected' : ''}`}/>)}</svg>
           {draft.map((r, col) => <section key={col}><h4>{r.label}</h4>{lanes.map(lane => <div key={lane} className={`po-drop-zone${dragging != null ? ' is-ready' : ''}`} onDragOver={e => { if (dragging != null) e.preventDefault(); }} onDrop={e => { e.preventDefault(); if (dragging != null) move(dragging, col, lane); }}>
-            <h5>{labels[lane]}</h5>{r[lane].map(id => <div key={id} data-edit-series={id} className={`po-editor-match${connecting && canConnect(positions.get(connecting.id), positions.get(id), connecting.kind, connecting.id === id) ? ' is-connect-target' : ''}`} draggable={!busy} onDragStart={e => { setConnecting(null); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', String(id)); setDragging(id); }} onDragEnd={() => setDragging(null)} onDragOver={e => { if (dragging != null || connecting) e.preventDefault(); }} onDrop={e => { e.preventDefault(); e.stopPropagation(); if (connecting) { connect(id); return; } if (dragging != null && dragging !== id) move(dragging, col, lane, id); }}>
+            <h5>{labels[lane]}</h5>{r[lane].map(id => <div key={id} data-edit-series={id} className={`po-editor-match${lane === 'lower' && lowerDestinations.has(id) ? ' is-lower-connected' : ''}${connecting && canConnect(positions.get(connecting.id), positions.get(id), connecting.kind, connecting.id === id) ? ' is-connect-target' : ''}`} draggable={!busy} onDragStart={e => { setConnecting(null); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', String(id)); setDragging(id); }} onDragEnd={() => setDragging(null)} onDragOver={e => { if (dragging != null || connecting) e.preventDefault(); }} onDrop={e => { e.preventDefault(); e.stopPropagation(); if (connecting) { connect(id); return; } if (dragging != null && dragging !== id) move(dragging, col, lane, id); }}>
               <button type="button" className="po-editor-select" aria-pressed={selected === id} onClick={() => connect(id)}><span aria-hidden="true">⠿</span><span>{name(id)}{info(id)}</span></button>
               <button type="button" className="po-editor-remove" aria-label={`Remove ${name(id)} from bracket`} title="Remove from bracket" onClick={() => remove(id)}>×</button>
               <div className="po-connection-ports">{(['winner', 'loser'] as const).map(kind => <button key={kind} type="button" data-port={`${id}:${kind}`} className={`po-connection-port ${kind}`} draggable={!busy} aria-label={`Connect ${kind} of ${name(id)}`} aria-pressed={connecting?.id === id && connecting.kind === kind} title={`Drag to connect ${kind}, or click then choose a match`} onClick={() => { setSelected(id); setConnecting({ id, kind }); }} onDragStart={e => { e.stopPropagation(); e.dataTransfer.effectAllowed = 'link'; e.dataTransfer.setData('text/plain', `${kind}:${id}`); setDragging(null); setSelected(id); setConnecting({ id, kind }); }} onDragEnd={() => setConnecting(null)}>{kind === 'winner' ? 'W' : 'L'} →</button>)}</div>
